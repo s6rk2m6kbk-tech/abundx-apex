@@ -64,6 +64,8 @@ canvas.sc-c{width:100%;height:100%;display:block;touch-action:pan-y;cursor:cross
 #nightBar{display:none}
 :root[data-night="1"] #nightBar{display:block;background:linear-gradient(90deg,#6e0000,#b30000,#6e0000);color:#fff;text-align:center;padding:9px 14px;font:700 12px 'Barlow',sans-serif;letter-spacing:.28em;text-transform:uppercase;animation:nightpulse 2.4s ease-in-out infinite}
 @keyframes nightpulse{0%,100%{box-shadow:0 0 0 rgba(255,0,0,0)}50%{box-shadow:0 2px 24px rgba(255,0,0,.75)}}
+#profSel{background:transparent;border:1px solid var(--line);color:var(--tx);border-radius:2px;padding:6px 8px;font:600 11px 'Barlow',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;width:auto}
+#profSel option{background:var(--bg);color:var(--tx)}
 #themeBtn{background:transparent;border:1px solid var(--line);color:var(--tx);width:36px;height:36px;border-radius:50%;cursor:pointer;display:grid;place-items:center;padding:0;transition:border-color .2s,background .2s}
 #themeBtn:hover{border-color:var(--tx);background:var(--ov3)}
 #themeBtn svg{width:17px;height:17px}#themeBtn .i-moon{display:none}
@@ -136,7 +138,7 @@ ul{padding-left:18px}li{margin-bottom:4px}
 </head>
 <body>
 <div id="nightBar"></div>
-<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
+<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><select id="profSel" onchange="setProfile(this.value)" title="Switch profile" aria-label="Switch profile"><option value="malik">Malik</option><option value="kartik">Kartik</option></select><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
 <nav id="nav"></nav>
 <main id="app"></main>
 
@@ -145,6 +147,7 @@ ul{padding-left:18px}li{margin-bottom:4px}
 const THEME_KEY='abundx_theme';
 let theme='dark';try{theme=localStorage.getItem(THEME_KEY)==='light'?'light':'dark'}catch(e){}
 document.documentElement.dataset.theme=theme;
+window.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('profSel');if(s)s.value=PROFILE});
 const INK=()=>theme==='light'?'#1a1c20':'#e8eaed';
 /* ---------- helpers ---------- */
 const pad=n=>String(n).padStart(2,'0');
@@ -167,7 +170,12 @@ const v=id=>document.getElementById(id).value;
 const n=id=>{const x=v(id);return x===''?null:Number(x)};
 
 /* ---------- state ---------- */
-const KEY='jee2028_tracker_v1';
+const PROFILES={malik:{key:'jee2028_tracker_v1',name:'Malik'},kartik:{key:'jee2028_tracker_kartik_v1',name:'Kartik'}};
+let PROFILE='malik';
+try{const q=new URLSearchParams(location.search).get('p');if(q&&PROFILES[q])localStorage.setItem('abundx_profile',q);const sp=localStorage.getItem('abundx_profile');if(sp&&PROFILES[sp])PROFILE=sp}catch(e){}
+function setProfile(p){try{localStorage.setItem('abundx_profile',p)}catch(e){}const u=new URL(location.href);if(u.searchParams.has('p')){u.searchParams.delete('p');u.hash='';location.replace(u.href)}else{location.hash='dashboard';location.reload()}}
+const KEY=PROFILES[PROFILE].key;
+const MAXM=PROFILE==='malik'?300:100;
 const DEF=()=>({
   settings:{
     start:'2026-10-02',exam:'2028-01-20',weeklyMin:945,weeklyMax:1045,baseline:140,unlockPast:false,
@@ -193,8 +201,22 @@ const mkTest=(n,date,chem,phy,math)=>({id:'T'+n,date,num:n,type:'Class test T-'+
 const TESTS_SEED=[mkTest(1,'2026-07-04',52,36,32),mkTest(2,'2026-07-18',68,44,64),mkTest(3,'2026-07-25',76,64,80),mkTest(4,'2026-08-01',64,64,16)];
 const MOCK_OCT2={...mkTest(6,'2026-10-02',76,68,52),id:'M20261002',type:'Arjuna Classes 11 JEE PCM (90 Q)',total:90,notes:'OMR sheet, roll 2127. Subject marks: Physics 68, Chemistry 76, Math 52. Total 196.'};
 const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna Classes 11th JEE (75 Q, 3 h)',total:75,notes:'Paper dated 24.10.2026: 75 Q (25 per subject), +4 / -1 marking. Subject marks Physics 72, Chemistry 60, Math 16. Total 148.'};
+/* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
+const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
+  phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
+  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],days:{}});
+const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
+  type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
+const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
+function loadK(){
+  let d=DEFK();
+  try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
+  if(!d.seedK){d.seedK=true;KARTIK_MOCKS.forEach(m=>{if(!d.mocks.some(x=>x.id===m.id))d.mocks.push(m)});try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  return d;
+}
 let S=load();
 function load(){
+  if(PROFILE!=='malik')return loadK();
   let d=DEF();
   try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
   if((d.settings.resV||0)<2){d.settings.resources=DEF().settings.resources;d.settings.resV=2;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
@@ -351,7 +373,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],profiles:['Profiles',vProfiles],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -416,7 +438,7 @@ function vDash(){
   <div class="grid">
     <div class="card"><div class="sub">Total questions</div><div class="big">${tq.toLocaleString('en-IN')}</div><div class="bar"><i style="width:${Math.min(100,tq/500)}%"></i></div><div class="sub">of 50,000–55,000 target (${r1(tq/500)}%)</div></div>
     <div class="card"><div class="sub">Overall accuracy</div><div class="big">${acc==null?'—':r1(acc)+'%'}</div><div class="sub">Last week: ${lw.acc==null?'—':r1(lw.acc)+'%'} · weighted by Q</div></div>
-    <div class="card"><div class="sub">Marks (mocks, /300)</div><div class="big">${ms.length?r0(avg(mk_)):'—'}</div><div class="sub">High ${ms.length?Math.max(...mk_):'—'} · Low ${ms.length?Math.min(...mk_):'—'} · ${ms.length} mock(s)</div></div>
+    <div class="card"><div class="sub">Marks (mocks, /${MAXM})</div><div class="big">${ms.length?r0(avg(mk_)):'—'}</div><div class="sub">High ${ms.length?Math.max(...mk_):'—'} · Low ${ms.length?Math.min(...mk_):'—'} · ${ms.length} mock(s)</div></div>
     <div class="card"><div class="sub">Class standing</div><div class="big">${pct==null?'—':r1(pct)+'%ile'}</div><div class="sub">Mean rank ${r1(rk)} · ${ms.length>1?'trend: '+trend(ms.map(m=>m.percentile)):''}</div></div>
   </div>
   <div class="grid2">
@@ -899,7 +921,7 @@ function mockPdf(id){
   const best=have.length?have.reduce((a,b)=>b[1]>a[1]?b:a):null,worst=have.length?have.reduce((a,b)=>b[1]<a[1]?b:a):null;
   const doc=pdfNew();
   let y=pdfHead(doc,`Mock #${m.num} Report`,fmt(m.date),`${m.type||''}  |  ${ph.name}`);
-  y=pdfKpis(doc,y,[['Marks',m.marks+' / 300',null,pc(m.marks,300)+(prev?'  '+sg(m.marks-prev.marks)+' vs prev':'')],['Rank',m.rank?m.rank+' / '+m.students:'-',null,m.percentile!=null?r1(m.percentile)+' percentile':''],['Correct',(m.correct??'-')+(m.total?' / '+m.total:''),null,m.total&&m.correct!=null?pc(m.correct,m.total)+' of paper':''],['Vs expected',sg(m.marks-exp),m.marks>=exp?PD.OK:PD.BAD,`expected ${r0(exp)}`]]);
+  y=pdfKpis(doc,y,[['Marks',m.marks+' / '+MAXM,null,pc(m.marks,MAXM)+(prev?'  '+sg(m.marks-prev.marks)+' vs prev':'')],['Rank',m.rank?m.rank+' / '+m.students:'-',null,m.percentile!=null?r1(m.percentile)+' percentile':''],['Correct',(m.correct??'-')+(m.total?' / '+m.total:''),null,m.total&&m.correct!=null?pc(m.correct,m.total)+' of paper':''],['Vs expected',sg(m.marks-exp),m.marks>=exp?PD.OK:PD.BAD,`expected ${r0(exp)}`]]);
   y=pdfSec(doc,'Subject breakdown',y);
   have.forEach(x=>{pdfCap(doc,x[0],PM,y,{size:7,color:PD.TX,bold:true});
     doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(`${x[1]} / 100`,PM+34,y);
@@ -909,7 +931,7 @@ function mockPdf(id){
   y=pdfEnsure(doc,y,50);y=pdfSec(doc,'Class comparison',y+2);
   const cl=[['You',m.marks,PD.TX],['Highest',m.hi,PD.OK],['Average',m.av,PD.MUT],['Lowest',m.lo,PD.BAD]].filter(x=>x[1]!=null);
   cl.forEach(x=>{pdfCap(doc,x[0],PM,y,{size:7,color:PD.TX,bold:true});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(String(x[1]),PM+34,y);
-    pdfBar(doc,PM+58,y-2.2,70,x[1]/300,x[2],2.4);if(x[0]!=='You'){const d=m.marks-x[1];doc.setFontSize(8);doc.setTextColor(...(d>=0?PD.OK:PD.BAD));doc.text(sg(d),PM+134,y)}y+=7});
+    pdfBar(doc,PM+58,y-2.2,70,x[1]/MAXM,x[2],2.4);if(x[0]!=='You'){const d=m.marks-x[1];doc.setFontSize(8);doc.setTextColor(...(d>=0?PD.OK:PD.BAD));doc.text(sg(d),PM+134,y)}y+=7});
   y=pdfEnsure(doc,y,50);y=pdfSec(doc,'Attempt analysis',y+3);
   const un=m.total&&m.attempted!=null?m.total-m.attempted:null;
   const R=[['Total questions',m.total],['Attempted',m.attempted],['Unattempted',un],['Correct',m.correct],['Incorrect',m.incorrect],['Time taken',m.time?m.time+' min'+(m.attempted?` (${r1(m.time/m.attempted)} min/Q)`:''):null],
@@ -1125,7 +1147,7 @@ function vSummary(){
     <p><button class="btn s alt" onclick="logDate='${d}';go('log')">${l?'Edit':'Add'} daily log</button></p></div>
 
    <div class="card"><h3>Test</h3>
-    ${mk.length?mk.map(m=>`<div style="margin-bottom:8px"><div class="big">${m.marks}<span style="font-size:14px;color:var(--mut)"> / 300</span></div><div class="sub">Mock #${m.num} &middot; ${m.rank?'rank '+m.rank+'/'+m.students:''}${m.percentile!=null?' &middot; '+r1(m.percentile)+' percentile':''}</div>
+    ${mk.length?mk.map(m=>`<div style="margin-bottom:8px"><div class="big">${m.marks}<span style="font-size:14px;color:var(--mut)"> / ${MAXM}</span></div><div class="sub">Mock #${m.num} &middot; ${m.rank?'rank '+m.rank+'/'+m.students:''}${m.percentile!=null?' &middot; '+r1(m.percentile)+' percentile':''}</div>
        <div class="sub">P ${m.phy??'--'} &middot; C ${m.chem??'--'} &middot; M ${m.math??'--'}</div><button class="btn s" onclick="mockView='${m.id}';go('mocks');mockView='${m.id}';vMocks()">View report</button></div>`).join('')
     :'<div class="sub">No test taken on this day.</div><p><button class="btn s alt" onclick="go(\'mocks\')">Log a mock</button></p>'}</div>
 
@@ -1201,11 +1223,11 @@ function vMocks(){
   $('#app').innerHTML=`<h2>Mock Tests</h2>
   <div class="card"><h3>${editMock?'Edit mock':'Log a mock'}</h3><form onsubmit="saveMock(event)">
   <div class="row">${f('mdate','Date',m.date||today(),`max="${today()}"`,'date')}${f('mnum','Test #',m.num??(ms.length+1),'min=1')}${f('mtype','Type',m.type||'Full Mock (100 Q, 3 hrs)','','text')}</div>
-  <div class="row">${f('mat','Attempted',m.attempted,'min=0')}${f('mco','Correct',m.correct,'min=0')}${f('min_','Incorrect',m.incorrect,'min=0')}${f('mmk','Marks (/300)',m.marks,'min=0 max=300')}</div>
+  <div class="row">${f('mat','Attempted',m.attempted,'min=0')}${f('mco','Correct',m.correct,'min=0')}${f('min_','Incorrect',m.incorrect,'min=0')}${f('mmk','Marks (/'+MAXM+')',m.marks,'min=0 max='+MAXM)}</div>
   <div class="row">${f('mph','Physics marks',m.phy,'min=0 max=100')}${f('mch','Chemistry marks',m.chem,'min=0 max=100')}${f('mma','Math marks',m.math,'min=0 max=100')}${f('mtm','Time taken (min)',m.time,'min=0')}</div>
   <div class="row">${f('mtot','Total questions in paper',m.total,'min=1')}${f('mcp','Physics correct',m.cp,'min=0')}${f('mcc','Chemistry correct',m.cc,'min=0')}${f('mcm','Math correct',m.cm,'min=0')}</div>
   <div class="row">${f('mea','Easy: attempted',m.ea,'min=0')}${f('mec','Easy: correct',m.ec,'min=0')}${f('mma_','Medium: attempted',m.ma,'min=0')}${f('mmc','Medium: correct',m.mc,'min=0')}${f('mha','Hard: attempted',m.ha,'min=0')}${f('mhc','Hard: correct',m.hc,'min=0')}</div>
-  <div class="row">${f('mhi','Class highest',m.hi,'min=0 max=300')}${f('mlo','Class lowest',m.lo,'min=0 max=300')}${f('mav','Class average',m.av,'min=0 max=300')}${f('mrk','My rank',m.rank,'min=1')}${f('mst','Total students',m.students,'min=1')}</div>
+  <div class="row">${f('mhi','Class highest',m.hi,'min=0 max='+MAXM)}${f('mlo','Class lowest',m.lo,'min=0 max='+MAXM)}${f('mav','Class average',m.av,'min=0 max='+MAXM)}${f('mrk','My rank',m.rank,'min=1')}${f('mst','Total students',m.students,'min=1')}</div>
   <div class="row">${f('men','Energy (1–10)',m.energy,'min=1 max=10')}${f('mfo','Focus (1–10)',m.focus,'min=1 max=10')}${f('mwp','Weak topics — Physics',m.wp,'','text')}${f('mwc','Weak topics — Chemistry',m.wc,'','text')}${f('mwm','Weak topics — Math',m.wm,'','text')}</div>
   <div><label>Notes</label><textarea id="mnote" rows="2">${esc(m.notes||'')}</textarea></div>
   <h3 style="margin-top:12px">Documents (PDF or image, max 25 MB each)</h3>
@@ -1231,7 +1253,7 @@ function vMockReport(id){
   $('#app').innerHTML=`<div class="tools noprint"><button class="btn alt" onclick="mockView=null;vMocks()">‹ All mocks</button><button class="btn ok" onclick="mockPdf('${m.id}')">Download PDF</button><button class="btn alt" onclick="window.print()">Print</button><button class="btn alt" onclick="mockView=null;editMock='${m.id}';vMocks()">Edit</button></div>
   <h2>Mock #${m.num} report — ${fmt(m.date)}</h2><div class="sub" style="margin:-8px 0 12px">${esc(m.type||'')} · ${esc(ph.name)}</div>
   <div class="grid">
-   <div class="card"><div class="sub">Marks</div><div class="big">${m.marks}<span style="font-size:16px;font-weight:400"> / 300</span></div><div class="sub">${pc(m.marks,300)}${prev?' · '+sg(m.marks-prev.marks)+' vs previous':''}</div></div>
+   <div class="card"><div class="sub">Marks</div><div class="big">${m.marks}<span style="font-size:16px;font-weight:400"> / ${MAXM}</span></div><div class="sub">${pc(m.marks,MAXM)}${prev?' · '+sg(m.marks-prev.marks)+' vs previous':''}</div></div>
    <div class="card"><div class="sub">Rank</div><div class="big">${m.rank?m.rank+' / '+m.students:'—'}</div><div class="sub">${m.percentile!=null?r1(m.percentile)+' percentile':''}${prev&&prev.rank&&m.rank?' · previous rank '+prev.rank+'/'+prev.students:''}</div></div>
    <div class="card"><div class="sub">Correct answers</div><div class="big">${m.correct??'—'}${m.total?' / '+m.total:''}</div><div class="sub">${m.total&&m.correct!=null?pc(m.correct,m.total)+' of paper':''}${m.attempted?' · '+pc(m.correct,m.attempted)+' of attempted':''}</div></div>
    <div class="card"><div class="sub">Vs expected on that date</div><div class="big ${m.marks>=exp?'ok':'bad'}">${sg(m.marks-exp)}</div><div class="sub">expected ${r0(exp)} · ${ph.name} target ${ph.target}+</div></div></div>
@@ -1247,7 +1269,7 @@ function vMockReport(id){
   <div class="card noprint"><h3>Documents</h3>${Object.keys(FK).map(k=>m.files&&m.files[k]?`<button class="btn s" onclick="openFile('${m.id}','${k}')">${FK[k]}: ${esc(m.files[k].name)}</button> `:`<span class="sub">${FK[k]}: not uploaded · </span>`).join('')}</div>`;
   mk('cr1',{type:'bar',data:{labels:have.map(x=>x[0]),datasets:[{data:have.map(x=>x[1]),backgroundColor:['#5aa9ff','#ffb020','#3ddc97']}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:100}}}});
   const cl=[['You',m.marks,INK()],['Highest',m.hi,'#3ddc97'],['Average',m.av,'#8a8f98'],['Lowest',m.lo,'#ff5a52']].filter(x=>x[1]!=null);
-  mk('cr2',{type:'bar',data:{labels:cl.map(x=>x[0]),datasets:[{data:cl.map(x=>x[1]),backgroundColor:cl.map(x=>x[2])}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:300}}}});
+  mk('cr2',{type:'bar',data:{labels:cl.map(x=>x[0]),datasets:[{data:cl.map(x=>x[1]),backgroundColor:cl.map(x=>x[2])}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:MAXM}}}});
 }
 function weakAreas(ms){
   const l=ms[ms.length-1],out=[];
@@ -1266,7 +1288,7 @@ function mockCharts(ms){
 async function saveMock(e){
   e.preventDefault();
   const d=v('mdate');if(!d||d>today())return alert('Date cannot be in the future.');
-  const marks=n('mmk');if(marks==null||marks<0||marks>300)return alert('Marks must be 0–300.');
+  const marks=n('mmk');if(marks==null||marks<0||marks>MAXM)return alert('Marks must be 0–'+MAXM+'.');
   const rank=n('mrk'),st=n('mst');
   if(rank!=null&&(!st||rank<1||rank>st))return alert('Rank must be between 1 and total students.');
   const at=n('mat'),co=n('mco'),inc=n('min_');
@@ -1347,7 +1369,7 @@ function vAnalytics(){
   const wavg=W.length?avg(W.map(w=>w.q)):null;
   let proj='—';
   if(ms.length>=2){const x=ms.map(m=>diff(ms[0].date,m.date)),y=ms.map(m=>m.marks),mx=avg(x),my=avg(y);const den=sum(x.map(a=>(a-mx)**2));
-    if(den>0){const sl=sum(x.map((a,i)=>(a-mx)*(y[i]-my)))/den;const dd=diff(ms[0].date,S.settings.milestones[S.settings.milestones.length-1].date);proj=Math.min(300,Math.round(my+sl*(dd-mx)))+' (linear fit of mocks → plan end)'}}
+    if(den>0){const sl=sum(x.map((a,i)=>(a-mx)*(y[i]-my)))/den;const dd=diff(ms[0].date,S.settings.milestones[S.settings.milestones.length-1].date);proj=Math.min(MAXM,Math.round(my+sl*(dd-mx)))+' (linear fit of mocks → plan end)'}}
   $('#app').innerHTML=`<h2>Analytics</h2>
   <div class="grid"><div class="card"><h3>This week</h3><div class="big">${cw.q} Q</div><div class="sub">Accuracy ${cw.acc==null?'—':r1(cw.acc)+'%'} · sleep ${r1(cw.sleep)} h · energy ${r1(cw.energy)}</div></div>
    <div class="card"><h3>This month</h3><div class="big">${moQ} Q</div><div class="sub">Accuracy ${moAcc==null?'—':r1(moAcc)+'%'} · ${mo.length} days logged</div></div>
