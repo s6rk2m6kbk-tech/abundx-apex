@@ -351,7 +351,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],profiles:['Profiles',vProfiles],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1166,6 +1166,28 @@ function vResources(){
   <h3>By subject</h3><div class="grid2">${subj}</div>
   <h3>Source mix by phase</h3><div class="card"><div class="tw"><table><tr><th>Phase</th><th>Dates</th><th>Claude</th><th>Core books</th><th>PYQ book</th></tr>${S.settings.phases.map(p=>`<tr><td><b>${esc(p.name)}</b><div class="sub">${esc(p.focus)}</div></td><td>${fmtS(p.start)} - ${fmtS(p.end)}</td><td>${p.mix[0]}%</td><td>${p.mix[1]}%</td><td>${p.mix[2]}%</td></tr>`).join('')}</table></div></div>
   <h3>Volume targets</h3><div class="card"><ul><li>${S.settings.weeklyMin}-${S.settings.weeklyMax} questions per week</li><li>115-135 Claude questions per day</li><li>About 50,000-55,000 questions over the plan</li><li>Sunday: mock test (100 Q) plus review</li></ul></div>`;
+}
+/* ---------- PROFILES: classmates who agreed to share their marks (public page) ---------- */
+const FRIENDS=[{id:'kartik',name:'Kartik',batch:'Arjuna Classes, 11th JEE 2028',subjects:['Physics'],
+  note:'Classmate. Studies Physics only at Arjuna Classes, so Chemistry and Maths show 0 on the class sheets.',
+  tests:[{date:'2026-10-24',phy:52},{date:'2026-10-31',phy:null},{date:'2026-11-13',phy:65}]}];
+function vProfiles(){
+  const ms=mocks(),mine=d=>ms.find(m=>m.phy!=null&&Math.abs(diff(m.date,d))<=1);
+  $('#app').innerHTML=`<h2>Profiles</h2><div class="sub" style="margin-bottom:12px">Classmates who agreed to share their marks. Physics is out of 100 (25 Q).</div>`+FRIENDS.map(f=>{
+    const t=f.tests.filter(x=>x.phy!=null),last=t[t.length-1],prev=t[t.length-2],best=Math.max(...t.map(x=>x.phy)),av=t.length?sum(t.map(x=>x.phy))/t.length:null;
+    const rows=f.tests.map(x=>{const m=mine(x.date),me=m?m.phy:null,d=x.phy!=null&&me!=null?me-x.phy:null;
+      return `<tr><td>${fmtS(x.date)}</td><td>${me==null?'-':me}</td><td>${x.phy==null?'<span class="sub">absent</span>':x.phy}</td><td>${d==null?'-':`<span class="${d>=0?'ok':'bad'}">${d>0?'+':''}${d}</span>`}</td></tr>`}).join('');
+    return `<div class="card" style="border-top:4px solid ${SUBJ_COL.Physics||INK()}"><h3>${esc(f.name)}</h3>
+      <div class="sub">${esc(f.batch)} &middot; Subjects: <b>${f.subjects.join(', ')}</b></div><div class="sub" style="margin-top:4px">${esc(f.note)}</div>
+      <div class="grid" style="margin-top:12px"><div class="card"><div class="sub">Latest Physics</div><div class="big">${last?last.phy:'-'}</div><div class="sub">${last?fmtS(last.date):''}${prev?` &middot; ${last.phy-prev.phy>=0?'+':''}${last.phy-prev.phy} vs ${fmtS(prev.date)}`:''}</div></div>
+      <div class="card"><div class="sub">Best Physics</div><div class="big">${t.length?best:'-'}</div></div>
+      <div class="card"><div class="sub">Average (${t.length} tests)</div><div class="big">${av==null?'-':r1(av)}</div></div></div>
+      <h3 style="margin-top:14px">Physics: me vs ${esc(f.name)}</h3>${sc('pf_'+f.id,280)}
+      <div class="tw" style="margin-top:10px"><table><tr><th>Test</th><th>Me (Physics)</th><th>${esc(f.name)} (Physics)</th><th>Me minus ${esc(f.name)}</th></tr>${rows}</table></div></div>`}).join('');
+  FRIENDS.forEach(f=>{const t=f.tests.filter(x=>x.phy!=null);if(!t.length)return;
+    stock('pf_'+f.id,{multi:true,dec:0,zero:true,series:[
+      {name:'Me (Physics)',color:'var(--blue)',pts:t.map(x=>{const m=mine(x.date);return m?{t:tms(x.date),y:m.phy}:null}).filter(Boolean)},
+      {name:f.name+' (Physics)',color:'var(--warn)',pts:t.map(x=>({t:tms(x.date),y:x.phy}))}]})});
 }
 function resToggle(){if(resEdit)save();resEdit=!resEdit;vResources()}
 function resAdd(sub){S.settings.resources[sub].push({name:'',note:'',cat:'core'});vResources()}
