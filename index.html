@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abundx Apex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--pri:#f0f0fa;--ok:#3ddc97;--warn:#ffb020;--bad:#ff5a52;--bg:#000;--card:rgba(255,255,255,.035);--tx:#f0f0fa;--mut:#8a8f98;--line:rgba(255,255,255,.14);--line2:rgba(255,255,255,.3);--blue:#5aa9ff;--purple:#b388ff;
+  --navbg:rgba(0,0,0,.72);--ov0:rgba(255,255,255,.01);--ov2:rgba(255,255,255,.06);--ov3:rgba(255,255,255,.1);--track:rgba(255,255,255,.12);--field:rgba(255,255,255,.04);--fieldf:rgba(255,255,255,.07);--hover:rgba(255,255,255,.025);--btnb:rgba(255,255,255,.7);--optbg:#111;--chartbg:#0b0b0c;--nolog:#2a2d31;--glow:rgba(90,169,255,.16);color-scheme:dark}
+:root[data-theme=light]{--pri:#0d0f12;--ok:#0b9a62;--warn:#c27803;--bad:#d93a32;--bg:#f3f4f6;--card:#fff;--tx:#0d0f12;--mut:#5d636c;--line:rgba(0,0,0,.13);--line2:rgba(0,0,0,.32);--blue:#1d6fd6;--purple:#7c4dff;
+  --navbg:rgba(243,244,246,.8);--ov0:rgba(0,0,0,.01);--ov2:rgba(0,0,0,.045);--ov3:rgba(0,0,0,.07);--track:rgba(0,0,0,.1);--field:rgba(0,0,0,.035);--fieldf:rgba(0,0,0,.06);--hover:rgba(0,0,0,.03);--btnb:rgba(0,0,0,.7);--optbg:#fff;--chartbg:#ffffff;--nolog:#d9dce1;--glow:rgba(29,111,214,.1);color-scheme:light}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg) radial-gradient(900px 420px at 80% -8%,var(--glow),transparent 70%) no-repeat;color:var(--tx);font:400 15px/1.5 'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.02em;-webkit-font-smoothing:antialiased;min-height:100vh}
+header{padding:22px 24px 14px;display:flex;flex-wrap:wrap;gap:6px 24px;align-items:flex-end;justify-content:space-between;max-width:1180px;margin:0 auto}
+.brand{font-weight:700;font-size:22px;letter-spacing:.32em;text-transform:uppercase}
+.brand small{display:block;font-weight:500;font-size:10px;letter-spacing:.38em;color:var(--mut);margin-top:2px}
+.hmeta{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+.hmeta b{color:var(--tx);font-weight:600}
+#hClock{font-size:22px;font-weight:300;letter-spacing:.12em;color:var(--tx);font-variant-numeric:tabular-nums}
+#hClock small{font-size:10px;letter-spacing:.3em;color:var(--mut);font-weight:600}
+header{align-items:center}.hmeta{margin-left:auto;align-items:center;gap:6px 16px}
+.hsep{width:1px;height:22px;background:var(--line)}
+#hDateL,#hLeft{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--mut)}#hLeft b{font-size:20px;font-weight:300;color:var(--tx);letter-spacing:.06em}
+
+
+/* stock-style charts */
+.sc{display:block}
+.sc-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-bottom:6px;min-height:38px}
+.sc-val{font-size:34px;font-weight:300;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.sc-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 11px;border-radius:9px;font-size:14px;font-weight:600;letter-spacing:.02em;align-self:center}
+.sc-badge.g{background:color-mix(in srgb,var(--ok) 26%,transparent);color:var(--ok)}
+.sc-badge.b{background:color-mix(in srgb,var(--bad) 26%,transparent);color:var(--bad)}
+.sc-sub{font-size:14px;color:var(--mut)}.sc-sub b{font-weight:600}
+.sc-date{flex-basis:100%;font-size:12px;color:var(--mut);letter-spacing:.04em;margin-top:2px}
+.sc-tabs{display:flex;border-bottom:1px solid var(--line);margin:8px 0 6px}
+.sc-tabs button{flex:1;background:none;border:0;color:var(--mut);padding:9px 0;font:600 12px 'Barlow',sans-serif;letter-spacing:.14em;cursor:pointer;position:relative;transition:color .15s}
+.sc-tabs button:hover{color:var(--tx)}
+.sc-tabs button.on{color:var(--blue)}
+.sc-tabs .sc-revbtn{flex:0 0 auto;padding:9px 12px;margin-left:6px;border-left:1px solid var(--line);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.sc-tabs .sc-revbtn.rev-on{color:var(--warn)}
+.sc-tabs button.on::after{content:'';position:absolute;left:22%;right:22%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--blue)}
+.sc-cv{position:relative;height:var(--sch,250px)}
+canvas.sc-c{width:100%;height:100%;display:block;touch-action:pan-y;cursor:crosshair}
+.sc-tip{position:absolute;top:6px;display:none;pointer-events:none;background:var(--optbg);border:1px solid var(--line2);border-radius:10px;padding:7px 11px;font-size:12px;line-height:1.5;white-space:nowrap;z-index:4;box-shadow:0 6px 22px rgba(0,0,0,.4);color:var(--tx)}
+.sc-td{color:var(--mut);font-size:11.5px}
+.sc-tr{display:flex;align-items:center;gap:6px}.sc-tr i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sc-leg{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:12px;color:var(--mut);min-height:16px}
+.sc-chip i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}.sc-chip b{color:var(--tx);font-weight:600;margin-left:3px}
+:root[data-night="1"] canvas.sc-c{filter:none}
+
+/* sleep mode: 12 AM - 6 AM Delhi time */
+:root[data-night="1"]{--pri:#ff5a48;--ok:#ff8f7a;--warn:#ffb199;--bad:#ff2414;--bg:#140000;--card:rgba(255,30,20,.07);--tx:#ffd6d0;--mut:#d9786c;--line:rgba(255,60,40,.32);--line2:rgba(255,80,60,.6);--blue:#ff5a4a;--purple:#ff7a8a;
+  --navbg:rgba(24,0,0,.82);--ov0:rgba(255,0,0,.02);--ov2:rgba(255,30,20,.1);--ov3:rgba(255,40,30,.16);--track:rgba(255,60,40,.22);--field:rgba(255,40,30,.08);--fieldf:rgba(255,40,30,.14);--hover:rgba(255,40,30,.07);--btnb:rgba(255,90,70,.85);--optbg:#1d0303;--chartbg:#1c0505;--nolog:#3a0c0a;--glow:rgba(255,0,0,.38);color-scheme:dark}
+:root[data-night="1"] body{background:var(--bg) radial-gradient(1000px 520px at 78% -10%,rgba(255,0,0,.42),transparent 70%),radial-gradient(900px 500px at 0% 105%,rgba(160,0,0,.4),transparent 70%) no-repeat;background-attachment:fixed}
+:root[data-night="1"] canvas{filter:sepia(1) saturate(5) hue-rotate(-52deg) brightness(.95)}
+:root[data-night="1"] .brand,:root[data-night="1"] h2{text-shadow:0 0 18px rgba(255,0,0,.55)}
+:root[data-night="1"] .card{box-shadow:0 0 0 1px rgba(255,0,0,.06) inset,0 0 22px rgba(160,0,0,.18)}
+#nightBar{display:none}
+:root[data-night="1"] #nightBar{display:block;background:linear-gradient(90deg,#6e0000,#b30000,#6e0000);color:#fff;text-align:center;padding:9px 14px;font:700 12px 'Barlow',sans-serif;letter-spacing:.28em;text-transform:uppercase;animation:nightpulse 2.4s ease-in-out infinite}
+@keyframes nightpulse{0%,100%{box-shadow:0 0 0 rgba(255,0,0,0)}50%{box-shadow:0 2px 24px rgba(255,0,0,.75)}}
+#themeBtn{background:transparent;border:1px solid var(--line);color:var(--tx);width:36px;height:36px;border-radius:50%;cursor:pointer;display:grid;place-items:center;padding:0;transition:border-color .2s,background .2s}
+#themeBtn:hover{border-color:var(--tx);background:var(--ov3)}
+#themeBtn svg{width:17px;height:17px}#themeBtn .i-moon{display:none}
+:root[data-theme=light] #themeBtn .i-sun{display:none}:root[data-theme=light] #themeBtn .i-moon{display:block}
+@media(max-width:600px){.hsep{display:none}#hClock{font-size:18px}}
+nav{display:flex;overflow-x:auto;position:sticky;top:0;z-index:10;background:var(--navbg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 12px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:0 0 auto;border:0;background:none;padding:15px 18px;font:600 12px 'Barlow',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+nav button:hover{color:var(--tx)}
+nav button.on{color:var(--tx);border-color:var(--tx)}
+main{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
+h2{margin:6px 0 20px;font-size:28px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+h3{margin:0 0 10px;font-size:12px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--mut)}
+main>h3{margin:28px 0 12px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-bottom:14px}
+.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:2px;padding:20px;margin-bottom:14px;min-width:0;transition:border-color .25s,background .25s}
+.card:hover{border-color:var(--line2)}
+.grid>.card,.grid2>.card{margin-bottom:0}
+.big{font-size:38px;font-weight:300;line-height:1.05;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.big span{letter-spacing:.06em}
+.hero{padding:34px 28px;background:linear-gradient(135deg,var(--ov2),var(--ov0))}
+.hero .big{font-size:clamp(56px,11vw,112px);font-weight:200;letter-spacing:-.01em}
+.hero .big span{font-size:14px!important;font-weight:500!important;letter-spacing:.24em;text-transform:uppercase;color:var(--mut)}
+.sub{color:var(--mut);font-size:12px;letter-spacing:.06em}
+.card>.sub:first-child,.card .sub:first-child:not(:only-child){text-transform:uppercase;letter-spacing:.2em;font-size:11px;margin-bottom:6px}
+.bar{height:3px;background:var(--track);overflow:hidden;margin:12px 0 6px}.bar>i{display:block;height:100%;background:var(--tx)}
+.chip{display:inline-block;padding:2px 10px;border-radius:1px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#000;background:var(--mut)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.bg-ok{background:var(--ok)}.bg-warn{background:var(--warn)}.bg-bad{background:var(--bad)}.bg-mut{background:#4a4f57}
+.alert{padding:12px 16px;border-radius:2px;margin-bottom:8px;font-size:14px;border:1px solid var(--line);border-left:3px solid}
+.alert.r{background:rgba(255,90,82,.07);border-left-color:var(--bad)}.alert.g{background:rgba(61,220,151,.07);border-left-color:var(--ok)}
+.lights{display:flex;gap:22px;flex-wrap:wrap}.light{display:flex;align-items:center;gap:10px;font-size:14px}
+.light b{font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;box-shadow:0 0 12px currentColor}
+.dot.bg-ok{color:var(--ok)}.dot.bg-warn{color:var(--warn)}.dot.bg-bad{color:var(--bad)}.dot.bg-mut{box-shadow:none}
+form .row{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:14px}
+label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);margin-bottom:5px}
+input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:2px;font:inherit;background:var(--field);color:var(--tx);outline:none;transition:border-color .2s,background .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--tx);background:var(--fieldf)}
+select option{background:var(--optbg);color:var(--tx)}
+input[type=checkbox]{width:auto;margin-right:8px;accent-color:var(--tx)}
+input:disabled,select:disabled,textarea:disabled{opacity:.5}
+.chk{display:flex;align-items:center;padding-top:22px}.chk label{margin:0;color:var(--tx);font-size:13px;letter-spacing:.06em;text-transform:none;font-weight:500}
+button.btn{background:transparent;color:var(--tx);border:1px solid var(--btnb);border-radius:2px;padding:11px 22px;font:600 12px 'Barlow',sans-serif;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+button.btn:hover{background:var(--tx);color:var(--bg)}
+button.btn.s{padding:5px 11px;font-size:10px;letter-spacing:.14em}
+button.btn.ok{background:var(--tx);color:var(--bg);border-color:var(--tx)}button.btn.ok:hover{background:transparent;color:var(--tx)}
+button.btn.bad{color:var(--bad);border-color:rgba(255,90,82,.6)}button.btn.bad:hover{background:var(--bad);color:#000;border-color:var(--bad)}
+button.btn.alt{border-color:var(--line);color:var(--mut)}button.btn.alt:hover{background:var(--ov3);color:var(--tx);border-color:var(--line2)}
+button.btn:disabled{opacity:.35;cursor:not-allowed}
+.tot{background:var(--field);border:1px solid var(--line);border-radius:2px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap}
+tr:hover td{background:var(--hover)}
+a{color:var(--blue)}
+.tw{overflow-x:auto}
+.cv{position:relative;height:260px}.cvh{position:relative}
+.png{position:absolute;right:0;top:-34px;font:600 9px 'Barlow',sans-serif;letter-spacing:.18em;text-transform:uppercase;border:1px solid var(--line);background:transparent;border-radius:2px;cursor:pointer;color:var(--mut);padding:3px 8px}
+.png:hover{color:var(--tx);border-color:var(--tx)}
+.tl{display:flex;gap:10px;align-items:center;padding:5px 0;font-size:14px}
+.hm{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.hm div{aspect-ratio:1.6;border-radius:2px;font-size:11px;color:#000;font-weight:600;display:flex;align-items:center;justify-content:center}
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+ul{padding-left:18px}li{margin-bottom:4px}
+::selection{background:var(--tx);color:var(--bg)}
+::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:var(--line2)}::-webkit-scrollbar-track{background:transparent}
+@media(max-width:600px){main{padding:18px 14px 70px}header{padding:16px 14px 10px}.brand{font-size:17px}.big{font-size:30px}h2{font-size:21px}.card{padding:16px}}
+@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}nav,.tools,.noprint,.png{display:none}body{background:var(--bg)}}
+</style>
+</head>
+<body>
+<div id="nightBar"></div>
+<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
+<nav id="nav"></nav>
+<main id="app"></main>
+
+<script>
+/* ---------- theme ---------- */
+const THEME_KEY='abundx_theme';
+let theme='dark';try{theme=localStorage.getItem(THEME_KEY)==='light'?'light':'dark'}catch(e){}
+document.documentElement.dataset.theme=theme;
+const INK=()=>theme==='light'?'#1a1c20':'#e8eaed';
+/* ---------- helpers ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const pd=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
+const diff=(a,b)=>Math.round((pd(b)-pd(a))/864e5);
+const today=()=>ymd(new Date());
+const mon=s=>{const d=pd(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d)};
+const fmt=s=>pd(s).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+const fmtS=s=>pd(s).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+const dow=s=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][pd(s).getDay()];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const avg=a=>a.length?sum(a)/a.length:null;
+const r1=x=>x==null?'—':(Math.round(x*10)/10).toString();
+const r0=x=>x==null?'—':Math.round(x).toString();
+const $=s=>document.querySelector(s);
+const v=id=>document.getElementById(id).value;
+const n=id=>{const x=v(id);return x===''?null:Number(x)};
+
+/* ---------- state ---------- */
+const KEY='jee2028_tracker_v1';
+const DEF=()=>({
+  settings:{
+    start:'2026-10-02',exam:'2028-01-20',weeklyMin:945,weeklyMax:1045,baseline:140,unlockPast:false,
+    phases:[
+      {name:'Phase 0',start:'2026-10-02',end:'2026-11-05',target:190,focus:'Math rescue (Coord Geom + Trig)',mix:[90,10,0]},
+      {name:'Phase 1',start:'2026-11-06',end:'2027-01-31',target:210,focus:'Stage 1: Foundation mastery',mix:[70,25,5]},
+      {name:'Phase 2',start:'2027-02-01',end:'2027-03-31',target:230,focus:'Stage 2: Optimization & speed',mix:[50,30,20]},
+      {name:'Phase 3',start:'2027-04-01',end:'2027-10-02',target:265,focus:'Stage 3: Elite precision',mix:[30,10,60]}],
+    resources:{
+      Physics:[{name:'SL Arora',note:''},{name:'Cengage Physics (Mains)',note:''},{name:'Cengage Physics (Advanced)',note:''},{name:'Physics PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}],
+      Chemistry:[{name:'NCERT',note:''},{name:'MS Chouhan',note:'Organic'},{name:'N Awasthi',note:'Physical'},{name:'IOC (VJ Sir)',note:'Inorganic'},{name:'Pradeep',note:''},{name:'Chemistry PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}],
+      Math:[{name:'RD Sharma',note:''},{name:'Cengage Math (Mains)',note:''},{name:'Cengage Math (Advanced)',note:''},{name:'Math PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}]},
+    milestones:[['2026-10-09',150],['2026-10-16',160],['2026-10-23',170],['2026-10-30',180],['2026-11-05',190],['2026-11-30',200],['2026-12-31',205],['2027-01-31',210],['2027-02-15',220],['2027-03-01',225],['2027-03-31',230],['2027-06-01',245],['2027-08-01',255],['2027-10-02',265]].map(([date,marks])=>({date,marks}))
+  },
+  logs:{},mocks:[],backlog:[],days:{}
+});
+const FIRST_MOCK={id:'M20260926',date:'2026-09-26',num:5,type:'Arjuna Classes 11th JEE Mock (75 Q)',phase:'Phase 0',attempted:null,correct:41,incorrect:null,accuracy:null,marks:164,phy:48,chem:56,math:60,time:null,total:75,cp:12,cc:14,cm:15,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:269,lo:null,av:null,rank:4,students:15,percentile:(15-4)/15*100,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Roll 2129. Top: Gouransh 269; 3rd Yuvraj Singh 176 (-12); 5th Shaurya 158 (+6).',files:{}};
+const HI_TOPICS=['Straight lines','Circle','Parabola','Trigo 1','Trigo 2'];
+const BACKLOG_SEED=[['Physics',['Vectors','1D','2D - Laws of motion','Work, energy','COM Rotation']],
+  ['Chemistry',['Atomic Structure','Chemical bonding','Periodic','Thermodynamics']],
+  ['Math',['Sets','Relation','Trigo 1','Trigo 2','Complex numbers','Quadratic equation','Linear inequalities','P and C','Binomial','Sequence and Series','Straight lines','Circle','Parabola']]];
+const mkTest=(n,date,chem,phy,math)=>({id:'T'+n,date,num:n,type:'Class test T-'+n,phase:'Phase 0',attempted:null,correct:null,incorrect:null,accuracy:null,marks:chem+phy+math,phy,chem,math,time:null,total:null,cp:null,cc:null,cm:null,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:null,lo:null,av:null,rank:null,students:null,percentile:null,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Subject marks entered as Chemistry / Physics / Maths.',files:{}});
+const TESTS_SEED=[mkTest(1,'2026-07-04',52,36,32),mkTest(2,'2026-07-18',68,44,64),mkTest(3,'2026-07-25',76,64,80),mkTest(4,'2026-08-01',64,64,16)];
+const MOCK_OCT2={...mkTest(6,'2026-10-02',76,68,52),id:'M20261002',type:'Arjuna Classes 11 JEE PCM (90 Q)',total:90,notes:'OMR sheet, roll 2127. Subject marks: Physics 68, Chemistry 76, Math 52. Total 196.'};
+const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna Classes 11th JEE (75 Q, 3 h)',total:75,notes:'Paper dated 24.10.2026: 75 Q (25 per subject), +4 / -1 marking. Subject marks Physics 72, Chemistry 60, Math 16. Total 148.'};
+let S=load();
+function load(){
+  let d=DEF();
+  try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
+  if((d.settings.resV||0)<2){d.settings.resources=DEF().settings.resources;d.settings.resV=2;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if((d.settings.resV||0)<3){const c=d.settings.resources.Chemistry;if(!c.some(b=>b.name==='Pradeep'))c.push({name:'Pradeep',note:''});d.settings.resV=3;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if((d.settings.resV||0)<4){const R=d.settings.resources,add=(sub,n,note)=>{if(!R[sub].some(b=>b.name===n))R[sub].push({name:n,note})};
+    add('Chemistry','Chemistry PYQ book','Past-year questions');['Physics','Chemistry','Math'].forEach(x=>add(x,'Claude pager','Daily pager questions'));
+    d.settings.resV=4;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedBL){d.seedBL=true;let k=d.backlog.reduce((m,b)=>Math.max(m,+String(b.id).slice(2)||0),0);
+    BACKLOG_SEED.forEach(([subject,topics])=>topics.forEach(topic=>{if(d.backlog.some(b=>b.subject===subject&&b.topic===topic))return;k++;
+      d.backlog.push({id:'BL'+String(k).padStart(3,'0'),date:'2026-10-03',type:'Topic',subject,topic,description:'Pending topic from my backlog list',accuracy:null,source:'Own backlog list',priority:subject==='Math'&&HI_TOPICS.includes(topic)?'High':'Medium',status:'Pending',attempts:0,revisited:'2026-10-03',plan:'',resolved:null})}));
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT){d.seedT=true;TESTS_SEED.forEach(t=>{if(!d.mocks.some(m=>m.id===t.id))d.mocks.push(t)});
+    const a=d.mocks.find(m=>m.id==='M20260926');if(a&&a.num===1)a.num=5;
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT2){d.seedT2=true;if(!d.mocks.some(m=>m.id===MOCK_OCT2.id))d.mocks.push(MOCK_OCT2);
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT3){d.seedT3=true;if(!d.mocks.some(m=>m.id===MOCK_OCT24.id))d.mocks.push(MOCK_OCT24);
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedGrace){d.seedGrace=true;const gm=d.mocks.find(x=>x.id==='M20261024');
+    if(gm&&!gm.grace){gm.grace={math:48};gm.math+=48;gm.marks+=48;gm.notes=(gm.notes||'')+' Includes 48 grace marks in Math (raw Math 16, raw total 148).'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedGrace2){d.seedGrace2=true;const g2=d.mocks.find(x=>x.id==='M20261024');
+    if(g2&&g2.grace&&g2.grace.math===48){g2.grace={math:28};g2.math=44;g2.marks=176;g2.notes='Paper dated 24.10.2026: 75 Q (25 per subject), +4 / -1 marking. Raw marks: Physics 72, Chemistry 60, Math 16 = 148. Math includes 28 grace marks, so final Math 44 and total 176.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedMay){d.seedMay=true;
+    if(!d.mocks.some(m=>m.id==='M20260520')){d.mocks.forEach(m=>{if(m.date>'2026-05-20')m.num=(m.num||0)+1});
+      d.mocks.push({...mkTest(1,'2026-05-20',0,0,0),id:'M20260520',type:'Class test (20 May)',marks:184,phy:null,chem:null,math:null,notes:'Total marks only (184). Subject marks not available.'})}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedJune){d.seedJune=true;
+    if(!d.mocks.some(m=>m.id==='M20260620')){d.mocks.forEach(m=>{if(m.date>'2026-06-20')m.num=(m.num||0)+1});
+      d.mocks.push({...mkTest(2,'2026-06-20',0,0,0),id:'M20260620',type:'Class test (20 June)',marks:145,phy:null,chem:null,math:null,notes:'Total marks only (145). Subject marks not available.'})}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedWT){d.seedWT=true;const w=d.mocks.find(x=>x.id==='M20261024');
+    if(w&&w.rank==null){w.hi=232;w.lo=52;w.av=148.8;w.rank=11;w.students=20;w.percentile=45;
+      w.notes=(w.notes||'')+' Class result sheet (24/10/2026): 20 present, 8 absent. Rank 11 of 20 on raw marks (148; tied with one classmate). Class highest 232, lowest 52, average 148.8, counted on the 18 rows with a total of 300 or less; two rows (420 and 356) are above the 300-mark maximum and were left out of those figures.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedWT2){d.seedWT2=true;const w=d.mocks.find(x=>x.id==='M20261024');
+    if(w&&w.students===20){w.rank=9;w.students=18;w.percentile=50;
+      w.notes=(w.notes||'').replace(/ Class result sheet \(24\/10\/2026\):.*$/,'')+' Class result sheet (24/10/2026): 8 absent. Two rows with a total above the 300-mark maximum (420 and 356) were removed, leaving 18 students. Rank 9 of 18 on raw marks (148; tied with one classmate). Class highest 232, lowest 52, average 148.8.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedWQ){d.seedWQ=true;d.weekQ=Object.assign({'2026-09-28':200,'2026-10-05':200,'2026-10-12':200,'2026-10-19':200},d.weekQ||{});
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedWQ2){d.seedWQ2=true;d.weekQ=Object.assign(d.weekQ||{},{'2026-10-26':25});
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT4){d.seedT4=true;if(!d.mocks.some(m=>m.id==='M20261031'))d.mocks.push({...mkTest(10,'2026-10-31',68,56,32),id:'M20261031',type:'Arjuna Classes 11th JEE/NEET/NDA weekly test',hi:288,lo:92,av:163.25,rank:8,students:20,percentile:60,
+      notes:'Class result sheet dated 31/10/2026, roll 2129. Subject marks Physics 56, Chemistry 68, Math 32. Total 156. Rank 8 of 20 on the sheet (tied with two classmates at 156). 5 absent. Three rows with a total above 300 (348, 440, 452) were left out, as on the 24 Oct sheet. Class highest 288, lowest 92, average 163.25.'});
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT5){d.seedT5=true;const w=d.mocks.find(x=>x.id==='M20261031');
+    if(w&&w.students===20){w.students=19;w.rank=7;w.percentile=63;w.hi=275;w.av=156.68;
+      w.notes=(w.notes||'').replace(/ Rank 8 of 20.*$/,'')+' Rank 7 of 19 on the sheet (tied with two classmates at 156). 5 absent. Removed from the list: three rows with a total above 300 (348, 440, 452) and Lakshay (288). Class highest 275, lowest 92, average 156.68.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedWT3){d.seedWT3=true;const w=d.mocks.find(x=>x.id==='M20261024');
+    if(w&&w.students===18){w.students=17;w.percentile=47;w.lo=108;w.av=154.5;
+      w.notes=(w.notes||'').replace(/ Class result sheet \(24\/10\/2026\):.*$/,'')+' Class result sheet (24/10/2026): 7 absent. Removed from the list: two rows with a total above the 300-mark maximum (420 and 356), Kartik Bharadwaj (52) and Hitashi (absent), leaving 17 students. Rank 9 of 17 on raw marks (148; tied with one classmate). Class highest 232, lowest 108, average 154.5.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT6){d.seedT6=true;const w=d.mocks.find(x=>x.id==='M20261024');
+    if(w&&w.students===17){w.students=16;w.percentile=44;w.av=154.94;
+      w.notes=(w.notes||'').replace(/ Rank 9 of 17.*$/,'')+' Rank 9 of 16 on raw marks (148). Also removed: Vidushi (108 in one subject, over 100). Class highest 232, lowest 108, average 154.94.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT7){d.seedT7=true;const w=d.mocks.find(x=>x.id==='M20261031');
+    if(w&&w.students===19){w.students=18;w.rank=6;w.percentile=67;w.hi=204;w.av=150.11;
+      w.notes=(w.notes||'').replace(/ Rank 7 of 19.*$/,'')+' Rank 6 of 18 on the sheet (tied with two classmates at 156). 5 absent. Removed from the list: three rows with a total above 300 (348, 440, 452), Lakshay (288) and Gouransh (100 in one subject, over the 95 limit). Class highest 204, lowest 92, average 150.11.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT8){d.seedT8=true;const w=d.mocks.find(x=>x.id==='M20261031');
+    if(w&&!w.grace&&w.marks===156){w.grace={math:20};w.math=52;w.marks=176;w.hi=224;w.lo=112;w.av=170.11;
+      w.notes=(w.notes||'').replace(/ Class highest 204.*$/,'')+' Grace: 20 marks in Math given to every student, so the class figures include it. Your raw total 156, with grace 176 (Math 52). Class highest 224, lowest 112, average 170.11. Rank unchanged because everyone gained the same.'}
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedT9){d.seedT9=true;if(!d.mocks.some(m=>m.id==='M20261114'))d.mocks.push({...mkTest(11,'2026-11-14',60,64,52),id:'M20261114',type:'Arjuna Classes JEE Main Class XI part test (75 Q, 3 h)',total:75,
+      notes:'Test booklet: 75 Q, 300 marks, 3 h, +4 / -1 for MCQ, +4 / 0 for numerical. Syllabus: Physics Thermal Properties of Matter; Chemistry Ionic Equilibrium; Maths Circle, Parabola, Ellipse. Marks from the OMR sheet: Physics 64, Chemistry 60, Math 52, total 176 (no grace). Numerical answers as written: Phy 21 = 420, 22 = 6x10^-2, 23 = 20, 24 = 2000 K, 25 = 7 mins; Chem 46 = 1.7, 47 = 5, 48 = unclear, 49 = 6, 50 blank; Math 71 = 4, 72 = 2, 73 = 8, 74 = 6, 75 = 25. No class result sheet yet, so no rank.'});
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  return d;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
+
+/* ---------- file storage (IndexedDB, for PDFs) ---------- */
+const FDB=new Promise((res,rej)=>{const r=indexedDB.open('jee_files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const fop=async(mode,fn)=>{const db=await FDB;return new Promise((res,rej)=>{const t=db.transaction('f',mode);const rq=fn(t.objectStore('f'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error)})};
+const fput=(k,b)=>fop('readwrite',o=>o.put(b,k)),fget=k=>fop('readonly',o=>o.get(k)),fdel=k=>fop('readwrite',o=>o.delete(k));
+const FK={report:'Class report',paper:'Question paper',key:'Answer key'};
+async function openFile(id,kind){const b=await fget(id+':'+kind);if(!b)return alert('File not found in this browser.');window.open(URL.createObjectURL(b),'_blank')}
+async function rmFile(id,kind){if(!confirm('Remove this file?'))return;await fdel(id+':'+kind);const m=S.mocks.find(x=>x.id===id);delete m.files[kind];save();vMocks()}
+const fileLinks=m=>Object.keys(FK).filter(k=>m.files&&m.files[k]).map(k=>`<button class="btn s alt" title="${esc(m.files[k].name)}" onclick="openFile('${m.id}','${k}')">${FK[k].split(' ').map(w=>w[0]).join('')}</button>`).join(' ')||'—';
+
+/* ---------- derived data ---------- */
+const SRC_LABEL={pager:'Claude',pyq:'PYQ book',textbook:'Core books',coaching:'Class questions'};
+const resCat=b=>b.cat||(/PYQ/i.test(b.name)?'pyq':b.name==='Claude pager'?'claude':'core');
+const bookList=cat=>['\u2014',...new Set(Object.values(S.settings.resources).flat().filter(b=>b.name&&resCat(b)===cat).map(b=>b.name)),'Other'];
+const qTot=l=>(l.coaching||0)+(l.pager||0)+(l.textbook||0)+(l.pyq||0);
+const logs=()=>Object.values(S.logs).sort((a,b)=>a.date<b.date?-1:1);
+function phaseFor(d){const P=S.settings.phases;let i=P.findIndex(p=>d>=p.start&&d<=p.end);if(i<0)i=d<P[0].start?0:P.length-1;return {...P[i],i}}
+function weekStats(key){
+  const ls=Object.values(S.logs).filter(l=>l.date>=key&&l.date<=addD(key,6));
+  const lq=sum(ls.map(qTot)),q=Math.max(lq,(S.weekQ||{})[key]||0);
+  const acc=lq?sum(ls.map(l=>l.accuracy*qTot(l)))/lq:null;
+  return {key,ls,q,acc,days:ls.length,
+    src:{coaching:sum(ls.map(l=>l.coaching||0)),pager:sum(ls.map(l=>l.pager||0)),textbook:sum(ls.map(l=>l.textbook||0)),pyq:sum(ls.map(l=>l.pyq||0))},
+    sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy)),focus:avg(ls.map(l=>l.focus))};
+}
+function allWeeks(){
+  const ls=logs(),wq=Object.keys(S.weekQ||{}).sort();if(!ls.length&&!wq.length)return [];
+  const first=[ls.length?mon(ls[0].date):null,wq[0]].filter(Boolean).sort()[0];
+  const out=[];for(let k=first;k<=mon(today());k=addD(k,7))out.push(weekStats(k));return out;
+}
+const totalQ=()=>sum(allWeeks().map(w=>w.q));
+const overallAcc=()=>{const t=totalQ();return t?sum(logs().map(l=>l.accuracy*qTot(l)))/t:null};
+const mocks=()=>[...S.mocks].sort((a,b)=>a.date<b.date?-1:1);
+function expectedMarks(d){
+  const pts=[{date:S.settings.start,marks:S.settings.baseline},...S.settings.milestones].sort((a,b)=>a.date<b.date?-1:1);
+  if(d<=pts[0].date)return pts[0].marks;
+  for(let i=1;i<pts.length;i++)if(d<=pts[i].date){const a=pts[i-1],b=pts[i];return a.marks+(b.marks-a.marks)*diff(a.date,d)/Math.max(1,diff(a.date,b.date))}
+  return pts[pts.length-1].marks;
+}
+function streak(){let c=0,d=today();if(!S.logs[d]||qTot(S.logs[d])===0)d=addD(d,-1);while(S.logs[d]&&qTot(S.logs[d])>0){c++;d=addD(d,-1)}return c}
+function isLocked(date){if(S.settings.unlockPast)return false;const sunEnd=pd(addD(mon(date),6));sunEnd.setHours(23,30,0,0);return new Date()>sunEnd}
+
+function alerts(){
+  const red=[],good=[],t=today(),st=S.settings;
+  // missed log
+  if(t>st.start){const y=addD(t,-1);if(y>=st.start&&!S.logs[y])red.push(`Missed study log for ${fmtS(y)} (${dow(y)}). Log it now if you studied.`)}
+  const cur=mon(t),last=addD(cur,-7),prev=addD(cur,-14);
+  const wl=weekStats(last),wp=weekStats(prev),wc=weekStats(cur);
+  if(wl.days){
+    if(wl.q<900)red.push(`Last week's Q count was ${wl.q}, below 900 (target ${st.weeklyMin}–${st.weeklyMax}).`);
+    else if(wl.q>=st.weeklyMin)good.push(`Last week's target hit: ${wl.q} Q.`);
+    if(wp.acc!=null&&wl.acc!=null&&wp.acc-wl.acc>5)red.push(`Accuracy dropped ${r1(wp.acc-wl.acc)} pts week-on-week (${r1(wp.acc)}% → ${r1(wl.acc)}%).`);
+  }
+  if(wc.days&&wc.q>=st.weeklyMin)good.push(`This week's Q target already hit (${wc.q} Q).`);
+  const recent=logs().slice(-7);
+  const sl=avg(recent.filter(l=>l.sleep!=null).map(l=>l.sleep));if(sl!=null&&sl<6.5)red.push(`Average sleep ${r1(sl)} h over last ${recent.length} logs (<6.5 h). Sleep is locked at 11:30 PM–6:30 AM.`);
+  const en=avg(recent.map(l=>l.energy));if(en!=null&&en<5)red.push(`Average energy ${r1(en)}/10 — burnout risk.`);
+  const ms=mocks();
+  const passed=st.milestones.filter(m=>m.date<=t).sort((a,b)=>a.date<b.date?-1:1).pop();
+  if(passed&&ms.length){const lm=ms[ms.length-1];if(lm.marks<passed.marks)red.push(`Behind milestone: ${passed.marks}+ was due by ${fmtS(passed.date)}; latest mock is ${lm.marks}.`)}
+  else if(passed&&!ms.length)red.push(`Milestone ${passed.marks}+ (${fmtS(passed.date)}) passed and no mock logged yet.`);
+  const best=ms.length?Math.max(...ms.map(m=>m.marks)):0;
+  const reached=st.milestones.filter(m=>m.date<=t&&best>=m.marks).pop();
+  if(reached)good.push(`Marks milestone reached: ${reached.marks}+ (best mock ${best}).`);
+  const s=streak();if(s>=7)good.push(`${s}-day logging streak!`);
+  if(wl.acc>90||wc.acc>90)good.push(`Accuracy above 90% this/last week.`);
+  // backlog overdue
+  const od=S.backlog.filter(b=>b.status!=='Resolved'&&diff(b.date,t)>21).length;
+  if(od)red.push(`${od} backlog item(s) older than 21 days.`);
+  return {red,good};
+}
+
+/* ---------- charts ---------- */
+Chart.register({id:'bg',beforeDraw(c){const x=c.ctx;x.save();x.globalCompositeOperation='destination-over';x.fillStyle=document.documentElement.dataset.night==='1'?'#1c0505':theme==='light'?'#ffffff':'#0b0b0c';x.fillRect(0,0,c.width,c.height);x.restore()}});
+Chart.defaults.font.family="'Barlow',system-ui,sans-serif";function chartTheme(){const n=document.documentElement.dataset.night==='1';Chart.defaults.color=n?'#d9786c':theme==='light'?'#5d636c':'#8a8f98';Chart.defaults.borderColor=n?'rgba(255,60,40,.18)':theme==='light'?'rgba(0,0,0,.08)':'rgba(255,255,255,.08)';Chart.defaults.elements.arc.borderColor=n?'#1c0505':theme==='light'?'#ffffff':'#0b0b0c'}chartTheme();Chart.defaults.elements.arc.borderWidth=2;Chart.defaults.plugins.legend.labels.boxWidth=12;Chart.defaults.maintainAspectRatio=false;
+let CH={};
+function mk(id,cfg){const el=document.getElementById(id);if(!el)return;if(CH[id])CH[id].destroy();CH[id]=new Chart(el,cfg)}
+const cv=(id,h)=>`<div class="cvh"><button class="png noprint" onclick="png('${id}')">PNG</button><div class="cv" ${h?`style="height:${h}px"`:''}><canvas id="${id}"></canvas></div></div>`;
+function png(id){const a=document.createElement('a');a.download=id+'.png';a.href=CH[id].toBase64Image();a.click()}
+const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
+
+/* ---------- shell ---------- */
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],reports:['Reports',vReports],settings:['Settings',vSettings]};
+let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
+function go(x){mockView=null;view=x;location.hash=x;render()}
+function render(){
+  $('#nav').innerHTML=Object.entries(VIEWS).map(([k,[l]])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+  Object.values(CH).forEach(c=>c.destroy());CH={};
+  $('#app').innerHTML='';VIEWS[view][1]();window.scrollTo(0,0);
+}
+function toggleTheme(){
+  theme=theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;
+  try{localStorage.setItem(THEME_KEY,theme)}catch(e){}
+  chartTheme();const y=window.scrollY;render();window.scrollTo(0,y);
+}
+const IST=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+const ISTD=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'});
+const ISTH=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',hourCycle:'h23'});
+let nightOn=false;
+function applyNight(on){
+  if(on===nightOn)return;
+  nightOn=on;if(on)document.documentElement.dataset.night='1';else delete document.documentElement.dataset.night;
+  document.title=on?'SLEEP - Abundx Apex':'Abundx Apex';
+  chartTheme();
+}
+function tick(){const el=document.getElementById('hClock');if(!el)return;const now=new Date();
+  const hr=parseInt(ISTH.format(now),10)%24,night=window.__forceNight!==undefined?window.__forceNight:hr<6;
+  applyNight(night);
+  const nb=document.getElementById('nightBar');if(nb)nb.textContent=night?`It is ${IST.format(now).toUpperCase()} - go to sleep. Tomorrow's marks are built tonight.`:'';
+  el.innerHTML=IST.format(now).toUpperCase()+' <small>IST</small>';
+  const d=ISTD.format(now);
+  document.getElementById('hDateL').textContent=pd(d).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const left=diff(d,S.settings.exam);
+  document.getElementById('hLeft').innerHTML=left>=0?`<b>${left}</b> days left`:`Exam was ${-left} days ago`}
+tick();setInterval(tick,1000);
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(VIEWS[h]&&h!==view){view=h;render()}});
+
+/* ---------- DASHBOARD ---------- */
+function vDash(){
+  const t=today(),st=S.settings,ph=phaseFor(t),ms=mocks(),dl=diff(t,st.exam);
+  const total=diff(st.start,st.exam),el=Math.min(total,Math.max(0,diff(st.start,t)));
+  const tq=totalQ(),acc=overallAcc(),A=alerts();
+  const mk_=ms.map(m=>m.marks),pct=ms.length?ms[ms.length-1].percentile:null;
+  const rk=avg(ms.filter(m=>m.rank).map(m=>m.rank));
+  const exp=expectedMarks(t);
+  const light=(c,l,d)=>`<div class="light"><span class="dot bg-${c}"></span><div><b>${l}</b><div class="sub">${d}</div></div></div>`;
+  const l3=ms.slice(-3),m3=avg(l3.map(m=>m.marks));
+  const lw=weekStats(addD(mon(t),-7)),rec=logs().slice(-7);
+  const sl=avg(rec.filter(l=>l.sleep!=null).map(l=>l.sleep));
+  const L=[
+    m3==null?light('mut','Marks','No mocks yet'):light(m3>=exp?'ok':m3>=exp-10?'warn':'bad','Marks',`Last ${l3.length} mock avg ${r0(m3)} vs expected ${r0(exp)}`),
+    !lw.days?light('mut','Volume','No full week yet'):light(lw.q>=st.weeklyMin?'ok':lw.q>=900?'warn':'bad','Volume',`Last week ${lw.q} Q`),
+    acc==null?light('mut','Accuracy','No data'):light(acc>=85?'ok':acc>=75?'warn':'bad','Accuracy',r1(acc)+'% overall'),
+    sl==null?light('mut','Sleep','No data'):light(sl>=6.8?'ok':sl>=6.5?'warn':'bad','Sleep',r1(sl)+' h avg')
+  ].join('');
+  const wc=weekStats(mon(t));
+  const todayLog=S.logs[t];
+  const mix=(()=>{const q=sum(Object.values(wc.src));if(!q)return'—';return ['pager','pyq','textbook','coaching'].map(k=>`${SRC_LABEL[k]} ${r0(wc.src[k]/q*100)}%`).join(' · ')})();
+  $('#app').innerHTML=`
+  <div class="card hero"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div class="big">${dl>=0?dl:0} <span style="font-size:16px;font-weight:400">days to JEE Mains · ${fmt(st.exam)}</span></div>
+    <div class="sub">Day ${Math.max(0,el)+1} of the plan · ${esc(ph.name)}: ${esc(ph.focus)}</div></div>
+    <div><button class="btn" onclick="go('log')">${todayLog?'Edit':'Log'} today ›</button><div class="sub" style="text-align:right;margin-top:4px">${todayLog?`Logged: ${qTot(todayLog)} Q`:'Not logged yet'}</div><div class="sub" style="text-align:right"><a href="#today" onclick="go('today');return false">Goals: ${(()=>{const g=dayRec(t).goals;return g.length?g.filter(x=>x.done).length+'/'+g.length+' done':'none set'})()}</a></div></div></div>
+    <div class="bar"><i style="width:${el/total*100}%;background:var(--pri)"></i></div></div>
+  ${A.red.map(a=>`<div class="alert r">⚠ ${esc(a)}</div>`).join('')}${A.good.map(a=>`<div class="alert g">★ ${esc(a)}</div>`).join('')}
+  <div class="grid">
+    <div class="card"><div class="sub">Total questions</div><div class="big">${tq.toLocaleString('en-IN')}</div><div class="bar"><i style="width:${Math.min(100,tq/500)}%"></i></div><div class="sub">of 50,000–55,000 target (${r1(tq/500)}%)</div></div>
+    <div class="card"><div class="sub">Overall accuracy</div><div class="big">${acc==null?'—':r1(acc)+'%'}</div><div class="sub">Last week: ${lw.acc==null?'—':r1(lw.acc)+'%'} · weighted by Q</div></div>
+    <div class="card"><div class="sub">Marks (mocks, /300)</div><div class="big">${ms.length?r0(avg(mk_)):'—'}</div><div class="sub">High ${ms.length?Math.max(...mk_):'—'} · Low ${ms.length?Math.min(...mk_):'—'} · ${ms.length} mock(s)</div></div>
+    <div class="card"><div class="sub">Class standing</div><div class="big">${pct==null?'—':r1(pct)+'%ile'}</div><div class="sub">Mean rank ${r1(rk)} · ${ms.length>1?'trend: '+trend(ms.map(m=>m.percentile)):''}</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Readiness</h3><div class="lights">${L}</div><div class="sub" style="margin-top:8px">Streak: ${streak()} day(s) · This week so far: ${wc.q} Q (${st.weeklyMin}–${st.weeklyMax}) · Mix: ${mix}</div></div>
+    <div class="card"><h3>Phases</h3>${st.phases.map((p,i)=>{const f=Math.min(1,Math.max(0,(diff(p.start,t)+1)/(diff(p.start,p.end)+1)));const cur=i===ph.i;
+      return `<div class="tl"><b style="width:64px">${esc(p.name)}</b><div style="flex:1"><div class="bar" style="margin:0"><i style="width:${f*100}%;background:${cur?'var(--blue)':'var(--ok)'}"></i></div></div><span class="sub" style="width:70px;text-align:right">${p.target}+ ${cur?'◀':''}</span></div>`}).join('')}
+      <div class="sub">Target mix now: ${ph.mix[0]}% Claude · ${ph.mix[1]}% Core books · ${ph.mix[2]}% PYQ book</div></div>
+  </div>
+  <div class="grid2"><div class="card"><h3>Marks progression vs targets</h3>${sc('cMarks')}</div><div class="card"><h3>Weekly questions</h3>${sc('cWeekQ')}</div></div>
+  <div class="card"><h3>Milestones</h3><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(190px,1fr))">${st.milestones.map(m=>{
+    const best=ms.length?Math.max(...ms.map(x=>x.marks)):0;const ok=best>=m.marks&&m.date<=t,miss=!ok&&m.date<t;
+    return `<div class="tl"><span class="dot bg-${ok?'ok':miss?'bad':'mut'}"></span>${fmtS(m.date)} → <b>${m.marks}+</b></div>`}).join('')}</div></div>`;
+  marksChart('cMarks');weekQChart('cWeekQ');
+}
+function trend(a){if(a.length<2)return'—';const d=a[a.length-1]-avg(a.slice(0,-1));return d>1?'improving ↑':d<-1?'declining ↓':'stable →'}
+/* ---------- STOCK-STYLE CHARTS (area chart, range tabs, crosshair, drag-to-measure) ---------- */
+const SC_RANGES=[['1M',30,'past month'],['3M',91,'past 3 months'],['6M',182,'past 6 months'],['1Y',365,'past year'],['ALL',Infinity,'overall']];
+const SC_DAY=864e5,SC_PAL=['var(--blue)','var(--warn)','var(--ok)','var(--purple)'];
+const tms=d=>pd(d).getTime();
+const SCI={};
+function scNice(lo,hi,n){
+  if(hi===lo){hi=lo+1;lo=lo-1}
+  const raw=(hi-lo)/n,mag=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/mag,step=(f<1.5?1:f<3?2:f<7?5:10)*mag;
+  const a=Math.floor(lo/step+1e-9)*step,b=Math.ceil(hi/step-1e-9)*step,t=[];for(let v=a;v<=b+step/2;v+=step)t.push(+v.toFixed(10));return t;
+}
+function scAlpha(c,a){let r,g,b;if(c[0]==='#'){let h=c.slice(1);if(h.length===3)h=h.split('').map(x=>x+x).join('');r=parseInt(h.slice(0,2),16);g=parseInt(h.slice(2,4),16);b=parseInt(h.slice(4,6),16)}else{[r,g,b]=(c.match(/[\d.]+/g)||[128,128,128]).map(Number)}return `rgba(${r},${g},${b},${a})`}
+const sc=(id,h)=>`<div class="cvh"><button class="png noprint" onclick="scPng('${id}')">PNG</button><div id="${id}" class="sc" style="--sch:${h||250}px"></div></div>`;
+function scPng(id){const i=SCI[id];if(!i)return;const c=i.cv,t=document.createElement('canvas');t.width=c.width;t.height=c.height;const x=t.getContext('2d');
+  x.fillStyle=getComputedStyle(i.root).getPropertyValue('--chartbg').trim()||'#000';x.fillRect(0,0,t.width,t.height);x.drawImage(c,0,0);
+  const a=document.createElement('a');a.download=id+'.png';a.href=t.toDataURL('image/png');a.click()}
+function stock(id,cfg){
+  const root=document.getElementById(id);if(!root)return;
+  const series=cfg.series.map(s=>({...s,pts:s.pts.filter(p=>p.y!=null&&!isNaN(p.y)).sort((a,b)=>a.t-b.t)}));
+  if(!series[0]||!series[0].pts.length){root.innerHTML='<div class="sub" style="padding:46px 0;text-align:center">No data yet.</div>';return}
+  const multi=!!cfg.multi,dec=cfg.dec??1,unit=cfg.unit||'',st={range:cfg.range||'ALL',hover:null,sel:null,drag:null,rev:(()=>{try{return localStorage.getItem('abundx_rev')==='1'}catch(e){return false}})()};
+  root.innerHTML='<div class="sc-head"></div><div class="sc-tabs"></div><div class="sc-cv"><canvas class="sc-c"></canvas><div class="sc-tip"></div></div><div class="sc-leg"></div>';
+  const $h=root.querySelector('.sc-head'),$t=root.querySelector('.sc-tabs'),cv=root.querySelector('canvas'),tip=root.querySelector('.sc-tip'),leg=root.querySelector('.sc-leg'),ctx=cv.getContext('2d');
+  $t.innerHTML=SC_RANGES.map(r=>`<button data-r="${r[0]}">${r[0]}</button>`).join('')+(multi?'':'<button class="sc-revbtn" data-rev="1" title="Reverse comparison: show how much lower or higher the earlier value was compared with the later one">&#8644; Reverse</button>');
+  SCI[id]={cv,root};
+  const nf=(v,s)=>(s&&+Math.abs(v).toFixed(dec)>0?(v>0?'+':'−'):'')+Math.abs(v).toLocaleString('en-IN',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  const fv=v=>nf(+v,false).replace(/^/,v<0?'−':'')+unit;
+  const dlong=t=>new Date(t).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const rcol=c=>c&&c.startsWith('var(')?getComputedStyle(root).getPropertyValue(c.slice(4,-1)).trim():c;
+  const css=n=>getComputedStyle(root).getPropertyValue(n).trim();
+  const scol=(s,i)=>rcol(s.color||(multi?SC_PAL[i%SC_PAL.length]:i===0?'var(--blue)':'var(--mut)'));
+  let G=null;
+  function valAt(s,t){const p=s.pts;let lo=0,hi=p.length-1;if(!p.length)return null;
+    for(const q of p)if(q.t===t)return q.y;
+    if(s.hold){let last=null;for(const q of p){if(q.t<=t)last=q;else break}return last?last.y:null}
+    if(!s.interp||t<p[0].t||t>p[hi].t)return null;
+    for(let i=1;i<p.length;i++)if(p[i].t>=t){const a=p[i-1],b=p[i];return a.y+(b.y-a.y)*(t-a.t)/(b.t-a.t||1)}return null}
+  function calc(){
+    const r=SC_RANGES.find(x=>x[0]===st.range),days=r[1];
+    const allT=series.flatMap(s=>s.pts.map(p=>p.t));
+    const pmax=multi?Math.max(...allT):series[0].pts[series[0].pts.length-1].t;
+    let t0,t1;
+    if(days===Infinity){t0=Math.min(...allT);t1=cfg.ahead?pmax+cfg.ahead*SC_DAY:Math.max(...allT)}else{t1=pmax+Math.min(cfg.ahead||0,days*.25)*SC_DAY;t0=t1-days*SC_DAY}
+    if(t1<=t0){t0-=3*SC_DAY;t1+=3*SC_DAY}
+    const vis=series.map(s=>s.pts.filter(p=>p.t>=t0&&p.t<=t1));
+    let ys=vis.filter((_,i)=>series[i].axis!==1).flat().map(p=>p.y);if(!ys.length)ys=series[0].pts.map(p=>p.y);
+    let lo=Math.min(...ys),hi=Math.max(...ys),ticks;
+    if(cfg.fixY){lo=cfg.fixY[0];hi=cfg.fixY[1];ticks=scNice(lo,hi,4).filter(v=>v>=lo-1e-9&&v<=hi+1e-9)}
+    else{if(cfg.zero)lo=Math.min(0,lo);const pad=((hi-lo)||Math.abs(hi)||1)*.12;hi+=pad;if(!(cfg.zero&&lo===0))lo-=pad;ticks=scNice(lo,hi,4);lo=ticks[0];hi=ticks[ticks.length-1]}
+    const tsSrc=multi?vis.flat():vis[0];const ts=[...new Set(tsSrc.map(p=>p.t))].sort((a,b)=>a-b);
+    let ax1=null;const i1=series.map((s,i)=>s.axis===1?i:-1).filter(i=>i>=0);
+    if(i1.length){let y1=i1.flatMap(i=>vis[i].map(p=>p.y));if(!y1.length)y1=i1.flatMap(i=>series[i].pts.map(p=>p.y));let l1=Math.min(...y1),h1=Math.max(...y1);const p1=((h1-l1)||Math.abs(h1)||1)*.12;l1-=p1;h1+=p1;const tk=scNice(l1,h1,4);ax1={lo:tk[0],hi:tk[tk.length-1],ticks:tk,i:i1[0]}}
+    return {t0,t1,vis,lo,hi,ticks,ts,ax1,label:r[2]};
+  }
+  function near(x){if(!G||!G.ts.length)return null;const t=G.t0+(x-G.padL)/G.pw*(G.t1-G.t0);let best=G.ts[0],bd=Infinity;for(const q of G.ts){const d=Math.abs(q-t);if(d<bd){bd=d;best=q}}return best}
+  function draw(){
+    const w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
+    const dpr=window.devicePixelRatio||1;if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+    G=calc();const {t0,t1,vis,lo,hi,ticks,ax1}=G;
+    const padL=46,padR=ax1?54:8,padT=14,padB=26,pw=w-padL-padR,ph=h-padT-padB;Object.assign(G,{padL,pw,w,h,padT,ph});
+    const X=t=>padL+(t-t0)/(t1-t0)*pw,Y=v=>padT+(1-(v-lo)/(hi-lo))*ph;G.X=X;G.Y=Y;
+    const Y1=ax1?(v=>padT+(1-(v-ax1.lo)/(ax1.hi-ax1.lo))*ph):Y,YS=s=>s.axis===1?Y1:Y;
+    const mut=css('--mut'),gridc=css('--line'),bg=css('--chartbg')||'#000',tx=css('--tx');
+    ctx.font="11px Barlow,system-ui,sans-serif";
+    // grid + y labels
+    ctx.lineWidth=1;ctx.textBaseline='middle';
+    ticks.forEach(v=>{const y=Math.round(Y(v))+.5;ctx.strokeStyle=gridc;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();
+      ctx.fillStyle=ax1?scol(series[0],0):mut;ctx.textAlign='right';ctx.fillText(v.toLocaleString('en-IN',{maximumFractionDigits:dec>0&&Math.abs(hi-lo)<20?1:0}),padL-8,y)});
+    if(ax1){ctx.fillStyle=scol(series[ax1.i],ax1.i);ctx.textAlign='left';ctx.textBaseline='middle';ax1.ticks.forEach(v=>ctx.fillText(v.toLocaleString('en-IN',{maximumFractionDigits:0}),w-padR+8,Math.round(Y1(v))+.5))}
+    // x labels
+    const span=(t1-t0)/SC_DAY,n=Math.max(2,Math.min(6,Math.floor(pw/95)));ctx.textBaseline='alphabetic';ctx.fillStyle=mut;
+    for(let i=0;i<=n;i++){const t=t0+(t1-t0)*i/n,x=X(t),d=new Date(t);
+      const lab=span>400?d.toLocaleDateString('en-IN',{month:'short',year:'2-digit'}):d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+      ctx.textAlign=i===0?'left':i===n?'right':'center';ctx.fillText(lab,x,h-8);
+      ctx.strokeStyle=gridc;ctx.beginPath();ctx.moveTo(Math.round(x)+.5,padT+ph);ctx.lineTo(Math.round(x)+.5,padT+ph+4);ctx.stroke()}
+    // primary colour (green/red by change)
+    const P=vis[0];let pcol=scol(series[0],0);
+    if(!multi&&P.length>=2){const d=P[P.length-1].y-P[0].y,good=cfg.good==='down'?d<=0:d>=0;pcol=css(good?'--ok':'--bad')}
+    G.pcol=pcol;
+    // reference line (value at start of range)
+    if(!multi&&P.length>=2&&cfg.ref!==false){const y=Math.round(Y(P[0].y))+.5;ctx.strokeStyle=mut;ctx.lineWidth=1;ctx.setLineDash([1.5,4]);ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(w-padR,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle=mut;ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillText((cfg.refLabel||'Range start')+' '+fv(P[0].y),w-padR-2,y-3)}
+    // clip to plot
+    ctx.save();ctx.beginPath();ctx.rect(padL,padT-3,pw,ph+6);ctx.clip();
+    const sel=st.sel&&st.sel[0]!==st.sel[1]?[Math.min(...st.sel),Math.max(...st.sel)]:null;
+    const lineOf=(s,i)=>{let pts=vis[i].slice();if(s.interp&&s.pts.length>1){const f=s.pts[0].t,l=s.pts[s.pts.length-1].t;
+        if(f<t0&&l>t0)pts.unshift({t:t0,y:valAt(s,t0)});if(l>t1&&f<t1)pts.push({t:t1,y:valAt(s,t1)})}return pts};
+    // area for primary
+    if(!multi&&P.length>=2){
+      const base=Y(lo),path=()=>{ctx.beginPath();ctx.moveTo(X(P[0].t),base);P.forEach(p=>ctx.lineTo(X(p.t),Y(p.y)));ctx.lineTo(X(P[P.length-1].t),base);ctx.closePath()};
+      const gr=ctx.createLinearGradient(0,padT,0,padT+ph);gr.addColorStop(0,scAlpha(pcol,sel?.5:.36));gr.addColorStop(1,scAlpha(pcol,0));
+      ctx.save();if(sel){ctx.beginPath();ctx.rect(X(sel[0]),padT-3,X(sel[1])-X(sel[0]),ph+6);ctx.clip()}path();ctx.fillStyle=gr;ctx.fill();ctx.restore()}
+    // lines
+    series.forEach((s,i)=>{if(!multi&&i===0)return;const pts=lineOf(s,i);if(!pts.length)return;const c=scol(s,i);
+      ctx.strokeStyle=c;ctx.lineWidth=s.dash?1.4:2;ctx.setLineDash(s.dash?(s.dash2?[2,3]:[6,4]):[]);ctx.lineJoin='round';const yy=YS(s);ctx.beginPath();pts.forEach((p,k)=>{if(!k)ctx.moveTo(X(p.t),yy(p.y));else{if(s.hold)ctx.lineTo(X(p.t),yy(pts[k-1].y));ctx.lineTo(X(p.t),yy(p.y))}});
+      if(s.hold){const tEnd=Math.max(...vis.flat().map(p=>p.t)),l=pts[pts.length-1];if(tEnd>l.t)ctx.lineTo(X(tEnd),yy(l.y))}ctx.stroke();ctx.setLineDash([]);
+      if(!s.dash&&pts.length<=40)pts.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),yy(p.y),2.6,0,7);ctx.fillStyle=c;ctx.fill();ctx.strokeStyle=bg;ctx.lineWidth=1.5;ctx.stroke()})});
+    if(!multi){ctx.strokeStyle=pcol;ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();P.forEach((p,k)=>k?ctx.lineTo(X(p.t),Y(p.y)):ctx.moveTo(X(p.t),Y(p.y)));ctx.stroke();
+      if(P.length<=40)P.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.y),P.length===1?4:2.6,0,7);ctx.fillStyle=pcol;ctx.fill();ctx.strokeStyle=bg;ctx.lineWidth=1.5;ctx.stroke()})}
+    ctx.restore();
+    // crosshair / selection
+    const vline=t=>{const x=Math.round(X(t))+.5;ctx.strokeStyle=mut;ctx.lineWidth=1;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,padT+ph);ctx.stroke();ctx.setLineDash([])};
+    const dot=(t,v,c,s)=>{ctx.beginPath();ctx.arc(X(t),(s&&s.axis===1?Y1:Y)(v),5,0,7);ctx.fillStyle=c;ctx.fill();ctx.strokeStyle=bg;ctx.lineWidth=2;ctx.stroke()};
+    const marks=sel?sel:(st.hover!=null?[st.hover]:[]);
+    marks.forEach(t=>{vline(t);series.forEach((s,i)=>{const v=valAt(s,t);if(v!=null&&(multi||i===0||sel===null&&false))dot(t,v,i===0&&!multi?pcol:scol(s,i),s)})});
+    refresh();
+  }
+  // a = earlier value, b = later value. Forward: change from a to b, as % of a. Reverse: how much lower/higher a was than b, as % of b.
+  const cmp=(a,b)=>{if(!st.rev){const d=b-a;return {d,pct:a?d/Math.abs(a)*100:null,ok:cfg.good==='down'?d<=0:d>=0,up:d>=0}}
+    const d=a-b,g=b-a;return {d,pct:b?d/Math.abs(b)*100:null,ok:cfg.good==='down'?g<=0:g>=0,up:d>=0}};
+  const lh=d=>d<0?'lower':d>0?'higher':'equal to';
+  function refresh(){
+    if(!G)return;const P=G.vis[0],sel=st.sel&&st.sel[0]!==st.sel[1]?[Math.min(...st.sel),Math.max(...st.sel)]:null,hov=st.hover;
+    const sp=(v)=>`<span class="${v}"></span>`;
+    // header
+    if(!multi){
+      if(P.length){let a=P[0],b=P[P.length-1],lab=G.label,dline='Latest '+dlong(b.t);
+        if(sel){a={t:sel[0],y:valAt(series[0],sel[0])};b={t:sel[1],y:valAt(series[0],sel[1])};lab=dlong(a.t)+' - '+dlong(b.t);dline='Selected range'}
+        else if(hov!=null){if(st.rev){a={t:hov,y:valAt(series[0],hov)};dline='Hovering '+dlong(hov)}else{b={t:hov,y:valAt(series[0],hov)};lab='since '+dlong(a.t);dline=dlong(hov)}}
+        const c=cmp(a.y,b.y),d=c.d,ok=c.ok,pct=c.pct==null?null:Math.abs(c.pct),two=P.length>=2||sel||hov!=null;
+        if(st.rev)lab=`${dlong(a.t)} was ${pct==null?'--':pct.toFixed(2)+'%'} ${lh(d)} than ${sel?dlong(b.t):'latest'}`;
+        $h.innerHTML=`<div class="sc-val">${fv(b.y)}</div>${two?`<span class="sc-badge ${ok?'g':'b'}">${c.up?'↑':'↓'} ${pct==null?'--':pct.toFixed(2)+'%'}</span><span class="sc-sub"><b class="${ok?'ok':'bad'}">${nf(d,true)}${unit}</b> ${lab}</span>`:''}<div class="sc-date">${dline}${st.rev?' · reverse comparison':''}</div>`}
+      else $h.innerHTML='<div class="sc-sub">No data in this range</div>';
+    }else{
+      const t=sel?sel[1]:hov!=null?hov:Math.max(...G.vis.flat().map(p=>p.t));$h.innerHTML=`<div class="sc-date" style="margin:0">${sel?dlong(sel[0])+' - '+dlong(sel[1]):hov!=null?dlong(hov):'Latest '+dlong(t)}</div>`}
+    // legend
+    leg.innerHTML=series.map((s,i)=>{if(!multi&&i===0)return'';const c=scol(s,i);let v='';
+      if(multi||s.showVal){const t=sel?sel[1]:hov!=null?hov:Math.max(...G.vis[i].map(p=>p.t),-Infinity);const y=valAt(s,t);
+        if(sel&&y!=null){const y0=valAt(s,sel[0]);v=y0!=null?` <b class="${y-y0>=0?'ok':'bad'}">${nf(y-y0,true)}${unit}</b>`:''}else if(y!=null)v=` <b>${s.fmt?s.fmt(y):fv(y)}</b>`}
+      return `<span class="sc-chip"><i style="background:${c};${s.dash?'opacity:.75':''}"></i>${esc(s.name)}${v}</span>`}).join('');
+    // tooltip
+    if(sel){const xa=G.X(sel[0]),xb=G.X(sel[1]),a0=valAt(series[0],sel[0]),b0=valAt(series[0],sel[1]),c=cmp(a0,b0),d=c.d,ok=c.ok;
+      if(multi){tip.style.display='none'}else{tip.innerHTML=`<b class="${ok?'ok':'bad'}">${nf(d,true)}${unit} (${c.pct==null?'--':(c.pct>=0?'+':'−')+Math.abs(c.pct).toFixed(2)}%)</b> <span class="sc-td">${st.rev?dlong(sel[0])+' was '+lh(d)+' than '+dlong(sel[1]):dlong(sel[0])+' - '+dlong(sel[1])}</span>`;tip.style.display='block';
+        tip.style.left=Math.max(0,Math.min(G.w-tip.offsetWidth,(xa+xb)/2-tip.offsetWidth/2))+'px'}}
+    else if(hov!=null){const x=G.X(hov);let html=`<div class="sc-td">${dlong(hov)}</div>`;
+      series.forEach((s,i)=>{const v=valAt(s,hov);if(v==null)return;if(!multi&&i>0&&!s.dash&&false)return;const ex=s.pts.find(p=>p.t===hov),hp=s.hold&&!ex?s.pts.filter(p=>p.t<=hov).pop():null,meta=ex?ex.meta:hp?'last test '+dlong(hp.t):'';
+        html+=`<div class="sc-tr"><i style="background:${i===0&&!multi?G.pcol:scol(s,i)}"></i>${esc(s.name)} <b>${s.fmt?s.fmt(v):fv(v)}</b>${meta?` <span class="sc-td">${esc(meta)}</span>`:''}</div>`});
+      if(!multi&&st.rev&&P.length){const lt=P[P.length-1];if(hov!==lt.t){const c=cmp(valAt(series[0],hov),lt.y);html+=`<div class="sc-tr"><span class="${c.ok?'ok':'bad'}">${c.pct==null?'--':Math.abs(c.pct).toFixed(2)+'%'} ${lh(c.d)} than latest (${fv(lt.y)})</span></div>`}}
+      tip.innerHTML=html;tip.style.display='block';const tw=tip.offsetWidth;tip.style.left=Math.max(0,x+14+tw>G.w?x-14-tw:x+14)+'px'}
+    else tip.style.display='none';
+    $t.querySelectorAll('button[data-r]').forEach(b=>b.classList.toggle('on',b.dataset.r===st.range));
+    const rb=$t.querySelector('.sc-revbtn');if(rb)rb.classList.toggle('rev-on',st.rev);
+  }
+  // events
+  const xOf=e=>e.clientX-cv.getBoundingClientRect().left;
+  cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(_){}st.drag=near(xOf(e));st.sel=null;st.hover=st.drag;draw()});
+  cv.addEventListener('pointermove',e=>{const t=near(xOf(e));if(st.drag!=null){st.sel=t!==st.drag?[st.drag,t]:null;st.hover=t}else st.hover=t;draw()});
+  const end=()=>{st.drag=null;st.sel=null;draw()};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  cv.addEventListener('pointerleave',()=>{if(st.drag==null){st.hover=null;draw()}});
+  $t.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.rev){st.rev=!st.rev;try{localStorage.setItem('abundx_rev',st.rev?'1':'0')}catch(_){}draw();return}
+    st.range=b.dataset.r;st.hover=null;st.sel=null;draw()});
+  if(window.ResizeObserver)new ResizeObserver(()=>draw()).observe(cv.parentElement);
+  requestAnimationFrame(draw);
+}
+/* chart builders */
+/* MSTR (Strategy Inc) comparison. Daily closes are a snapshot, not live. */
+const MSTR_ASOF='2026-11-04';
+const MSTR_DATA='2026-05-01:177.17,2026-05-04:183.8,2026-05-05:186.9,2026-05-06:186.82,2026-05-07:179.84,2026-05-08:187.59,2026-05-11:195.94,2026-05-12:184.42,2026-05-13:178.03,2026-05-14:186.97,2026-05-15:177.42,2026-05-18:166.63,2026-05-19:164.63,2026-05-20:165.81,2026-05-21:164.85,2026-05-22:159.89,2026-05-26:159.93,2026-05-27:154.2,2026-05-28:151.64,2026-05-29:159.09,2026-06-01:149.78,2026-06-02:136.08,2026-06-03:126.55,2026-06-04:129.37,2026-06-05:120.44,2026-06-08:127.2,2026-06-09:117.02,2026-06-10:115.35,2026-06-11:120.15,2026-06-12:123.97,2026-06-15:131.14,2026-06-16:122.81,2026-06-17:116.56,2026-06-18:112.53,2026-06-22:109.46,2026-06-23:103.84,2026-06-24:94.13,2026-06-25:85.33,2026-06-26:82.31,2026-06-29:92.68,2026-06-30:86.93,2026-07-01:93.39,2026-07-02:100.77,2026-07-06:100.77,2026-07-07:97.36,2026-07-08:93.87,2026-07-09:93.89,2026-07-10:94.64,2026-07-13:92.1,2026-07-14:97.58,2026-07-15:97.47,2026-07-16:94.03,2026-07-17:94.85,2026-07-20:97.82,2026-07-21:101.95,2026-07-22:100.01,2026-07-23:93.63,2026-07-24:91.67,2026-07-27:98.65,2026-07-28:96.16,2026-07-29:93.33,2026-07-30:97.74,2026-07-31:93.28,2026-08-03:94.86,2026-08-04:97.65,2026-08-05:98.37,2026-08-06:96.85,2026-08-07:100.01,2026-08-10:97.33,2026-08-11:96.09,2026-08-12:94.83,2026-08-13:97.1,2026-08-14:93.04,2026-08-17:97.68,2026-08-18:92.52,2026-08-19:104.25,2026-08-20:112.39,2026-08-21:119.25,2026-08-24:122.63,2026-08-25:126.83,2026-08-26:123.19,2026-08-27:137.4,2026-08-28:127.31,2026-08-31:132.94,2026-09-01:124.88,2026-09-02:123.19,2026-09-03:144.82,2026-09-04:142.8,2026-09-08:136.52,2026-09-09:132.7,2026-09-10:128.56,2026-09-11:130.97,2026-09-14:136.94,2026-09-15:129.6,2026-09-16:126.18,2026-09-17:132.25,2026-09-18:153.92,2026-09-21:168.5,2026-09-22:167.33,2026-09-23:162.2,2026-09-24:161.61,2026-09-25:158.61,2026-09-28:157.14,2026-09-29:154.67,2026-09-30:153.09,2026-10-01:160.5,2026-10-02:160.01,2026-10-05:164.43,2026-10-06:164.55,2026-10-07:153.37,2026-10-08:151.47,2026-10-09:154.34,2026-10-12:152.68,2026-10-13:152.18,2026-10-14:143.24,2026-10-15:151.29,2026-10-16:136.83,2026-10-19:136.02,2026-10-20:142.72,2026-10-21:153.48,2026-10-22:145.8,2026-10-23:146.01,2026-10-26:139.82,2026-10-27:141.4,2026-10-28:145.16,2026-10-29:141.62,2026-10-30:130.51,2026-11-02:130.76,2026-11-03:135.63,2026-11-04:142.54';
+const mstrPts=()=>MSTR_DATA.split(',').map(x=>{const q=x.split(':');return {t:tms(q[0]),y:+q[1]}});
+function mstrChart(id){
+  const ms=mocks();if(!ms.length)return stock(id,{series:[{name:'x',pts:[]}]});
+  const all=mstrPts(),px=all.filter(p=>p.t>=tms(ms[0].date)),on=d=>{const t=tms(d);let l=null;for(const p of all){if(p.t<=t)l=p;else break}return l};
+  stock(id,{multi:true,dec:0,series:[
+    {name:'My marks (/300)',color:'var(--blue)',hold:true,fmt:v=>v.toFixed(0),pts:ms.map(m=>({t:tms(m.date),y:m.marks,meta:'Mock #'+m.num}))},
+    {name:'MSTR close (USD)',color:'var(--warn)',axis:1,fmt:v=>'$'+v.toFixed(2),pts:px}]});
+  const pairs=ms.map(m=>({m:m.marks,p:(on(m.date)||{}).y})).filter(x=>x.p!=null),n=pairs.length,note=document.getElementById('mstrNote');if(!note)return;
+  const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;let r=null;
+  if(n>=3){const mx=mean(pairs.map(x=>x.m)),my=mean(pairs.map(x=>x.p));let sxy=0,sxx=0,syy=0;pairs.forEach(x=>{sxy+=(x.m-mx)*(x.p-my);sxx+=(x.m-mx)**2;syy+=(x.p-my)**2});r=sxx&&syy?sxy/Math.sqrt(sxx*syy):null}
+  const m0=ms[0],m1=ms[ms.length-1],p0=on(m0.date),p1=px[px.length-1],pc=(a,b)=>((b-a)/a*100),sgn=v=>(v>=0?'+':'\u2212')+Math.abs(v).toFixed(1)+'%';
+  const word=r==null?'':Math.abs(r)<.3?'no meaningful link':Math.abs(r)<.6?'a weak to moderate link':'a strong link';
+  note.innerHTML=`Since ${fmtS(m0.date)}: your marks ${m0.marks} &rarr; ${m1.marks} (<b>${sgn(pc(m0.marks,m1.marks))}</b>), MSTR $${p0.y.toFixed(2)} &rarr; $${p1.y.toFixed(2)} (<b>${sgn(pc(p0.y,p1.y))}</b>).`+
+    (r!=null?`<br>Correlation across your ${n} tests: <b>r = ${r.toFixed(2)}</b> (${word}). This is a coincidence check only; the share price has nothing to do with your preparation.`:'')+
+    `<br><span class="sc-td">MSTR = Strategy Inc Class A (NASDAQ). Daily closing prices, snapshot up to ${fmtS(MSTR_ASOF)} 2026; not live. For comparison only, not investment advice.</span>`;
+}
+
+function marksChart(id,noTarget){
+  const st=S.settings,ms=mocks();
+  const series=[{name:'Mock marks',pts:ms.map(m=>({t:tms(m.date),y:m.marks,meta:'Mock #'+m.num+(m.rank?' - rank '+m.rank+'/'+m.students:'')}))}];
+  if(!noTarget)series.push({name:'Target',color:'var(--mut)',dash:true,interp:true,showVal:false,pts:[{t:tms(st.start),y:st.baseline},...st.milestones.map(m=>({t:tms(m.date),y:m.marks}))]});
+  stock(id,{series,dec:0,range:'ALL',ahead:60,refLabel:'First mock'});
+}
+function weekQChart(id){
+  const W=allWeeks(),st=S.settings;
+  stock(id,{series:[{name:'Q solved',pts:W.map(w=>({t:tms(w.key),y:w.q,meta:w.days?w.days+' day(s) logged':'weekly total'}))},
+    {name:'Target min',color:'var(--mut)',dash:true,pts:W.map(w=>({t:tms(w.key),y:st.weeklyMin}))},
+    {name:'Target max',color:'var(--mut)',dash:true,dash2:true,pts:W.map(w=>({t:tms(w.key),y:st.weeklyMax}))}],dec:0,zero:true,refLabel:'Start'});
+}
+
+/* ---------- DAILY LOG ---------- */
+let logDate=today();
+function vLog(){
+  const l=S.logs[logDate]||{};const locked=S.logs[logDate]&&isLocked(logDate)||(!S.logs[logDate]&&isLocked(logDate));
+  const ph=phaseFor(logDate);
+  const f=(id,lab,val,extra='')=>`<div><label for="${id}">${lab}</label><input id="${id}" type="number" ${extra} value="${val??''}" oninput="calcLog()" ${locked?'disabled':''}></div>`;
+  $('#app').innerHTML=`<h2>Daily Log</h2><div class="card"><form onsubmit="saveLog(event)">
+  <div class="row"><div><label>Date</label><input id="ldate" type="date" max="${today()}" value="${logDate}" onchange="logDate=this.value;vLog()"></div>
+    <div><label>Phase (auto)</label><input value="${esc(ph.name)}" disabled></div></div>
+  ${locked?'<div class="alert r">This week is locked (auto-locks Sunday 11:30 PM). Enable “Allow editing locked weeks” in Settings to change it.</div>':''}
+  <div class="row">${f('lp','Claude Q (target 115–135/day)',l.pager,'min=0 max=200')}${f('ly','PYQ book Q',l.pyq,'min=0 max=200')}${f('lt','Core books Q',l.textbook,'min=0 max=200')}${f('lc','Class questions',l.coaching,'min=0 max=200')}</div>
+  <div class="row"><div><label>Core book used</label><select id="lbook" ${locked?'disabled':''}>${bookList('core').map(b=>`<option ${l.book===b?'selected':''}>${b}</option>`).join('')}</select></div>
+    <div><label>PYQ book used</label><select id="lpbook" ${locked?'disabled':''}>${bookList('pyq').map(b=>`<option ${l.pyqBook===b?'selected':''}>${b}</option>`).join('')}</select></div>
+    <div><label>PYQ years (e.g. 2019–2022)</label><input id="lyears" value="${esc(l.years||'')}" ${locked?'disabled':''}></div>
+    <div class="chk"><input type="checkbox" id="ltimed" ${l.timed?'checked':''} ${locked?'disabled':''}><label for="ltimed">PYQ book Qs were timed</label></div></div>
+  <div class="tot" id="ltot"></div>
+  <div class="row">${f('lacc','Accuracy %',l.accuracy,'min=0 max=100 step=0.1')}${f('len','Energy (1–10)',l.energy,'min=1 max=10')}${f('lfo','Focus (1–10)',l.focus,'min=1 max=10')}${f('lsl','Sleep last night (h)',l.sleep,'min=0 max=12 step=0.25')}
+    <div><label>Sleep quality</label><select id="lsq" ${locked?'disabled':''}>${['','Poor','OK','Good','Great'].map(x=>`<option ${l.sleepQ===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+  <div class="row"><div class="chk"><input type="checkbox" id="lon" ${l.onTime?'checked':''} ${locked?'disabled':''}><label for="lon">Slept by 11:30 PM</label></div>
+    <div class="chk"><input type="checkbox" id="lau" ${l.audio?'checked':''} ${locked?'disabled':''}><label for="lau">Audio learning done</label></div></div>
+  <div class="row"><div><label>Topics studied</label><input id="ltop" value="${esc(l.topics||'')}" ${locked?'disabled':''}></div><div><label>Weak topics (comma separated)</label><input id="lweak" value="${esc(l.weak||'')}" ${locked?'disabled':''}></div></div>
+  <div><label>Notes</label><textarea id="lnote" rows="2" ${locked?'disabled':''}>${esc(l.notes||'')}</textarea></div>
+  <p><button class="btn ok" ${locked?'disabled':''}>${S.logs[logDate]?'Update log':'Save log'}</button></p></form></div>
+  <div class="card noprint"><h3>Download daily log report (PDF)</h3><div class="tools" style="align-items:end">
+   <div><label>From</label><input id="pf" type="date" max="${today()}" value="${addD(today(),-6)}"></div><div><label>To</label><input id="pt" type="date" max="${today()}" value="${today()}"></div>
+   <button class="btn" onclick="logPdf(v('pf'),v('pt'))">Download PDF</button>
+   <button class="btn alt" onclick="logPdf(logDate,logDate)">Just ${fmtS(logDate)}</button>
+   <button class="btn alt" onclick="logPdf(mon(today()),today())">This week</button>
+   <button class="btn alt" onclick="logPdf((logs()[0]||{date:today()}).date,today())">All logs</button></div></div>
+  <div class="card"><h3>Recent logs</h3><div class="tw"><table><tr><th>Date</th><th>Phase</th><th>Class</th><th>Claude</th><th>Core</th><th>PYQ</th><th>Total</th><th>Acc</th><th>En</th><th>Sleep</th><th></th></tr>
+  ${logs().slice(-21).reverse().map(x=>`<tr><td>${fmtS(x.date)} ${dow(x.date)}</td><td>${esc(x.phase)}</td><td>${x.coaching||0}</td><td>${x.pager||0}</td><td>${x.textbook||0}</td><td>${x.pyq||0}</td><td><b>${qTot(x)}</b></td><td>${x.accuracy}%</td><td>${x.energy}</td><td>${x.sleep??'—'}</td><td><button class="btn s alt" onclick="logDate='${x.date}';vLog();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delLog('${x.date}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No logs yet.</td></tr>'}</table></div></div>`;
+  calcLog();
+}
+function calcLog(){
+  const g=id=>Number(document.getElementById(id)?.value)||0;
+  const c=g('lc'),p=g('lp'),t=g('lt'),y=g('ly'),T=c+p+t+y,P=x=>T?r0(x/T*100)+'%':'—';
+  const ph=phaseFor(logDate),pp=T?[p/T*100,t/T*100,y/T*100]:null;
+  $('#ltot').innerHTML=`<b>Total today: ${T} Q</b> · Claude ${P(p)} · PYQ book ${P(y)} · Core books ${P(t)} · Class ${P(c)}<div class="sub">${ph.name} target mix (excl. class): ${ph.mix[0]}/${ph.mix[1]}/${ph.mix[2]}% Claude/Core/PYQ book${pp?` · yours (of total): ${pp.map(r0).join('/')}%`:''}</div>`;
+}
+function saveLog(e){
+  e.preventDefault();
+  const d=v('ldate');if(!d)return alert('Pick a date.');if(d>today())return alert('Cannot log a future date.');
+  if(isLocked(d))return alert('That week is locked.');
+  const q={coaching:n('lc')||0,pager:n('lp')||0,textbook:n('lt')||0,pyq:n('ly')||0};
+  for(const k in q)if(q[k]<0||q[k]>200)return alert(`${k} Q must be 0–200.`);
+  if(sum(Object.values(q))>200&&!confirm(`Total ${sum(Object.values(q))} Q exceeds 200/day cap. Save anyway?`))return;
+  const acc=n('lacc'),en=n('len'),fo=n('lfo'),sl=n('lsl');
+  if(acc==null||acc<0||acc>100)return alert('Accuracy must be 0–100.');
+  if(en==null||en<1||en>10||fo==null||fo<1||fo>10)return alert('Energy and Focus must be 1–10.');
+  if(sl!=null&&(sl<0||sl>12))return alert('Sleep must be 0–12 h.');
+  if(sl!=null&&sl>8.5&&!confirm(`Sleep of ${sl} h is an outlier (>8.5). Save anyway?`))return;
+  S.logs[d]={date:d,phase:phaseFor(d).name,...q,book:v('lbook'),pyqBook:v('lpbook'),years:v('lyears'),timed:$('#ltimed').checked,accuracy:acc,energy:en,focus:fo,sleep:sl,sleepQ:v('lsq'),onTime:$('#lon').checked,audio:$('#lau').checked,topics:v('ltop'),weak:v('lweak'),notes:v('lnote')};
+  save();logDate=d;go('dashboard');
+}
+/* ---------- PDF (dark theme, matches the app) ---------- */
+const PD={BG:[0,0,0],CARD:[13,13,15],ROW:[24,26,30],LINE:[62,64,70],TX:[240,240,250],MUT:[138,143,152],OK:[61,220,151],WARN:[255,176,32],BAD:[255,90,82],BLUE:[90,169,255],PURPLE:[179,136,255],
+  OKBG:[10,42,31],WARNBG:[46,34,8],BADBG:[52,17,15]};
+const PM=14;
+function pdfOK(){if(window.jspdf&&window.jspdf.jsPDF)return true;alert('PDF library could not load (it needs internet once). Check your connection and refresh.');return false}
+function pdfNew(){
+  const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4'});
+  doc.W=doc.internal.pageSize.getWidth();doc.H=doc.internal.pageSize.getHeight();
+  const fill=()=>{doc.setFillColor(...PD.BG);doc.rect(0,0,doc.W,doc.H,'F')};
+  fill();const add=doc.addPage.bind(doc);doc.addPage=function(){const r=add.apply(null,arguments);fill();return r};
+  return doc;
+}
+function pdfCap(doc,text,x,y,o){o=o||{};doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(o.size||7);doc.setTextColor(...(o.color||PD.MUT));
+  doc.text(String(text).toUpperCase(),x,y,{charSpace:o.cs??1.2,align:o.align})}
+function pdfHead(doc,title,sub1,sub2){
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...PD.TX);doc.text('ABUNDX APEX',PM,14,{charSpace:1.8});
+  pdfCap(doc,'JEE 2028 Progress Tracker',PM,18,{size:6,cs:1.4});
+  pdfCap(doc,'Generated '+fmt(today()),doc.W-PM,13,{size:6.5,cs:0,align:'right'});
+  pdfCap(doc,Math.max(0,diff(today(),S.settings.exam))+' days to exam',doc.W-PM,17.5,{size:6.5,cs:0,align:'right'});
+  doc.setDrawColor(...PD.LINE);doc.setLineWidth(.25);doc.line(PM,23,doc.W-PM,23);
+  doc.setFont('helvetica','normal');doc.setFontSize(21);doc.setTextColor(...PD.TX);doc.text(title.toUpperCase(),PM,37,{charSpace:1.4});
+  let y=44;[sub1,sub2].filter(Boolean).forEach(t=>{doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.MUT);doc.text(t,PM,y);y+=5});
+  return y+3;
+}
+function pdfKpis(doc,y,items){
+  const n=items.length,g=3,w=(doc.W-2*PM-(n-1)*g)/n;
+  items.forEach((k,i)=>{const x=PM+i*(w+g);doc.setFillColor(...PD.CARD);doc.setDrawColor(...PD.LINE);doc.setLineWidth(.2);doc.rect(x,y,w,19,'FD');
+    pdfCap(doc,k[0],x+3,y+6,{size:5.8,cs:.9});
+    doc.setFont('helvetica','normal');doc.setFontSize(k[1].length>7?12:15);doc.setTextColor(...(k[2]||PD.TX));doc.text(String(k[1]),x+3,y+14.5);
+    if(k[3]){doc.setFontSize(6);doc.setTextColor(...PD.MUT);doc.text(String(k[3]),x+3,y+17.6)}});
+  return y+25;
+}
+function pdfSec(doc,text,y){pdfCap(doc,text,PM,y,{size:7.5,cs:1.6,color:PD.TX,bold:true});doc.setDrawColor(...PD.LINE);doc.setLineWidth(.2);doc.line(PM,y+2,doc.W-PM,y+2);return y+7}
+function pdfEnsure(doc,y,need){if(y+need>doc.H-18){doc.addPage();return 16}return y}
+function pdfBar(doc,x,y,w,frac,color,h){h=h||2;doc.setFillColor(40,42,46);doc.rect(x,y,w,h,'F');doc.setFillColor(...color);doc.rect(x,y,Math.max(0,Math.min(1,frac))*w,h,'F')}
+function pdfTbl(doc,opts){
+  doc.autoTable(Object.assign({margin:{left:PM,right:PM,bottom:16},theme:'grid',
+    styles:{font:'helvetica',fontSize:8,cellPadding:2.2,textColor:PD.TX,lineColor:PD.LINE,lineWidth:.15,fillColor:PD.CARD,halign:'center',valign:'middle'},
+    headStyles:{fillColor:PD.BG,textColor:PD.MUT,fontStyle:'bold',fontSize:6.5},
+    footStyles:{fillColor:PD.ROW,textColor:PD.TX,fontStyle:'bold'},alternateRowStyles:{fillColor:[17,18,20]}},opts));
+  return doc.lastAutoTable.finalY;
+}
+const up=a=>a.map(x=>typeof x==='string'?x.toUpperCase():x);
+function pdfFoot(doc,label){
+  const n=doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setDrawColor(...PD.LINE);doc.setLineWidth(.2);doc.line(PM,doc.H-12,doc.W-PM,doc.H-12);
+    pdfCap(doc,'Abundx Apex  -  '+label,PM,doc.H-7.5,{size:6,cs:.8});pdfCap(doc,`Page ${i} / ${n}`,doc.W-PM,doc.H-7.5,{size:6,cs:0,align:'right'})}
+}
+const tint=(g)=>g==='ok'?[PD.OK,PD.OKBG]:g==='warn'?[PD.WARN,PD.WARNBG]:[PD.BAD,PD.BADBG];
+const SRC_RGB={pager:PD.BLUE,pyq:PD.OK,textbook:PD.WARN,coaching:PD.PURPLE};
+function pdfSources(doc,y,src,q){
+  const order=['pager','pyq','textbook','coaching'];
+  let x=PM;const CW=doc.W-2*PM;
+  order.forEach(k=>{const w=q?CW*src[k]/q:0;if(w>0){doc.setFillColor(...SRC_RGB[k]);doc.rect(x,y,w,3,'F');x+=w}});
+  y+=9;
+  order.forEach((k,i)=>{const lx=PM+i*(CW/4);doc.setFillColor(...SRC_RGB[k]);doc.rect(lx,y-2.4,2.4,2.4,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...PD.TX);doc.text(`${SRC_LABEL[k]}  ${src[k]}  (${q?r0(src[k]/q*100):0}%)`,lx+4,y)});
+  return y+6;
+}
+
+/* daily log */
+function logPdf(from,to){
+  if(!from||!to||from>to)return alert('Choose a valid date range.');
+  if(!pdfOK())return;
+  const L=logs().filter(l=>l.date>=from&&l.date<=to);
+  if(!L.length)return alert('No logs in that date range.');
+  const doc=pdfNew();
+  const q=sum(L.map(qTot)),acc=q?sum(L.map(l=>l.accuracy*qTot(l)))/q:null;
+  const av=k=>avg(L.filter(l=>l[k]!=null).map(l=>l[k]));
+  const ph=phaseFor(L[L.length-1].date);
+  let y=pdfHead(doc,'Daily Log Report',`${fmt(from)}  to  ${fmt(to)}`,`${ph.name}  |  target ${ph.target}+ marks`);
+  y=pdfKpis(doc,y,[['Days logged',L.length],['Total Q',q],['Avg Q / day',r0(q/L.length)],['Accuracy',acc==null?'-':r1(acc)+'%',acc>=85?PD.OK:acc>=75?PD.WARN:PD.BAD],['Avg sleep',r1(av('sleep'))+' h'],['Avg energy',r1(av('energy'))+'/10']]);
+  const src={};['pager','pyq','textbook','coaching'].forEach(k=>src[k]=sum(L.map(l=>l[k]||0)));
+  y=pdfSec(doc,'Question sources',y);y=pdfSources(doc,y+1,src,q);
+  const nc=src.pager+src.textbook+src.pyq;
+  doc.setFontSize(7);doc.setTextColor(...PD.MUT);doc.text(`Target mix for ${ph.name} (Claude / Core books / PYQ book): ${ph.mix.join(' / ')}%     Your mix excluding class: ${nc?[src.pager,src.textbook,src.pyq].map(z=>r0(z/nc*100)).join(' / '):'-'}%`,PM,y);
+  y=pdfSec(doc,'Daily breakdown',y+9);
+  const last=to<today()?to:today(),body=[],meta=[];
+  for(let wk=mon(from);wk<=last;wk=addD(wk,7)){
+    const days=[];for(let i=0;i<7;i++){const d=addD(wk,i);if(d>=from&&d<=last)days.push(d)}
+    const inR=days.map(d=>S.logs[d]).filter(Boolean),wq=sum(inR.map(qTot)),wa=wq?sum(inR.map(l=>l.accuracy*qTot(l)))/wq:null;
+    body.push([{content:`WEEK OF ${fmtS(wk)} - ${fmtS(addD(wk,6))}     ${inR.length}/${days.length} DAYS LOGGED     ${wq} Q${days.length===7?`  (TARGET ${S.settings.weeklyMin}-${S.settings.weeklyMax})`:''}     ACCURACY ${wa==null?'-':r1(wa)+'%'}`,colSpan:11,styles:{fillColor:PD.ROW,textColor:PD.TX,fontStyle:'bold',halign:'left',fontSize:7}}]);meta.push(null);
+    days.forEach(d=>{const l=S.logs[d];
+      if(!l){body.push([{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},{content:'No log recorded',colSpan:10,styles:{textColor:PD.MUT,fontStyle:'italic',halign:'left'}}]);meta.push('none')}
+      else{body.push([{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},l.coaching||0,l.pager||0,l.textbook||0,l.pyq||0,qTot(l),l.accuracy+'%',l.energy,l.focus,l.sleep??'-',(l.onTime?'11:30 ':'')+(l.audio?'Audio':'')||'-']);meta.push(l)}});
+  }
+  y=pdfTbl(doc,{startY:y,body,columnStyles:{0:{cellWidth:27},5:{fontStyle:'bold'},10:{cellWidth:22}},
+    head:[up(['Date','Class','Claude','Core','PYQ','Total Q','Acc','Energy','Focus','Sleep h','Habits'])],
+    foot:[['TOTAL',src.coaching,src.pager,src.textbook,src.pyq,q,acc==null?'-':r1(acc)+'%',r1(av('energy')),r1(av('focus')),r1(av('sleep')),'']],
+    didParseCell(h){if(h.section!=='body')return;const l=meta[h.row.index];if(!l||l==='none')return;const c=h.column.index;
+      const set=g=>{const [t,b]=tint(g);h.cell.styles.textColor=t;h.cell.styles.fillColor=b};
+      if(c===6)set(l.accuracy>=85?'ok':l.accuracy>=75?'warn':'bad');
+      if(c===7)set(l.energy>=7?'ok':l.energy>=5?'warn':'bad');
+      if(c===9&&l.sleep!=null)set(l.sleep>=7?'ok':l.sleep>=6.5?'warn':'bad')}});
+  y+=4;doc.setFontSize(6.5);doc.setTextColor(...PD.MUT);doc.text('Green = good (accuracy 85+, energy 7+, sleep 7+ h)   Amber = watch   Red = low (accuracy <75, energy <5, sleep <6.5 h)   11:30 = in bed by 11:30 PM',PM,y);
+  const notes=L.filter(l=>l.topics||l.weak||l.notes||(l.book&&l.book!=='—')||(l.pyqBook&&l.pyqBook!=='—')||l.years);
+  if(notes.length){
+    y=pdfEnsure(doc,y+6,30);y=pdfSec(doc,'Topics, weak areas and notes',y+6);
+    pdfTbl(doc,{startY:y,columnStyles:{0:{cellWidth:24},1:{cellWidth:38},2:{cellWidth:34},3:{cellWidth:36}},styles:{halign:'left',fontSize:8,cellPadding:2.2,textColor:PD.TX,lineColor:PD.LINE,lineWidth:.15,fillColor:PD.CARD,valign:'top'},
+      head:[up(['Date','Topics studied','Weak topics','Sources','Notes'])],
+      body:notes.map(l=>[`${fmtS(l.date)} ${dow(l.date)}`,l.topics||'-',l.weak||'-',[l.book&&l.book!=='—'?l.book:'',l.pyqBook&&l.pyqBook!=='—'?l.pyqBook:'',l.years?'PYQ '+l.years+(l.timed?' (timed)':''):''].filter(Boolean).join('\n')||'-',l.notes||'-'])});
+  }
+  pdfFoot(doc,'Daily Log Report');
+  doc.save(from===to?`daily-log-${from}.pdf`:`daily-log-${from}_to_${to}.pdf`);
+}
+
+/* end-of-day sheet: blank form to print and fill by hand (white, printer friendly) */
+function eodPdf(){
+  if(!pdfOK())return;
+  const doc=new window.jspdf.jsPDF({unit:'mm',format:'a4',compress:true}),W=210,M=12,CW=W-2*M,GR=[110,110,110];
+  const T=(txt,x,y,o)=>{o=o||{};doc.setFont('helvetica',o.bold?'bold':'normal');doc.setFontSize(o.size||8);doc.setTextColor(...(o.color||[0,0,0]));doc.text(String(txt),x,y,o.opt)};
+  const sec=(title,y)=>{T(title.toUpperCase(),M,y,{bold:true,size:8,opt:{charSpace:.8}});doc.setDrawColor(0);doc.setLineWidth(.5);doc.line(M,y+1.6,W-M,y+1.6);return y+4};
+  const tbl=o=>{doc.autoTable(Object.assign({margin:{left:M,right:M},theme:'grid',
+    styles:{font:'helvetica',fontSize:8,cellPadding:{top:1.4,bottom:1.4,left:2,right:2},textColor:0,lineColor:[90,90,90],lineWidth:.25,minCellHeight:6.8,valign:'middle'},
+    headStyles:{fillColor:[232,232,232],textColor:0,fontStyle:'bold',fontSize:6.8,halign:'center'}},o));return doc.lastAutoTable.finalY};
+  const box=(x,y)=>{doc.setDrawColor(0);doc.setLineWidth(.3);doc.rect(x,y,3.8,3.8)};
+  const field=(label,x,y,w,size)=>{T(label,x,y,{size:size||8,bold:true});const lw=doc.getTextWidth(label)+2;doc.setDrawColor(0);doc.setLineWidth(.25);doc.line(x+lw,y+.6,x+w,y+.6)};
+  const C=()=>({halign:'center'});
+  // header
+  T('ABUNDX APEX',M,14,{bold:true,size:13,opt:{charSpace:1.6}});T('JEE 2028 PROGRESS TRACKER',M,18.2,{size:6.5,color:GR,opt:{charSpace:1}});
+  T('END-OF-DAY SHEET',W-M,14,{bold:true,size:14,opt:{align:'right'}});T('Fill in by hand before sleeping.',W-M,18.2,{size:7,color:GR,opt:{align:'right'}});
+  doc.setDrawColor(0);doc.setLineWidth(.8);doc.line(M,21.5,W-M,21.5);
+  field('Date:',M,28,70,9);field('Day:',M+82,28,60,9);field('Phase:',M+148,28,W-M-(M+148),9);
+  // 1 goals
+  let y=sec('1. Day goal',34);
+  const gb=[];for(let i=1;i<=5;i++)gb.push([i,'','','','','']);
+  y=tbl({startY:y,head:[['#','GOAL','START TIME','TARGET Q','DONE','ACTUAL Q']],body:gb,
+    columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:90},2:{cellWidth:24,halign:'center'},3:{cellWidth:22,halign:'center'},4:{cellWidth:18,halign:'center'},5:{cellWidth:24,halign:'center'}},
+    didDrawCell(h){if(h.section==='body'&&h.column.index===4)box(h.cell.x+h.cell.width/2-1.9,h.cell.y+h.cell.height/2-1.9)}});
+  // 2 expected vs achieved
+  y=sec('2. Log: expected vs achieved (questions)',y+5);
+  y=tbl({startY:y,head:[['SOURCE','EXPECTED Q','ACHIEVED Q','DIFFERENCE (+/-)','EFFICIENCY %']],
+    body:[['Claude','','','',''],['PYQ book','','','',''],['Core books','','','',''],['Class questions','','','',''],[{content:'TOTAL',styles:{fontStyle:'bold'}},'','','','']],
+    columnStyles:{0:{cellWidth:48,fontStyle:'bold'},1:C(),2:C(),3:C(),4:C()}});
+  T('Efficiency % = Achieved / Expected x 100.',M,y+3.4,{size:6.3,color:GR});
+  // 3 accuracy
+  y=sec('3. Accuracy in questions solved',y+9);
+  y=tbl({startY:y,head:[['SUBJECT','ATTEMPTED','CORRECT','WRONG','ACCURACY %']],
+    body:[['Physics','','','',''],['Chemistry','','','',''],['Math','','','',''],[{content:'OVERALL',styles:{fontStyle:'bold'}},'','','','']],
+    columnStyles:{0:{cellWidth:48,fontStyle:'bold'},1:C(),2:C(),3:C(),4:C()}});
+  T('Accuracy % = Correct / Attempted x 100.',M,y+3.4,{size:6.3,color:GR});
+  // 4 study time
+  y=sec('4. Study time',y+9);
+  y=tbl({startY:y,head:[['SESSION','PLANNED TIME','ACTUAL START','ACTUAL END','Q SOLVED','DONE']],body:[['Session 1','','','','',''],['Session 2','','','','',''],['Session 3','','','','','']],
+    columnStyles:{0:{cellWidth:30,fontStyle:'bold'},1:{halign:'center',cellWidth:36},2:C(),3:C(),4:C(),5:{halign:'center',cellWidth:18}},
+    didDrawCell(h){if(h.section==='body'&&h.column.index===5)box(h.cell.x+h.cell.width/2-1.9,h.cell.y+h.cell.height/2-1.9)}});
+  y+=7.5;field('Total hours studied today:',M,y,66);field('Days studied this week:',M+70,y,58);T('/ 7',M+130,y,{size:8});field('Streak (days in a row):',M+140,y,46);
+  // 5 day check
+  y=sec('5. Day check',y+6);
+  y+=4;T('ENERGY',M,y,{bold:true,size:7.2});T('FOCUS',M+98,y,{bold:true,size:7.2});
+  for(let i=1;i<=10;i++){[M+19,M+112].forEach(x0=>{const cx=x0+(i-1)*7.2;doc.setDrawColor(0);doc.setLineWidth(.25);doc.circle(cx,y-1.1,2.6);T(i,cx,y+.1,{size:6.3,opt:{align:'center'}})})}
+  y+=8;box(M,y-3);T('Slept on time',M+5.5,y,{size:8});box(M+40,y-3);T('Audio learning done',M+45.5,y,{size:8});
+  field('Backlog resolved:',M+100,y,40);field('added:',M+146,y,W-M-(M+146));
+  // 6 review
+  y=sec('6. Review',y+5);y+=1;
+  const bw=(CW-6)/2;[['Mistakes / weak topics to revise',M],['Tomorrow\u2019s top goals',M+bw+6]].forEach(([t,x])=>{
+    T(t.toUpperCase(),x,y+3,{bold:true,size:6.8,opt:{charSpace:.4}});doc.setDrawColor(150);doc.setLineWidth(.2);for(let i=1;i<=4;i++)doc.line(x,y+3+i*7,x+bw,y+3+i*7)});
+  T('Abundx Apex  -  print, fill by hand, and enter the numbers in the app afterwards.',W/2,291,{size:6.3,color:GR,opt:{align:'center'}});
+  doc.save('end-of-day-sheet.pdf');
+}
+
+/* weekly report */
+function weekData(key){
+  const w=weekStats(key),prev=weekStats(addD(key,-7));
+  const grp=k=>{const g=f=>sum(w.ls.filter(l=>f(pd(l.date).getDay())).map(l=>l[k]||0));return [g(d=>d>=1&&d<=5),g(d=>d===6),g(d=>d===0)]};
+  const ms=mocks().filter(m=>m.date>=key&&m.date<=addD(key,6));
+  const flags=[],recs=[];
+  if(w.q&&w.q<900){flags.push(`Q count ${w.q} < 900`);recs.push('Protect all three study sessions; if coaching runs long, trim Session 2 filler rather than Session 3 backlog review.')}
+  if(w.acc!=null&&prev.acc!=null&&prev.acc-w.acc>5){flags.push(`Accuracy down ${r1(prev.acc-w.acc)} pts`);recs.push('Slow down on new Q for 2 days and redo errors from the last 3 sessions before adding volume.')}
+  if(w.sleep!=null&&w.sleep<6.5){flags.push(`Sleep avg ${r1(w.sleep)} h`);recs.push('Hard-stop at 11:30 PM; sleep is the one locked constraint.')}
+  if(w.energy!=null&&w.energy<5){flags.push(`Energy avg ${r1(w.energy)}/10`);recs.push('Burnout risk: use the free time on Sat/Sun for real rest, not extra Q.')}
+  const missing=7-w.days;if(w.days&&missing>0&&addD(key,6)<today())flags.push(`${missing} day(s) without a log`);
+  const od=S.backlog.filter(b=>b.status!=='Resolved'&&diff(b.date,today())>SLA[b.priority]);
+  if(od.length){flags.push(`${od.length} backlog item(s) past SLA`);recs.push('Clear overdue backlog items in Session 3 first: '+od.slice(0,3).map(b=>b.topic).join(', ')+'.')}
+  if(!recs.length)recs.push(w.days?'On track - keep the same routine.':'No data for this week.');
+  return {w,prev,grp,ms,flags,recs};
+}
+function weeklyPdf(key){
+  if(!pdfOK())return;
+  const {w,prev,grp,ms,flags,recs}=weekData(key),st=S.settings;
+  if(!w.days)return alert('No logs in that week.');
+  const doc=pdfNew(),arrow=(a,b)=>a==null||b==null?'':a-b>1?'up vs last week':a-b<-1?'down vs last week':'flat vs last week';
+  let y=pdfHead(doc,'Weekly Report',`${fmt(key)}  to  ${fmt(addD(key,6))}`,`${phaseFor(key).name}  |  ${w.days}/7 days logged`);
+  y=pdfKpis(doc,y,[['Questions',w.q,w.q>=st.weeklyMin?PD.OK:w.q>=900?PD.WARN:PD.BAD,`target ${st.weeklyMin}-${st.weeklyMax}`],['Accuracy',w.acc==null?'-':r1(w.acc)+'%',null,arrow(w.acc,prev.acc)],['Energy',r1(w.energy)+'/10',null,arrow(w.energy,prev.energy)],['Sleep',r1(w.sleep)+' h',null,arrow(w.sleep,prev.sleep)],['Mock',ms.length?ms.map(m=>m.marks).join(', '):'-']]);
+  y=pdfSec(doc,'Question sources',y);y=pdfSources(doc,y+1,w.src,w.q);
+  y=pdfSec(doc,'Weekly summary',y+3);
+  const row=(lab,k)=>{const [a,b,c]=grp(k);return [{content:lab,styles:{halign:'left'}},a,b,c,w.src[k],(w.q?r0(w.src[k]/w.q*100):0)+'%']};
+  y=pdfTbl(doc,{startY:y,head:[up(['Source','Mon-Fri','Sat','Sun','Total','% weekly'])],body:[row('Claude','pager'),row('PYQ book','pyq'),row('Core books','textbook'),row('Class questions','coaching')],foot:[['TOTAL','','','',`${w.q} / ${st.weeklyMin}-${st.weeklyMax}`,'100%']]});
+  y=pdfEnsure(doc,y+8,50);y=pdfSec(doc,'Day by day',y+8);
+  const days=[];for(let i=0;i<7;i++){const d=addD(key,i),l=S.logs[d];days.push(l?[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},qTot(l),l.accuracy+'%',l.energy,l.focus,l.sleep??'-']:[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},{content:'No log',colSpan:5,styles:{textColor:PD.MUT,fontStyle:'italic',halign:'left'}}])}
+  y=pdfTbl(doc,{startY:y,head:[up(['Date','Total Q','Acc','Energy','Focus','Sleep h'])],body:days});
+  y=pdfEnsure(doc,y+8,40);y=pdfSec(doc,'Red flags',y+8);
+  if(flags.length)flags.forEach(f=>{y=pdfEnsure(doc,y,7);doc.setFillColor(...PD.BAD);doc.rect(PM,y-2.4,1.6,3,'F');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(f,PM+4,y);y+=6});
+  else{doc.setFontSize(9);doc.setTextColor(...PD.OK);doc.text('None this week',PM,y);y+=6}
+  y=pdfEnsure(doc,y+4,30);y=pdfSec(doc,'Recommended actions',y+4);
+  recs.forEach((r,i)=>{const lines=doc.splitTextToSize(r,doc.W-2*PM-8);y=pdfEnsure(doc,y,lines.length*4.5+3);doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...PD.MUT);doc.text(String(i+1).padStart(2,'0'),PM,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(lines,PM+8,y);y+=lines.length*4.5+2});
+  const mls=st.milestones.filter(m=>m.date>=key&&m.date<=addD(key,6));
+  if(mls.length){y=pdfEnsure(doc,y+4,16);y=pdfSec(doc,'Milestones this week',y+4);doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(mls.map(m=>m.marks+'+ on '+fmtS(m.date)).join('    '),PM,y)}
+  pdfFoot(doc,'Weekly Report');
+  doc.save(`weekly-report-${key}.pdf`);
+}
+
+/* mock report */
+const graceNote=(m,sub)=>{const k={Physics:'phy',Chemistry:'chem',Math:'math'}[sub],g=m.grace&&m.grace[k];return g?` <span class="sub">(${m[k]-g} + ${g} grace)</span>`:''};
+function mockInsights(m,prev,ph,exp,best,worst){
+  const sg=x=>(x>=0?'+':'')+r1(x),ins=[];
+  if(worst&&best&&worst!==best)ins.push(`Strongest: <b>${best[0]}</b> (${best[1]}). Weakest: <b>${worst[0]}</b> (${worst[1]}), ${best[1]-worst[1]} marks behind your best subject.`);
+  ins.push(`${m.marks>=exp?'Ahead of':'Behind'} the expected trajectory for ${fmtS(m.date)} (${r0(exp)}) by ${r0(Math.abs(m.marks-exp))} marks; ${ph.name} target is ${ph.target}+ (${m.marks>=ph.target?'reached':(ph.target-m.marks)+' marks to go'}).`);
+  if(m.total&&m.correct!=null)ins.push(`${m.total-m.correct} of ${m.total} questions were not correct${m.correct*4===m.marks?' (marks = 4 x correct, so no negative marking applied)':''}. Each extra correct answer is worth +4.`);
+  if(prev)ins.push(`Vs mock #${prev.num}: marks ${sg(m.marks-prev.marks)}${m.percentile!=null&&prev.percentile!=null?`, percentile ${sg(m.percentile-prev.percentile)}`:''}.`);
+  if(m.hi!=null)ins.push(`${m.hi-m.marks} marks behind the class topper (${m.hi}).`);
+  return ins;
+}
+function mockPdf(id){
+  if(!pdfOK())return;
+  const ms=mocks(),i=ms.findIndex(x=>x.id===id),m=ms[i];if(!m)return;
+  const prev=i>0?ms[i-1]:null,ph=phaseFor(m.date),exp=expectedMarks(m.date);
+  const pc=(a,b)=>b?r1(a/b*100)+'%':'-',sg=x=>(x>=0?'+':'')+r1(x),Q=m.total?m.total/3:null;
+  const subj=[['Physics',m.phy,m.cp,m.wp,PD.BLUE],['Chemistry',m.chem,m.cc,m.wc,PD.WARN],['Math',m.math,m.cm,m.wm,PD.OK]];
+  const have=subj.filter(x=>x[1]!=null);
+  const best=have.length?have.reduce((a,b)=>b[1]>a[1]?b:a):null,worst=have.length?have.reduce((a,b)=>b[1]<a[1]?b:a):null;
+  const doc=pdfNew();
+  let y=pdfHead(doc,`Mock #${m.num} Report`,fmt(m.date),`${m.type||''}  |  ${ph.name}`);
+  y=pdfKpis(doc,y,[['Marks',m.marks+' / 300',null,pc(m.marks,300)+(prev?'  '+sg(m.marks-prev.marks)+' vs prev':'')],['Rank',m.rank?m.rank+' / '+m.students:'-',null,m.percentile!=null?r1(m.percentile)+' percentile':''],['Correct',(m.correct??'-')+(m.total?' / '+m.total:''),null,m.total&&m.correct!=null?pc(m.correct,m.total)+' of paper':''],['Vs expected',sg(m.marks-exp),m.marks>=exp?PD.OK:PD.BAD,`expected ${r0(exp)}`]]);
+  y=pdfSec(doc,'Subject breakdown',y);
+  have.forEach(x=>{pdfCap(doc,x[0],PM,y,{size:7,color:PD.TX,bold:true});
+    doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(`${x[1]} / 100`,PM+34,y);
+    pdfBar(doc,PM+58,y-2.2,70,x[1]/100,x[4],2.4);
+    doc.setFontSize(8);doc.setTextColor(...PD.MUT);doc.text(`${x[2]!=null?x[2]+(Q?' / '+r0(Q):'')+' correct'+(Q?'  ('+pc(x[2],Q)+')':''):''}`,PM+134,y);
+    if(x[3]){y+=4.5;doc.setFontSize(7);doc.text('Weak: '+x[3],PM+34,y)}y+=7});
+  y=pdfEnsure(doc,y,50);y=pdfSec(doc,'Class comparison',y+2);
+  const cl=[['You',m.marks,PD.TX],['Highest',m.hi,PD.OK],['Average',m.av,PD.MUT],['Lowest',m.lo,PD.BAD]].filter(x=>x[1]!=null);
+  cl.forEach(x=>{pdfCap(doc,x[0],PM,y,{size:7,color:PD.TX,bold:true});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(String(x[1]),PM+34,y);
+    pdfBar(doc,PM+58,y-2.2,70,x[1]/300,x[2],2.4);if(x[0]!=='You'){const d=m.marks-x[1];doc.setFontSize(8);doc.setTextColor(...(d>=0?PD.OK:PD.BAD));doc.text(sg(d),PM+134,y)}y+=7});
+  y=pdfEnsure(doc,y,50);y=pdfSec(doc,'Attempt analysis',y+3);
+  const un=m.total&&m.attempted!=null?m.total-m.attempted:null;
+  const R=[['Total questions',m.total],['Attempted',m.attempted],['Unattempted',un],['Correct',m.correct],['Incorrect',m.incorrect],['Time taken',m.time?m.time+' min'+(m.attempted?` (${r1(m.time/m.attempted)} min/Q)`:''):null],
+    ...[['Easy','ea','ec'],['Medium','ma','mc'],['Hard','ha','hc']].map(([l,a,c])=>[l+' accuracy',m[a]?`${m[c]}/${m[a]} (${pc(m[c],m[a])})`:null])];
+  y=pdfTbl(doc,{startY:y,body:R.map(r=>[{content:r[0],styles:{halign:'left',textColor:PD.MUT}},{content:r[1]??'-',styles:{halign:'left'}}]),columnStyles:{0:{cellWidth:60}}});
+  y=pdfEnsure(doc,y+8,40);y=pdfSec(doc,'Insights',y+8);
+  mockInsights(m,prev,ph,exp,best,worst).forEach((t,k)=>{const lines=doc.splitTextToSize(t.replace(/<[^>]+>/g,''),doc.W-2*PM-8);y=pdfEnsure(doc,y,lines.length*4.5+3);
+    doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(...PD.MUT);doc.text(String(k+1).padStart(2,'0'),PM,y);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(lines,PM+8,y);y+=lines.length*4.5+2});
+  if(m.notes){y=pdfEnsure(doc,y+4,20);y=pdfSec(doc,'Notes',y+4);const lines=doc.splitTextToSize(m.notes,doc.W-2*PM);doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(lines,PM,y)}
+  pdfFoot(doc,`Mock #${m.num} Report`);
+  doc.save(`mock-${m.num}-report-${m.date}.pdf`);
+}
+function delLog(d){if(isLocked(d))return alert('That week is locked.');if(confirm('Delete log for '+fmt(d)+'?')){delete S.logs[d];save();vLog()}}
+
+/* ---------- TODAY (goals + coaching) ---------- */
+let todayDate=today();
+const SUBJ3=['Physics','Chemistry','Math'];
+const SUBJECT_OPTS=['Physics','Chemistry','Math','Physics and Chemistry','Chemistry and Math','Physics and Math','All three combined'];
+const subjParts=x=>x==='All three combined'?['Physics','Chemistry','Math']:String(x||'').split(' and ').filter(Boolean);
+const subjMatch=(item,sel)=>!sel||item===sel||subjParts(item).includes(sel);
+function fmtT(t){if(!t)return'—';const [h,m]=t.split(':').map(Number);return `${((h+11)%12)+1}:${pad(m)} ${h<12?'AM':'PM'}`}
+const tmin=t=>{const [h,m]=t.split(':').map(Number);return h*60+m};
+function dayRec(d,create){if(!S.days)S.days={};if(!S.days[d]&&create)S.days[d]={goals:[],coaching:{}};return S.days[d]||{goals:[],coaching:{}}}
+function goalStatus(g,d){
+  if(g.done)return `<span class="ok">Done${g.doneAt?' at '+fmtT(g.doneAt):''}</span>`;
+  if(d<today())return '<span class="bad">Not done</span>';
+  if(d>today())return '<span class="sub">Upcoming</span>';
+  const now=new Date(),nm=now.getHours()*60+now.getMinutes(),df=tmin(g.start)-nm;
+  if(df>0)return `<span class="sub">Starts in ${df>=60?Math.floor(df/60)+' h ':''}${df%60} min</span>`;
+  return `<span class="warn">Started ${-df>=60?Math.floor(-df/60)+' h ':''}${-df%60} min ago</span>`;
+}
+function vToday(){
+  const d=todayDate,r=dayRec(d),c=r.coaching||{},G=[...r.goals].sort((a,b)=>a.start<b.start?-1:1);
+  const done=G.filter(g=>g.done).length,tq=sum(G.map(g=>g.q||0)),isToday=d===today();
+  const wd=pd(d).getDay(),weekday=wd>=1&&wd<=5;
+  const hist=Object.keys(S.days||{}).filter(k=>k!==d&&k<=today()&&Object.values(S.days[k].coaching||{}).some(x=>x)).sort().reverse().slice(0,7);
+  const ta=(id,lab,val)=>`<div><label for="${id}">${lab}</label><textarea id="${id}" rows="2">${esc(val||'')}</textarea></div>`;
+  $('#app').innerHTML=`<h2>${isToday?"Today's goals":'Goals for '+fmt(d)}</h2>
+  <div class="tools" style="align-items:end"><div><label>Date</label><input type="date" max="${today()}" value="${d}" onchange="todayDate=this.value||today();vToday()"></div>
+   ${isToday?'':'<button class="btn alt" onclick="todayDate=today();vToday()">Back to today</button>'}
+   <div class="sub" style="padding-bottom:8px">${new Date(d+'T00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long'})}${isToday?' - now '+new Date().toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'}):''}</div></div>
+
+  <div class="card"><h3>Goals</h3>
+   <div class="sub">${G.length?`${done} of ${G.length} done${tq?` - ${tq} Q planned`:''}`:'No goals set yet.'}</div>
+   <div class="bar"><i style="width:${G.length?done/G.length*100:0}%"></i></div>
+   ${G.length?`<div class="tw"><table><tr><th></th><th>Start</th><th>Subject</th><th>Goal</th><th>Q</th><th>Status</th><th></th></tr>${G.map(g=>`<tr>
+     <td><input type="checkbox" ${g.done?'checked':''} onchange="toggleGoal('${g.id}')" style="width:18px;height:18px"></td>
+     <td><input type="time" value="${g.start}" onchange="setGoalStart('${g.id}',this.value)" style="width:120px;padding:4px"></td>
+     <td>${esc(g.subject)}</td><td ${g.done?'style="text-decoration:line-through;color:var(--mut)"':''}>${esc(g.text)}</td><td>${g.q||'—'}</td><td>${goalStatus(g,d)}</td>
+     <td><button class="btn s bad" onclick="delGoal('${g.id}')">x</button></td></tr>`).join('')}</table></div>`:''}
+   <form onsubmit="addGoal(event)" style="margin-top:12px"><div class="row" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+     <div><label>Start time</label><input id="gst" type="time" required></div>
+     <div><label>Subject</label><select id="gsu">${[...SUBJECT_OPTS,'Mock test','Backlog','Other'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+     <div style="grid-column:span 2"><label>Goal</label><input id="gtx" required placeholder="e.g. Coordinate geometry - 40 Q from Cengage"></div>
+     <div><label>Target Q (optional)</label><input id="gq" type="number" min="0" max="200"></div></div>
+     <button class="btn ok">Add goal</button>
+     ${weekday?`<button type="button" class="btn alt" onclick="addTemplate()">Add standard 3 study sessions</button>`:''}</form></div>
+
+  <div class="card"><h3>What was done at coaching</h3>
+   <form onsubmit="saveCoaching(event)"><div class="row"><div><label>Start time</label><input id="cs" type="time" value="${c.start||'09:00'}"></div><div><label>End time</label><input id="ce" type="time" value="${c.end||'15:00'}"></div>
+     <div><label>Questions solved / discussed</label><input id="cq" type="number" min="0" max="200" value="${c.q??''}"></div>
+     <div><label>Attended?</label><select id="ca"><option ${c.attended!=='No'?'selected':''}>Yes</option><option ${c.attended==='No'?'selected':''}>No</option></select></div></div>
+    <div class="row">${ta('cph','Physics - topics covered',c.phy)}${ta('cch','Chemistry - topics covered',c.chem)}${ta('cma','Math - topics covered',c.math)}</div>
+    <div class="row">${ta('chw','Homework / DPP assigned',c.hw)}${ta('cdb','Doubts to clear',c.doubts)}${ta('cn','Other notes',c.notes)}</div>
+    <button class="btn ok">Save coaching notes</button>
+    ${c.q?`<button type="button" class="btn alt" onclick="coachToLog()">Copy ${c.q} Q to daily log (Class questions)</button>`:''}</form></div>
+
+  ${hist.length?`<div class="card"><h3>Recent coaching notes</h3><div class="tw"><table><tr><th>Date</th><th>Time</th><th>Physics</th><th>Chemistry</th><th>Math</th><th>Q</th></tr>${hist.map(k=>{const x=S.days[k].coaching;return `<tr><td><a href="#" onclick="todayDate='${k}';vToday();return false">${fmtS(k)} ${dow(k)}</a></td><td>${fmtT(x.start)}-${fmtT(x.end)}</td><td>${esc(x.phy||'—')}</td><td>${esc(x.chem||'—')}</td><td>${esc(x.math||'—')}</td><td>${x.q??'—'}</td></tr>`}).join('')}</table></div></div>`:''}`;
+}
+const gid=()=>'G'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+function addGoal(e){
+  e.preventDefault();const q=n('gq');if(q!=null&&(q<0||q>200))return alert('Target Q must be 0-200.');
+  dayRec(todayDate,true).goals.push({id:gid(),text:v('gtx').trim(),subject:v('gsu'),start:v('gst'),q,done:false});save();vToday();
+}
+function addTemplate(){
+  const r=dayRec(todayDate,true);
+  [['16:30','Session 1 - main study block (4 h)',75],['20:30','Session 2 - practice (1 h)',22],['22:00','Session 3 - weak topics and backlog (1.5 h)',28]].forEach(([start,text,q])=>{if(!r.goals.some(g=>g.start===start&&g.text===text))r.goals.push({id:gid(),text,subject:'Other',start,q,done:false})});
+  save();vToday();
+}
+function toggleGoal(id){const g=dayRec(todayDate).goals.find(x=>x.id===id);g.done=!g.done;const now=new Date();g.doneAt=g.done?`${pad(now.getHours())}:${pad(now.getMinutes())}`:null;save();vToday()}
+function setGoalStart(id,t){if(!t)return;dayRec(todayDate).goals.find(x=>x.id===id).start=t;save();vToday()}
+function delGoal(id){const r=dayRec(todayDate);r.goals=r.goals.filter(x=>x.id!==id);save();vToday()}
+function saveCoaching(e){
+  e.preventDefault();const q=n('cq');if(q!=null&&(q<0||q>200))return alert('Questions must be 0-200.');
+  if(v('cs')&&v('ce')&&v('ce')<=v('cs'))return alert('End time must be after start time.');
+  dayRec(todayDate,true).coaching={start:v('cs'),end:v('ce'),q,attended:v('ca'),phy:v('cph'),chem:v('cch'),math:v('cma'),hw:v('chw'),doubts:v('cdb'),notes:v('cn')};
+  save();vToday();
+}
+function coachToLog(){
+  const c=dayRec(todayDate).coaching,l=S.logs[todayDate];
+  if(!l)return alert('No daily log for this date yet. Save the daily log first, then its Class questions can be updated here.');
+  if(isLocked(todayDate))return alert('That week is locked.');
+  l.coaching=c.q;save();alert('Daily log updated: Class questions = '+c.q);
+}
+
+/* ---------- TODAY SUMMARY ---------- */
+let sumDate=today();
+function dayEfficiency(d){
+  const r=dayRec(d),G=r.goals||[],l=S.logs[d];
+  const done=G.filter(g=>g.done).length,goalsPct=G.length?done/G.length*100:null;
+  const goalQ=sum(G.map(g=>g.q||0)),dailyTarget=Math.round(S.settings.weeklyMin/7);
+  const plan=goalQ>0?goalQ:dailyTarget,planSrc=goalQ>0?'planned in goals':'daily target ('+S.settings.weeklyMin+'/7)';
+  const logged=l?qTot(l):null,qRaw=logged==null?null:logged/plan*100,qPct=qRaw==null?null:Math.min(100,qRaw);
+  const parts=[goalsPct,qPct].filter(x=>x!=null);
+  return {G,done,goalsPct,plan,planSrc,logged,qRaw,qPct,overall:parts.length?avg(parts):null};
+}
+function ring(pct,color){
+  const r=54,c=2*Math.PI*r,f=pct==null?0:Math.min(100,pct)/100*c;
+  return `<svg viewBox="0 0 140 140" width="150" height="150"><circle cx="70" cy="70" r="${r}" fill="none" stroke="var(--track)" stroke-width="7"/>
+    <circle cx="70" cy="70" r="${r}" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="butt" stroke-dasharray="${f} ${c}" transform="rotate(-90 70 70)"/>
+    <text x="70" y="76" text-anchor="middle" font-size="30" font-weight="300" fill="var(--tx)" font-family="Barlow,sans-serif">${pct==null?'--':r0(pct)+'%'}</text></svg>`;
+}
+/* ---------- REALITY CHECK ---------- */
+const QUOTES=[
+ "Nobody is coming to solve the questions for you.",
+ "Motivation is a mood. A schedule is a decision.",
+ "A rank is the sum of the days you did not skip.",
+ "You cannot revise what you never understood. Fix the base first.",
+ "Every topic left in the backlog is a mark waiting to be lost.",
+ "Solving 100 questions without reviewing the mistakes is practising how to be wrong.",
+ "Tired practice at midnight is worth less than rested practice tomorrow. Sleep is part of the plan.",
+ "The easy day you take today becomes a hard day for you in January 2028.",
+ "Watching a solution feels like learning. Solving it yourself is learning.",
+ "Your competition is not studying 'when they feel like it'.",
+ "Accuracy is not luck. It is the result of the questions you reviewed.",
+ "Speed comes after accuracy. Accuracy comes after understanding. Do not skip the order.",
+ "A mock you do not analyse is just a three-hour tired exercise.",
+ "Being busy is not the same as being prepared. Count solved questions, not hours.",
+ "Weak topics do not disappear if you avoid them. They show up in the exam instead.",
+ "Comfort is the most expensive thing you can buy this year.",
+ "The exam will not ask how hard you felt you worked.",
+ "One missed day is nothing. A habit of missed days is a different result.",
+ "You decided on IIT Delhi. The syllabus does not care how you feel today.",
+ "Doubts left unsolved become the wrong answers you lose marks on.",
+ "Phone time is borrowed from your future rank.",
+ "Do the hard chapter first. The easy one will still be easy later.",
+ "Marks are earned in the boring middle of the plan, not in the last week.",
+ "If today was a bad session, the answer is tomorrow's session, not a bad week.",
+ "Every question you skip in practice is a question you meet cold in the exam.",
+ "Consistency beats intensity. Ten ordinary days beat one heroic one.",
+ "Revision is where marks are kept. Without it, you are filling a leaking bucket.",
+ "Confidence in the exam hall is built in the daily log, not in the last night.",
+ "Do not compare your day one to someone's day three hundred. Compare to yesterday.",
+ "The backlog does not shrink by looking at it. It shrinks by solving it.",
+ "You will never feel completely ready. Prepare anyway.",
+ "Good intentions do not appear in the rank list."
+];
+function realityLines(d){
+  const st=S.settings,L=[],dl=diff(d,st.exam);
+  const planEnd=st.milestones[st.milestones.length-1],target=planEnd.marks;
+  const ms=mocks().filter(m=>m.date<=d),last=ms[ms.length-1];
+  if(dl>=0)L.push(`<b>${dl}</b> days to the exam (${r0(dl/7)} weeks). Every day from here is already counted.`);
+  if(last){const gap=target-last.marks,mo=Math.max(1,dl/30),exp=expectedMarks(d);
+    L.push(`Last mock: <b>${last.marks}</b> on ${fmtS(last.date)}. Target: <b>${target}</b>. Gap: <b>${gap>0?gap:0}</b> marks, which means gaining about <b>${gap>0?r1(gap/mo):0}</b> marks every month from now.`);
+    L.push(`${last.marks>=exp?'You are ahead of':'You are behind'} your own plan line (<b>${r0(exp)}</b> expected today) by <b>${r0(Math.abs(last.marks-exp))}</b> marks.`)}
+  else L.push(`No mock logged yet. Without a mock score you do not actually know where you stand.`);
+  const logs14=logs().filter(l=>l.date<=d&&l.date>addD(d,-14));
+  if(logs14.length>=3){const av=sum(logs14.map(qTot))/logs14.length,doneQ=sum(logs().filter(l=>l.date<=d).map(qTot)),daysToEnd=Math.max(1,diff(d,planEnd.date)),req=Math.max(0,(50000-doneQ)/daysToEnd);
+    L.push(`Your last ${logs14.length} logged days average <b>${r0(av)}</b> Q/day. The 50,000 Q plan needs about <b>${r0(req)}</b> Q/day from here. ${av>=req?'You are on pace.':'You are short by '+r0(req-av)+' Q every day.'}`)}
+  const wk=weekStats(mon(d)),missed=[];for(let i=0;i<7;i++){const x=addD(mon(d),i);if(x<=d&&x>=st.start&&!S.logs[x])missed.push(x)}
+  if(missed.length)L.push(`<b>${missed.length}</b> day(s) this week with no log. If you did not log it, it did not happen.`);
+  const open=S.backlog.filter(b=>b.date<=d&&(!b.resolved||b.resolved>d)),od=open.filter(b=>diff(b.date,d)>SLA[b.priority]);
+  if(open.length)L.push(`<b>${open.length}</b> backlog topic(s) still open${od.length?`, <b>${od.length}</b> already past their deadline`:''}.`);
+  return L.slice(0,5);
+}
+function realityCard(d){
+  const q=QUOTES[((diff('2026-01-01',d)%QUOTES.length)+QUOTES.length)%QUOTES.length];
+  return `<div class="card" style="border-left:3px solid var(--warn);margin-bottom:14px"><div class="sub">Reality check</div>
+    <div style="font-size:clamp(20px,3.2vw,30px);font-weight:300;line-height:1.25;margin:6px 0 14px;letter-spacing:.01em">&ldquo;${q}&rdquo;</div>
+    <ul style="margin:0;color:var(--tx);font-size:14px">${realityLines(d).map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+}
+function vSummary(){
+  const d=sumDate,t=today(),isT=d===t,E=dayEfficiency(d),l=S.logs[d],r=dayRec(d),c=r.coaching||{};
+  const col=E.overall==null?'var(--mut)':E.overall>=85?'var(--ok)':E.overall>=60?'var(--warn)':'var(--bad)';
+  const verdict=E.overall==null?'No goals or log yet':E.overall>=85?'On target':E.overall>=60?'Partly there':'Behind';
+  const mk=mocks().filter(m=>m.date===d);
+  const B=S.backlog,open=B.filter(b=>b.date<=d&&(!b.resolved||b.resolved>d));
+  const over=open.filter(b=>diff(b.date,d)>SLA[b.priority]);
+  const resolvedToday=B.filter(b=>b.resolved===d).length,addedToday=B.filter(b=>b.date===d).length;
+  const dueSoon=[...open].sort((a,b)=>addD(a.date,SLA[a.priority])<addD(b.date,SLA[b.priority])?-1:1).slice(0,5);
+  const G=[...E.G].sort((a,b)=>a.start<b.start?-1:1);
+  const stat=(lab,val,sub)=>`<div><div class="sub">${lab}</div><div style="font-size:22px;font-weight:300">${val}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+  const pcol=p=>p==null?'':p>=85?'ok':p>=60?'warn':'bad';
+  $('#app').innerHTML=`<h2>${isT?'Today':fmt(d)}</h2>
+  <div class="tools" style="align-items:end"><div><label>Date</label><input type="date" max="${t}" value="${d}" onchange="sumDate=this.value||today();vSummary()"></div>
+    ${isT?'':'<button class="btn alt" onclick="sumDate=today();vSummary()">Back to today</button>'}
+    <button class="btn" onclick="eodPdf()">Print end-of-day sheet (blank PDF)</button>
+    <div class="sub" style="padding-bottom:8px">${pd(d).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div></div>
+
+  ${realityCard(d)}
+
+  <div class="card hero" style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+    <div>${ring(E.overall,col)}</div>
+    <div style="flex:1;min-width:240px"><div class="sub">Efficiency in reaching today's goal</div>
+      <div class="big" style="color:${col}">${E.overall==null?'--':r0(E.overall)+'%'}</div><div style="font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:${col};margin-top:4px">${verdict}</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:14px 0 0">
+        ${stat('Goals completed',E.goalsPct==null?'--':r0(E.goalsPct)+'%',E.G.length?E.done+' of '+E.G.length+' done':'no goals set')}
+        ${stat('Questions vs plan',E.qRaw==null?'--':r0(E.qRaw)+'%',E.logged==null?'not logged':E.logged+' of '+E.plan+' Q ('+E.planSrc+')')}
+      </div>
+      <div class="sub" style="margin-top:10px">Efficiency = average of goals completed and questions done vs plan (each capped at 100%). It uses whichever of the two you have data for.</div></div></div>
+
+  <div class="grid2">
+   <div class="card"><h3>Goals</h3>
+    ${G.length?`<div class="bar"><i style="width:${E.goalsPct}%;background:var(--${pcol(E.goalsPct)||'tx'})"></i></div><div class="tw"><table>${G.map(g=>`<tr><td style="width:24px" class="${g.done?'ok':isT||d>t?'sub':'bad'}">${g.done?'&#10003;':'&#9675;'}</td><td>${fmtT(g.start)}</td><td>${esc(g.subject)}</td><td ${g.done?'style="color:var(--mut);text-decoration:line-through"':''}>${esc(g.text)}</td><td>${g.q||''}</td></tr>`).join('')}</table></div>`:'<div class="sub">No goals set for this day.</div>'}
+    <p><button class="btn s alt" onclick="todayDate='${d}';go('today')">Open Daily Goals</button></p></div>
+
+   <div class="card"><h3>Daily log</h3>
+    ${l?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin:0 0 10px">${stat('Total Q',qTot(l),'')}${stat('Accuracy',l.accuracy+'%','')}${stat('Energy / Focus',l.energy+' / '+l.focus,'')}${stat('Sleep',l.sleep!=null?l.sleep+' h':'--',l.onTime?'in bed by 11:30':'')}</div>
+      <div class="sub">Claude ${l.pager||0} &middot; PYQ book ${l.pyq||0} &middot; Core books ${l.textbook||0} &middot; Class ${l.coaching||0}</div>
+      ${l.topics?`<div class="sub" style="margin-top:6px">Topics: ${esc(l.topics)}</div>`:''}${l.weak?`<div class="sub">Weak: ${esc(l.weak)}</div>`:''}`
+    :'<div class="sub">Nothing logged for this day yet.</div>'}
+    ${c.attended?`<div class="sub" style="margin-top:8px">Coaching: ${c.attended==='No'?'not attended':fmtT(c.start)+' - '+fmtT(c.end)+(c.q!=null?', '+c.q+' Q':'')}</div>`:''}
+    <p><button class="btn s alt" onclick="logDate='${d}';go('log')">${l?'Edit':'Add'} daily log</button></p></div>
+
+   <div class="card"><h3>Test</h3>
+    ${mk.length?mk.map(m=>`<div style="margin-bottom:8px"><div class="big">${m.marks}<span style="font-size:14px;color:var(--mut)"> / 300</span></div><div class="sub">Mock #${m.num} &middot; ${m.rank?'rank '+m.rank+'/'+m.students:''}${m.percentile!=null?' &middot; '+r1(m.percentile)+' percentile':''}</div>
+       <div class="sub">P ${m.phy??'--'} &middot; C ${m.chem??'--'} &middot; M ${m.math??'--'}</div><button class="btn s" onclick="mockView='${m.id}';go('mocks');mockView='${m.id}';vMocks()">View report</button></div>`).join('')
+    :'<div class="sub">No test taken on this day.</div><p><button class="btn s alt" onclick="go(\'mocks\')">Log a mock</button></p>'}</div>
+
+   <div class="card"><h3>Backlog remaining</h3>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr));margin:0 0 10px">${stat('Open',open.length,'High '+open.filter(b=>b.priority==='High').length+' / Med '+open.filter(b=>b.priority==='Medium').length+' / Low '+open.filter(b=>b.priority==='Low').length)}
+      ${stat('Overdue',`<span class="${over.length?'bad':''}">${over.length}</span>`,'past their deadline')}${stat('Resolved',resolvedToday,'on this day')}${stat('Added',addedToday,'on this day')}</div>
+    ${dueSoon.length?`<div class="tw"><table><tr><th>Topic</th><th>Pri</th><th>Due</th></tr>${dueSoon.map(b=>{const due=addD(b.date,SLA[b.priority]);return `<tr><td>${esc(b.subject)} &middot; ${esc(b.topic)}</td><td>${b.priority}</td><td class="${due<d?'bad':''}">${fmtS(due)}${due<d?' (overdue)':''}</td></tr>`}).join('')}</table></div>`:'<div class="sub">Backlog is clear.</div>'}
+    <p><button class="btn s alt" onclick="go('backlog')">Open backlog</button></p></div>
+  </div>`;
+}
+
+/* ---------- RESOURCES ---------- */
+let resEdit=false;
+const SUBJ_COL={Physics:'#5aa9ff',Chemistry:'#ffb020',Math:'#3ddc97'};
+function vResources(){
+  const R=S.settings.resources,used={};
+  logs().forEach(l=>{if(l.book&&l.book!=='—')used[l.book]=(used[l.book]||0)+(l.textbook||0);if(l.pyqBook&&l.pyqBook!=='—')used[l.pyqBook]=(used[l.pyqBook]||0)+(l.pyq||0)});
+  const tot=k=>sum(logs().map(l=>l[k]||0)),lm=mocks().slice(-1)[0];
+  const CAT={claude:'Claude',pyq:'PYQ book',core:'Core book'};
+  const bySub=cat=>Object.keys(R).map(sub=>{const n=R[sub].filter(b=>b.name&&resCat(b)===cat).map(b=>esc(b.name));return n.length?`<div><b>${sub}:</b> ${n.join(', ')}</div>`:''}).join('');
+  const src=[
+   ['Claude','Daily pager (all subjects). Structured plan, 115-135 Q/day. Main source in Phases 0-2.','pager','<div>All subjects: Claude daily pager</div>'],
+   ['PYQ book','JEE Mains past-year question books. Main source in Phase 3.','pyq',bySub('pyq')],
+   ['Core books','Main textbooks and practice books for each subject.','textbook',bySub('core')],
+   ['Class questions','Arjuna Classes, 9 AM-3 PM Mon-Fri. Questions solved and discussed in class.','coaching','<div>All subjects: coaching class</div>']];
+  const subj=Object.keys(R).map(sub=>{
+    const open=S.backlog.filter(b=>subjMatch(b.subject,sub)&&b.status!=='Resolved').length;
+    const mk=lm?{Physics:lm.phy,Chemistry:lm.chem,Math:lm.math}[sub]:null;
+    const rows=R[sub].map((b,i)=>resEdit?`<tr><td><input value="${esc(b.name)}" oninput="S.settings.resources['${sub}'][${i}].name=this.value"></td><td><select onchange="S.settings.resources['${sub}'][${i}].cat=this.value">${Object.entries(CAT).map(([k,l])=>`<option value="${k}" ${resCat(b)===k?'selected':''}>${l}</option>`).join('')}</select></td><td><input value="${esc(b.note)}" oninput="S.settings.resources['${sub}'][${i}].note=this.value"></td><td><button class="btn s bad" onclick="resDel('${sub}',${i})">x</button></td></tr>`
+      :`<tr><td><b>${esc(b.name)}</b></td><td>${CAT[resCat(b)]}</td><td>${esc(b.note)}</td><td>${resCat(b)==='claude'?'—':used[b.name]||0}</td></tr>`).join('')||'<tr><td colspan=4 class="sub">Nothing added.</td></tr>';
+    return `<div class="card" style="border-top:4px solid ${SUBJ_COL[sub]||INK()}"><h3>${esc(sub)}</h3>
+      <div class="sub" style="margin-bottom:8px">Latest mock: <b>${mk??'-'}</b>${mk!=null?' / 100':''} &middot; Open backlog items: <b>${open}</b></div>
+      <div class="tw"><table><tr><th>Resource</th><th>Type</th><th>Used for</th><th>${resEdit?'':'Q logged'}</th></tr>${rows}</table></div>
+      ${resEdit?`<p><button class="btn s" onclick="resAdd('${sub}')">+ Add resource</button></p>`:''}</div>`}).join('');
+  $('#app').innerHTML=`<h2>Resources</h2><div class="tools"><div class="sub" style="flex:1;align-self:center">Where my questions come from: Claude, PYQ books, core books and class questions.</div>
+    <button class="btn ${resEdit?'ok':'alt'}" onclick="resToggle()">${resEdit?'Save changes':'Edit list'}</button></div>
+  <h3>Question sources</h3><div class="grid">${src.map(([t,d,k,list])=>`<div class="card" style="border-top:4px solid ${COL[k]}"><h3>${t}</h3><div class="sub">${d}</div><div style="margin:8px 0;font-size:14px">${list}</div><div class="sub">Logged so far: <b>${tot(k)}</b> Q</div></div>`).join('')}</div>
+  <h3>By subject</h3><div class="grid2">${subj}</div>
+  <h3>Source mix by phase</h3><div class="card"><div class="tw"><table><tr><th>Phase</th><th>Dates</th><th>Claude</th><th>Core books</th><th>PYQ book</th></tr>${S.settings.phases.map(p=>`<tr><td><b>${esc(p.name)}</b><div class="sub">${esc(p.focus)}</div></td><td>${fmtS(p.start)} - ${fmtS(p.end)}</td><td>${p.mix[0]}%</td><td>${p.mix[1]}%</td><td>${p.mix[2]}%</td></tr>`).join('')}</table></div></div>
+  <h3>Volume targets</h3><div class="card"><ul><li>${S.settings.weeklyMin}-${S.settings.weeklyMax} questions per week</li><li>115-135 Claude questions per day</li><li>About 50,000-55,000 questions over the plan</li><li>Sunday: mock test (100 Q) plus review</li></ul></div>`;
+}
+function resToggle(){if(resEdit)save();resEdit=!resEdit;vResources()}
+function resAdd(sub){S.settings.resources[sub].push({name:'',note:'',cat:'core'});vResources()}
+function resDel(sub,i){S.settings.resources[sub].splice(i,1);vResources()}
+/* ---------- MOCKS ---------- */
+let editMock=null,mockView=null;
+function vMocks(){
+  if(mockView&&S.mocks.find(x=>x.id===mockView))return vMockReport(mockView);
+  const ms=mocks(),m=editMock?S.mocks.find(x=>x.id===editMock)||{}:{};
+  const f=(id,lab,val,extra='',type='number')=>`<div><label for="${id}">${lab}</label><input id="${id}" type="${type}" ${extra} value="${esc(val??'')}"></div>`;
+  $('#app').innerHTML=`<h2>Mock Tests</h2>
+  <div class="card"><h3>${editMock?'Edit mock':'Log a mock'}</h3><form onsubmit="saveMock(event)">
+  <div class="row">${f('mdate','Date',m.date||today(),`max="${today()}"`,'date')}${f('mnum','Test #',m.num??(ms.length+1),'min=1')}${f('mtype','Type',m.type||'Full Mock (100 Q, 3 hrs)','','text')}</div>
+  <div class="row">${f('mat','Attempted',m.attempted,'min=0')}${f('mco','Correct',m.correct,'min=0')}${f('min_','Incorrect',m.incorrect,'min=0')}${f('mmk','Marks (/300)',m.marks,'min=0 max=300')}</div>
+  <div class="row">${f('mph','Physics marks',m.phy,'min=0 max=100')}${f('mch','Chemistry marks',m.chem,'min=0 max=100')}${f('mma','Math marks',m.math,'min=0 max=100')}${f('mtm','Time taken (min)',m.time,'min=0')}</div>
+  <div class="row">${f('mtot','Total questions in paper',m.total,'min=1')}${f('mcp','Physics correct',m.cp,'min=0')}${f('mcc','Chemistry correct',m.cc,'min=0')}${f('mcm','Math correct',m.cm,'min=0')}</div>
+  <div class="row">${f('mea','Easy: attempted',m.ea,'min=0')}${f('mec','Easy: correct',m.ec,'min=0')}${f('mma_','Medium: attempted',m.ma,'min=0')}${f('mmc','Medium: correct',m.mc,'min=0')}${f('mha','Hard: attempted',m.ha,'min=0')}${f('mhc','Hard: correct',m.hc,'min=0')}</div>
+  <div class="row">${f('mhi','Class highest',m.hi,'min=0 max=300')}${f('mlo','Class lowest',m.lo,'min=0 max=300')}${f('mav','Class average',m.av,'min=0 max=300')}${f('mrk','My rank',m.rank,'min=1')}${f('mst','Total students',m.students,'min=1')}</div>
+  <div class="row">${f('men','Energy (1–10)',m.energy,'min=1 max=10')}${f('mfo','Focus (1–10)',m.focus,'min=1 max=10')}${f('mwp','Weak topics — Physics',m.wp,'','text')}${f('mwc','Weak topics — Chemistry',m.wc,'','text')}${f('mwm','Weak topics — Math',m.wm,'','text')}</div>
+  <div><label>Notes</label><textarea id="mnote" rows="2">${esc(m.notes||'')}</textarea></div>
+  <h3 style="margin-top:12px">Documents (PDF or image, max 25 MB each)</h3>
+  <div class="row">${Object.entries(FK).map(([k,l])=>`<div><label for="mf_${k}">${l}</label>${m.files&&m.files[k]?`<div class="sub">Current: ${esc(m.files[k].name)} <button type="button" class="btn s" onclick="openFile('${m.id}','${k}')">View</button> <button type="button" class="btn s bad" onclick="rmFile('${m.id}','${k}')">Remove</button><br>Choose a file to replace it.</div>`:''}<input id="mf_${k}" type="file" accept=".pdf,application/pdf,image/*"></div>`).join('')}</div>
+  <p><button class="btn ok">${editMock?'Update mock':'Save mock'}</button> ${editMock?'<button type="button" class="btn alt" onclick="editMock=null;vMocks()">Cancel</button>':''}</p></form></div>
+  ${ms.length?`<div class="grid2"><div class="card"><h3>Marks vs targets</h3>${sc('cm1')}</div><div class="card"><h3>Subject-wise marks</h3>${sc('cm2')}</div>
+  <div class="card"><h3>Accuracy by difficulty</h3>${sc('cm3')}</div><div class="card"><h3>Percentile &amp; rank</h3>${sc('cm4')}</div>
+  <div class="card"><h3>Speed: avg time per attempted Q (min)</h3>${sc('cm5')}</div><div class="card"><h3>Weak areas (&lt;70% accuracy)</h3>${weakAreas(ms)}</div></div>`:''}
+  <div class="card"><h3>All mocks</h3><div class="tw"><table><tr><th>Date</th><th>#</th><th>Marks</th><th>P/C/M</th><th>Acc</th><th>E/M/H acc</th><th>vs class avg</th><th>Rank</th><th>%ile</th><th>Files</th><th></th></tr>
+  ${[...ms].reverse().map(x=>`<tr><td>${fmtS(x.date)}</td><td>${x.num}</td><td><b>${x.marks}</b></td><td>${x.phy??'–'}/${x.chem??'–'}/${x.math??'–'}</td><td>${x.accuracy!=null?r1(x.accuracy)+'%':'—'}</td><td>${[x.ea?x.ec/x.ea:null,x.ma?x.mc/x.ma:null,x.ha?x.hc/x.ha:null].map(z=>z==null?'–':r0(z*100)).join('/')}</td><td>${x.av!=null?(x.marks-x.av>=0?'+':'')+(x.marks-x.av):'—'}</td><td>${x.rank?x.rank+'/'+x.students:'—'}</td><td>${x.percentile!=null?r1(x.percentile):'—'}</td><td style="white-space:nowrap">${fileLinks(x)}</td><td style="white-space:nowrap"><button class="btn s" onclick="mockView='${x.id}';vMocks();window.scrollTo(0,0)">Report</button> <button class="btn s alt" onclick="editMock='${x.id}';vMocks();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delMock('${x.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No mocks yet.</td></tr>'}</table></div></div>`;
+  if(ms.length)mockCharts(ms);
+}
+function vMockReport(id){
+  const ms=mocks(),i=ms.findIndex(x=>x.id===id),m=ms[i],prev=i>0?ms[i-1]:null,ph=phaseFor(m.date),exp=expectedMarks(m.date);
+  const pc=(a,b)=>b?r1(a/b*100)+'%':'—',sg=x=>(x>=0?'+':'')+r1(x);
+  const Q=m.total?m.total/3:null;
+  const subj=[['Physics',m.phy,m.cp,m.wp],['Chemistry',m.chem,m.cc,m.wc],['Math',m.math,m.cm,m.wm]];
+  const have=subj.filter(x=>x[1]!=null);
+  const best=have.length?have.reduce((a,b)=>b[1]>a[1]?b:a):null,worst=have.length?have.reduce((a,b)=>b[1]<a[1]?b:a):null;
+  const gap=(lab,val)=>val==null?'':`<tr><td>${lab}</td><td>${val}</td><td class="${m.marks-val>=0?'ok':'bad'}">${sg(m.marks-val)}</td></tr>`;
+  const un=m.total&&m.attempted!=null?m.total-m.attempted:null;
+  const ins=mockInsights(m,prev,ph,exp,best,worst);
+  $('#app').innerHTML=`<div class="tools noprint"><button class="btn alt" onclick="mockView=null;vMocks()">‹ All mocks</button><button class="btn ok" onclick="mockPdf('${m.id}')">Download PDF</button><button class="btn alt" onclick="window.print()">Print</button><button class="btn alt" onclick="mockView=null;editMock='${m.id}';vMocks()">Edit</button></div>
+  <h2>Mock #${m.num} report — ${fmt(m.date)}</h2><div class="sub" style="margin:-8px 0 12px">${esc(m.type||'')} · ${esc(ph.name)}</div>
+  <div class="grid">
+   <div class="card"><div class="sub">Marks</div><div class="big">${m.marks}<span style="font-size:16px;font-weight:400"> / 300</span></div><div class="sub">${pc(m.marks,300)}${prev?' · '+sg(m.marks-prev.marks)+' vs previous':''}</div></div>
+   <div class="card"><div class="sub">Rank</div><div class="big">${m.rank?m.rank+' / '+m.students:'—'}</div><div class="sub">${m.percentile!=null?r1(m.percentile)+' percentile':''}${prev&&prev.rank&&m.rank?' · previous rank '+prev.rank+'/'+prev.students:''}</div></div>
+   <div class="card"><div class="sub">Correct answers</div><div class="big">${m.correct??'—'}${m.total?' / '+m.total:''}</div><div class="sub">${m.total&&m.correct!=null?pc(m.correct,m.total)+' of paper':''}${m.attempted?' · '+pc(m.correct,m.attempted)+' of attempted':''}</div></div>
+   <div class="card"><div class="sub">Vs expected on that date</div><div class="big ${m.marks>=exp?'ok':'bad'}">${sg(m.marks-exp)}</div><div class="sub">expected ${r0(exp)} · ${ph.name} target ${ph.target}+</div></div></div>
+  <div class="grid2"><div class="card"><h3>Subject breakdown</h3><div class="tw"><table><tr><th>Subject</th><th>Marks /100</th><th>Correct</th><th>Accuracy</th><th>Weak topics</th></tr>
+   ${subj.map(x=>`<tr><td><b>${x[0]}</b></td><td>${x[1]??'—'}${graceNote(m,x[0])}</td><td>${x[2]??'—'}${Q&&x[2]!=null?' / '+r0(Q):''}</td><td>${Q&&x[2]!=null?pc(x[2],Q):'—'}</td><td>${esc(x[3]||'—')}</td></tr>`).join('')}</table></div>${cv('cr1',200)}</div>
+   <div class="card"><h3>Class comparison</h3><div class="tw"><table><tr><th></th><th>Marks</th><th>You vs</th></tr><tr><td><b>You</b></td><td><b>${m.marks}</b></td><td></td></tr>${gap('Class highest',m.hi)}${gap('Class average',m.av)}${gap('Class lowest',m.lo)}</table></div>${cv('cr2',200)}</div></div>
+  <div class="grid2"><div class="card"><h3>Attempt analysis</h3><table>
+   <tr><td>Total questions</td><td>${m.total??'—'}</td></tr><tr><td>Attempted</td><td>${m.attempted??'—'}</td></tr><tr><td>Unattempted</td><td>${un??'—'}</td></tr><tr><td>Correct</td><td>${m.correct??'—'}</td></tr><tr><td>Incorrect</td><td>${m.incorrect??'—'}</td></tr>
+   <tr><td>Time taken</td><td>${m.time?m.time+' min'+(m.attempted?` (${r1(m.time/m.attempted)} min/Q)`:''):'—'}</td></tr>
+   ${[['Easy','ea','ec'],['Medium','ma','mc'],['Hard','ha','hc']].map(([l,a,c])=>`<tr><td>${l} accuracy</td><td>${m[a]?m[c]+'/'+m[a]+' ('+pc(m[c],m[a])+')':'—'}</td></tr>`).join('')}</table></div>
+   <div class="card"><h3>Insights</h3><ul>${ins.map(x=>`<li>${x}</li>`).join('')}</ul></div></div>
+  ${m.notes?`<div class="card"><h3>Notes</h3><div>${esc(m.notes)}</div></div>`:''}
+  <div class="card noprint"><h3>Documents</h3>${Object.keys(FK).map(k=>m.files&&m.files[k]?`<button class="btn s" onclick="openFile('${m.id}','${k}')">${FK[k]}: ${esc(m.files[k].name)}</button> `:`<span class="sub">${FK[k]}: not uploaded · </span>`).join('')}</div>`;
+  mk('cr1',{type:'bar',data:{labels:have.map(x=>x[0]),datasets:[{data:have.map(x=>x[1]),backgroundColor:['#5aa9ff','#ffb020','#3ddc97']}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:100}}}});
+  const cl=[['You',m.marks,INK()],['Highest',m.hi,'#3ddc97'],['Average',m.av,'#8a8f98'],['Lowest',m.lo,'#ff5a52']].filter(x=>x[1]!=null);
+  mk('cr2',{type:'bar',data:{labels:cl.map(x=>x[0]),datasets:[{data:cl.map(x=>x[1]),backgroundColor:cl.map(x=>x[2])}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:300}}}});
+}
+function weakAreas(ms){
+  const l=ms[ms.length-1],out=[];
+  const d=[['Easy',l.ea,l.ec],['Medium',l.ma,l.mc],['Hard',l.ha,l.hc]].filter(x=>x[1]).map(x=>`${x[0]}: ${x[2]}/${x[1]} (${r0(x[2]/x[1]*100)}%)`);
+  const subj=[['Physics',l.phy,l.wp],['Chemistry',l.chem,l.wc],['Math',l.math,l.wm]].map(x=>`<div><b>${x[0]}</b> ${x[1]??'–'}/100 — ${esc(x[2]||'no weak topics noted')}</div>`);
+  return `<div class="sub">Latest mock (#${l.num})</div><p>${d.join('<br>')||'—'}</p>${subj.join('')}`;
+}
+function mockCharts(ms){
+  marksChart('cm1');
+  stock('cm2',{multi:true,dec:0,fixY:[0,100],series:[['Physics','phy','var(--blue)'],['Chemistry','chem','var(--warn)'],['Math','math','var(--ok)']].map(([n,k,c])=>({name:n,color:c,pts:ms.map(m=>({t:tms(m.date),y:m[k]}))}))});
+  const acc=(a,c)=>ms.map(m=>({t:tms(m.date),y:m[a]?m[c]/m[a]*100:null}));
+  stock('cm3',{multi:true,unit:'%',dec:0,fixY:[0,100],series:[['Easy','ea','ec','var(--ok)'],['Medium','ma','mc','var(--warn)'],['Hard','ha','hc','var(--bad)']].map(([n,a,c,col])=>({name:n,color:col,pts:acc(a,c)}))});
+  stock('cm4',{dec:1,fixY:[0,100],refLabel:'First mock',series:[{name:'Percentile',pts:ms.map(m=>({t:tms(m.date),y:m.percentile,meta:m.rank?'rank '+m.rank+'/'+m.students:''}))}]});
+  stock('cm5',{dec:1,good:'down',unit:' min',refLabel:'First mock',series:[{name:'Min per question',pts:ms.map(m=>({t:tms(m.date),y:m.time&&m.attempted?m.time/m.attempted:null}))}]});
+}
+async function saveMock(e){
+  e.preventDefault();
+  const d=v('mdate');if(!d||d>today())return alert('Date cannot be in the future.');
+  const marks=n('mmk');if(marks==null||marks<0||marks>300)return alert('Marks must be 0–300.');
+  const rank=n('mrk'),st=n('mst');
+  if(rank!=null&&(!st||rank<1||rank>st))return alert('Rank must be between 1 and total students.');
+  const at=n('mat'),co=n('mco'),inc=n('min_');
+  if(at!=null&&co!=null&&inc!=null&&co+inc>at&&!confirm('Correct + incorrect exceeds attempted. Save anyway?'))return;
+  const ph=n('mph'),ch=n('mch'),ma=n('mma');
+  if(ph!=null&&ch!=null&&ma!=null&&ph+ch+ma!==marks&&!confirm(`Subject marks sum to ${ph+ch+ma}, not ${marks}. Save anyway?`))return;
+  for(const id of['men','mfo']){const x=n(id);if(x!=null&&(x<1||x>10))return alert('Energy/Focus must be 1–10.')}
+  const fl=Object.keys(FK).map(k=>[k,document.getElementById('mf_'+k).files[0]]).filter(x=>x[1]);
+  for(const [k,f] of fl)if(f.size>25*1024*1024)return alert(FK[k]+' is larger than 25 MB.');
+  const oldM=editMock?S.mocks.find(x=>x.id===editMock):null;
+  const o={files:{...(oldM&&oldM.files)},id:editMock||'M'+Date.now(),date:d,num:n('mnum'),type:v('mtype'),phase:phaseFor(d).name,attempted:at,correct:co,incorrect:inc,
+    accuracy:at?co/at*100:null,marks,phy:ph,chem:ch,math:ma,time:n('mtm'),ea:n('mea'),ec:n('mec'),ma:n('mma_'),mc:n('mmc'),ha:n('mha'),hc:n('mhc'),
+    total:n('mtot'),cp:n('mcp'),cc:n('mcc'),cm:n('mcm'),hi:n('mhi'),lo:n('mlo'),av:n('mav'),rank,students:st,percentile:rank&&st?(st-rank)/st*100:null,
+    energy:n('men'),focus:n('mfo'),wp:v('mwp'),wc:v('mwc'),wm:v('mwm'),notes:v('mnote')};
+  try{for(const [k,f] of fl){await fput(o.id+':'+k,f);o.files[k]={name:f.name,size:f.size}}}catch(err){return alert('Could not store file: '+err.message)}
+  const i=S.mocks.findIndex(x=>x.id===o.id);if(i>=0)S.mocks[i]=o;else S.mocks.push(o);
+  editMock=null;save();vMocks();window.scrollTo(0,0);
+}
+function delMock(id){if(confirm('Delete this mock (and its files)?')){Object.keys(FK).forEach(k=>fdel(id+':'+k));S.mocks=S.mocks.filter(x=>x.id!==id);save();vMocks()}}
+
+/* ---------- BACKLOG ---------- */
+let editBL=null,blFilter={s:'',p:'',st:'open'};
+const SLA={High:3,Medium:7,Low:14};
+function vBacklog(){
+  const t=today(),B=S.backlog,open=B.filter(b=>b.status!=='Resolved'),b0=editBL?B.find(x=>x.id===editBL)||{}:{};
+  const wk=mon(t),resW=B.filter(b=>b.resolved&&b.resolved>=wk).length;
+  const resolved=B.filter(b=>b.resolved),avgT=avg(resolved.map(b=>diff(b.date,b.resolved)));
+  const pc=p=>open.filter(b=>b.priority===p).length;
+  const subj=['Physics','Chemistry','Math','Combined'].map(s=>{const o=open.filter(b=>s==='Combined'?subjParts(b.subject).length>1:b.subject===s);
+    return `<tr><td><b>${s}</b></td><td>${o.length}</td><td>${o.filter(b=>b.priority==='High').length}/${o.filter(b=>b.priority==='Medium').length}/${o.filter(b=>b.priority==='Low').length}</td><td>${o.filter(b=>b.accuracy!=null).sort((a,b)=>a.accuracy-b.accuracy).slice(0,3).map(b=>esc(b.topic)+' ('+b.accuracy+'%)').join(', ')||'—'}</td></tr>`}).join('');
+  let L=B.filter(b=>subjMatch(b.subject,blFilter.s)&&(!blFilter.p||b.priority===blFilter.p)&&(blFilter.st==='all'||(blFilter.st==='open'?b.status!=='Resolved':b.status===blFilter.st)));
+  L.sort((a,b)=>({High:0,Medium:1,Low:2}[a.priority]-{High:0,Medium:1,Low:2}[b.priority])||(a.date<b.date?-1:1));
+  const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}</select>`;
+  $('#app').innerHTML=`<h2>Backlog</h2>
+  <div class="grid"><div class="card"><div class="sub">Open items</div><div class="big">${open.length}</div><div class="sub">High ${pc('High')} · Med ${pc('Medium')} · Low ${pc('Low')}</div></div>
+   <div class="card"><div class="sub">Resolved this week</div><div class="big">${resW}</div><div class="sub">Resolution rate ${B.length?r0(resolved.length/B.length*100)+'%':'—'} · avg ${avgT==null?'—':r1(avgT)+' days'}</div></div>
+   <div class="card"><div class="sub">Older than 14 days</div><div class="big ${open.filter(b=>diff(b.date,t)>14).length?'bad':''}">${open.filter(b=>diff(b.date,t)>14).length}</div><div class="sub">&gt;21 days: ${open.filter(b=>diff(b.date,t)>21).length}</div></div></div>
+  <div class="card"><h3>${editBL?'Edit item '+editBL:'Add backlog item'}</h3><form onsubmit="saveBL(event)">
+   <div class="row"><div><label>Type</label>${sel('bty',['Topic','Question','Concept','Error Pattern'],b0.type)}</div><div><label>Subject</label>${sel('bsu',SUBJECT_OPTS,b0.subject)}</div>
+    <div><label>Topic name</label><input id="bto" required value="${esc(b0.topic||'')}"></div><div><label>Accuracy %</label><input id="bac" type="number" min=0 max=100 value="${b0.accuracy??''}"></div></div>
+   <div class="row"><div><label>Source</label><input id="bso" value="${esc(b0.source||'')}"></div><div><label>Priority (SLA: H 3d / M 7d / L 14d)</label>${sel('bpr',['High','Medium','Low'],b0.priority)}</div>
+    <div><label>Status</label>${sel('bst',['Pending','In Progress','Resolved'],b0.status)}</div><div><label>Attempts</label><input id="bat" type="number" min=0 value="${b0.attempts??0}"></div></div>
+   <div class="row"><div><label>Why is it in the backlog?</label><input id="bde" value="${esc(b0.description||'')}"></div><div><label>Resolution plan</label><input id="bpl" value="${esc(b0.plan||'')}"></div></div>
+   <button class="btn ok">${editBL?'Update':'Add item'}</button> ${editBL?'<button type="button" class="btn alt" onclick="editBL=null;vBacklog()">Cancel</button>':''}</form></div>
+  <div class="card"><h3>By subject (open)</h3><div class="tw"><table><tr><th>Subject</th><th>Count</th><th>H/M/L</th><th>Top 3 weakest</th></tr>${subj}</table></div></div>
+  <div class="grid2"><div class="card"><h3>Open backlog volume (weekly)</h3>${sc('cb1',230)}</div><div class="card"><h3>Aging (open)</h3>${cv('cb2',200)}</div><div class="card"><h3>Open by priority</h3>${cv('cb3',200)}</div></div>
+  <div class="card"><h3>Items</h3><div class="tools noprint"><select onchange="blFilter.s=this.value;vBacklog()"><option value="">All subjects</option>${SUBJECT_OPTS.map(x=>`<option ${blFilter.s===x?'selected':''}>${x}</option>`).join('')}</select>
+   <select onchange="blFilter.p=this.value;vBacklog()"><option value="">All priorities</option>${['High','Medium','Low'].map(x=>`<option ${blFilter.p===x?'selected':''}>${x}</option>`).join('')}</select>
+   <select onchange="blFilter.st=this.value;vBacklog()">${[['open','Open'],['all','All'],['Resolved','Resolved']].map(([k,l])=>`<option value="${k}" ${blFilter.st===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div class="tw"><table><tr><th>ID</th><th>Added</th><th>Subj / Topic</th><th>Pri</th><th>Status</th><th>Age</th><th>Acc</th><th>Att</th><th>Plan</th><th></th></tr>
+   ${L.map(b=>{const age=diff(b.date,b.resolved||t),over=b.status!=='Resolved'&&age>SLA[b.priority];
+     return `<tr><td>${b.id}</td><td>${fmtS(b.date)}</td><td><b>${esc(b.subject)}</b> · ${esc(b.topic)}<div class="sub">${esc(b.type)} — ${esc(b.description)}</div></td><td><span class="chip bg-${b.priority==='High'?'bad':b.priority==='Medium'?'warn':'ok'}">${b.priority}</span></td><td>${b.status}</td><td class="${over?'bad':''}">${age}d${over?' ⚠':''}</td><td>${b.accuracy??'—'}</td><td>${b.attempts}</td><td>${esc(b.plan)}</td>
+     <td style="white-space:nowrap">${b.status!=='Resolved'?`<button class="btn s" onclick="revisit('${b.id}')">Revisited</button> <button class="btn s ok" onclick="resolveBL('${b.id}')">Resolve</button> `:''}<button class="btn s alt" onclick="editBL='${b.id}';vBacklog();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delBL('${b.id}')">×</button></td></tr>`}).join('')||'<tr><td colspan=10 class="sub">Nothing here.</td></tr>'}</table></div></div>`;
+  // charts
+  const first=B.length?mon(B.map(b=>b.date).sort()[0]):mon(t),wks=[];for(let k=first;k<=mon(t);k=addD(k,7))wks.push(k);
+  stock('cb1',{good:'down',zero:true,dec:0,refLabel:'First week',series:[{name:'Open items',pts:wks.map(k=>({t:tms(k),y:B.filter(b=>b.date<=addD(k,6)&&(!b.resolved||b.resolved>addD(k,6))).length}))}]});
+  const ag=[0,0,0];open.forEach(b=>{const a=diff(b.date,t);ag[a<=7?0:a<=14?1:2]++});
+  mk('cb2',{type:'bar',data:{labels:['1–7 d','8–14 d','15+ d'],datasets:[{data:ag,backgroundColor:['#3ddc97','#ffb020','#ff5a52']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  mk('cb3',{type:'doughnut',data:{labels:['High','Medium','Low'],datasets:[{data:[pc('High'),pc('Medium'),pc('Low')],backgroundColor:['#ff5a52','#ffb020','#3ddc97']}]}});
+}
+function saveBL(e){
+  e.preventDefault();const t=today();
+  const ac=n('bac');if(ac!=null&&(ac<0||ac>100))return alert('Accuracy 0–100.');
+  const old=editBL?S.backlog.find(x=>x.id===editBL):null;
+  const st=v('bst');
+  const o={id:old?old.id:'BL'+String(S.backlog.reduce((m,b)=>Math.max(m,+b.id.slice(2)),0)+1).padStart(3,'0'),date:old?old.date:t,type:v('bty'),subject:v('bsu'),topic:v('bto'),description:v('bde'),accuracy:ac,source:v('bso'),priority:v('bpr'),status:st,attempts:n('bat')||0,revisited:old?old.revisited:t,plan:v('bpl'),resolved:st==='Resolved'?(old&&old.resolved)||t:null};
+  if(old)Object.assign(old,o);else S.backlog.push(o);
+  editBL=null;save();vBacklog();
+}
+function revisit(id){const b=S.backlog.find(x=>x.id===id);b.attempts++;b.revisited=today();if(b.status==='Pending')b.status='In Progress';save();vBacklog()}
+function resolveBL(id){const b=S.backlog.find(x=>x.id===id);b.status='Resolved';b.resolved=today();save();vBacklog()}
+function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x.id!==id);save();vBacklog()}}
+
+/* ---------- ANALYTICS ---------- */
+function vAnalytics(){
+  const W=allWeeks(),t=today(),cw=weekStats(mon(t)),mo=logs().filter(l=>l.date.slice(0,7)===t.slice(0,7)),ms=mocks();
+  const moQ=sum(mo.map(qTot)),moAcc=moQ?sum(mo.map(l=>l.accuracy*qTot(l)))/moQ:null;
+  const wavg=W.length?avg(W.map(w=>w.q)):null;
+  let proj='—';
+  if(ms.length>=2){const x=ms.map(m=>diff(ms[0].date,m.date)),y=ms.map(m=>m.marks),mx=avg(x),my=avg(y);const den=sum(x.map(a=>(a-mx)**2));
+    if(den>0){const sl=sum(x.map((a,i)=>(a-mx)*(y[i]-my)))/den;const dd=diff(ms[0].date,S.settings.milestones[S.settings.milestones.length-1].date);proj=Math.min(300,Math.round(my+sl*(dd-mx)))+' (linear fit of mocks → plan end)'}}
+  $('#app').innerHTML=`<h2>Analytics</h2>
+  <div class="grid"><div class="card"><h3>This week</h3><div class="big">${cw.q} Q</div><div class="sub">Accuracy ${cw.acc==null?'—':r1(cw.acc)+'%'} · sleep ${r1(cw.sleep)} h · energy ${r1(cw.energy)}</div></div>
+   <div class="card"><h3>This month</h3><div class="big">${moQ} Q</div><div class="sub">Accuracy ${moAcc==null?'—':r1(moAcc)+'%'} · ${mo.length} days logged</div></div>
+   <div class="card"><h3>Overall</h3><div class="big">${r0(wavg)} Q/wk</div><div class="sub">Accuracy ${overallAcc()==null?'—':r1(overallAcc())+'%'}<br>Projected marks: ${proj}</div></div></div>
+  <div class="grid2"><div class="card"><h3>Weekly Q (actual vs target)</h3>${sc('ca1')}</div><div class="card"><h3>Weekly accuracy %</h3>${sc('ca2')}</div>
+   <div class="card"><h3>Marks vs phase targets</h3>${sc('ca3')}</div><div class="card"><h3>Avg sleep per week (target 7 h)</h3>${sc('ca4')}</div>
+   <div class="card"><h3>Source mix — this week</h3>${cv('ca5')}</div><div class="card"><h3>Cumulative Q by source per phase</h3>${cv('ca6')}</div>
+   <div class="card"><h3>Mock score trend</h3>${sc('ca7')}</div>
+   <div class="card" style="grid-column:1/-1"><h3>My marks vs MSTR (Strategy Inc) share price</h3>${sc('ca8',300)}<div class="sub" id="mstrNote" style="margin-top:12px;line-height:1.7"></div></div>
+   <div class="card"><h3>Energy heatmap (last 8 weeks)</h3><div class="sub">Mon → Sun · green ≥7, orange 5–6, red &lt;5, grey = no log</div><div class="hm" style="margin-top:6px">${heat()}</div></div></div>`;
+  weekQChart('ca1');
+  stock('ca2',{unit:'%',dec:1,series:[{name:'Accuracy',pts:W.filter(w=>w.acc!=null).map(w=>({t:tms(w.key),y:w.acc,meta:w.q+' Q'}))}]});
+  marksChart('ca3');
+  stock('ca4',{unit:' h',dec:1,series:[{name:'Avg sleep',pts:W.filter(w=>w.sleep!=null).map(w=>({t:tms(w.key),y:w.sleep}))},{name:'Target 7 h',color:'var(--ok)',dash:true,pts:W.map(w=>({t:tms(w.key),y:7}))}]});
+  const names={pager:'Claude',pyq:'PYQ book',textbook:'Core books',coaching:'Class questions'};
+  mk('ca5',{type:'pie',data:{labels:Object.values(names),datasets:[{data:Object.keys(names).map(k=>cw.src[k]),backgroundColor:Object.keys(names).map(k=>COL[k])}]}});
+  const ph=S.settings.phases;
+  mk('ca6',{type:'bar',data:{labels:ph.map(p=>p.name),datasets:Object.keys(names).map(k=>({label:names[k],backgroundColor:COL[k],data:ph.map(p=>sum(logs().filter(l=>l.date>=p.start&&l.date<=p.end).map(l=>l[k]||0)))}))},options:{scales:{x:{stacked:true},y:{stacked:true}}}});
+  marksChart('ca7',true);
+  mstrChart('ca8');
+}
+function heat(){
+  const s=addD(mon(today()),-49);let h='';
+  for(let i=0;i<56;i++){const d=addD(s,i),l=S.logs[d],e=l?l.energy:null;
+    h+=`<div title="${fmtS(d)}${l?': energy '+e:''}" style="background:${e==null?'var(--nolog)':e>=7?'#3ddc97':e>=5?'#ffb020':'#ff5a52'};${d>today()?'opacity:.3':''}">${e??''}</div>`}
+  return h;
+}
+
+/* ---------- REPORTS ---------- */
+let repWeek=mon(today());
+function vReports(){
+  const ws=[...new Set([mon(today()),...Object.keys(S.logs).map(mon)])].sort().reverse();
+  const {w,prev,grp,ms,flags,recs}=weekData(repWeek),st=S.settings;
+  const row=(lab,k)=>{const [a,b,c]=grp(k);return `<tr><td>${lab}</td><td>${a}</td><td>${b}</td><td>${c}</td><td><b>${w.src[k]}</b></td><td>${w.q?r0(w.src[k]/w.q*100):0}%</td></tr>`};
+  const arrow=(a,b)=>a==null||b==null?'—':a-b>1?'↑':a-b<-1?'↓':'→';
+  $('#app').innerHTML=`<h2>Reports</h2>
+  <div class="tools noprint"><select onchange="repWeek=this.value;vReports()">${ws.map(k=>`<option value="${k}" ${k===repWeek?'selected':''}>Week of ${fmt(k)}${isLocked(k)?' 🔒':''}</option>`).join('')}</select>
+   <button class="btn ok" onclick="weeklyPdf(repWeek)">Download PDF</button><button class="btn alt" onclick="window.print()">Print</button><button class="btn alt" onclick="csv('logs')">CSV: logs</button><button class="btn alt" onclick="csv('mocks')">CSV: mocks</button><button class="btn alt" onclick="csv('backlog')">CSV: backlog</button></div>
+  <div class="card"><h3>Weekly report — ${fmt(repWeek)} to ${fmt(addD(repWeek,6))}</h3>
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+   <div><div class="sub">Questions</div><div class="big">${w.q}</div><div class="sub">target ${st.weeklyMin}–${st.weeklyMax}</div></div>
+   <div><div class="sub">Accuracy ${arrow(w.acc,prev.acc)}</div><div class="big">${w.acc==null?'—':r1(w.acc)+'%'}</div></div>
+   <div><div class="sub">Energy ${arrow(w.energy,prev.energy)}</div><div class="big">${r1(w.energy)}</div></div>
+   <div><div class="sub">Sleep ${arrow(w.sleep,prev.sleep)}</div><div class="big">${r1(w.sleep)} h</div></div>
+   <div><div class="sub">Mock</div><div class="big">${ms.length?ms.map(m=>m.marks).join(', '):'—'}</div></div></div>
+  <div class="tw"><table><tr><th>Source</th><th>Mon–Fri</th><th>Sat</th><th>Sun</th><th>Total</th><th>% weekly</th></tr>${row('Claude','pager')}${row('PYQ book','pyq')}${row('Core books','textbook')}${row('Class questions','coaching')}
+   <tr><td><b>TOTAL</b></td><td></td><td></td><td></td><td><b>${w.q}</b> / ${st.weeklyMin}–${st.weeklyMax}</td><td>100%</td></tr></table></div>
+  <h3 style="margin-top:14px">Red flags</h3>${flags.length?flags.map(f=>`<div class="alert r">${esc(f)}</div>`).join(''):'<div class="sub">None 🎉</div>'}
+  <h3 style="margin-top:10px">Recommended actions</h3><ul>${recs.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
+  <div class="sub">Milestones this week: ${st.milestones.filter(m=>m.date>=repWeek&&m.date<=addD(repWeek,6)).map(m=>m.marks+'+ on '+fmtS(m.date)).join(', ')||'none'}</div></div>`;
+}
+function csv(kind){
+  const rows=kind==='logs'?logs():kind==='mocks'?mocks():S.backlog;
+  if(!rows.length)return alert('Nothing to export.');
+  const keys=[...new Set(rows.flatMap(Object.keys))];
+  const c=x=>{x=x==null?'':String(x);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+  dl(kind+'.csv',[keys.join(','),...rows.map(r=>keys.map(k=>c(r[k])).join(','))].join('\n'),'text/csv');
+}
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()}
+
+/* ---------- SETTINGS ---------- */
+function vSettings(){
+  const s=S.settings;
+  $('#app').innerHTML=`<h2>Settings</h2>
+  <div class="card"><h3>Locked constraints</h3><div class="sub">Sleep 11:30 PM–6:30 AM (7 h) · Coaching 9 AM–3 PM Mon–Fri · Study 4:30–11:30 PM · 400-day target ~50,000–55,000 Q. These are fixed and not editable.</div></div>
+  <form class="card" onsubmit="saveSettings(event)"><h3>Editable parameters</h3>
+   <div class="row"><div><label>Plan start</label><input id="s0" type="date" value="${s.start}"></div><div><label>Exam date</label><input id="s1" type="date" value="${s.exam}"></div>
+    <div><label>Weekly Q min</label><input id="s2" type="number" value="${s.weeklyMin}"></div><div><label>Weekly Q max</label><input id="s3" type="number" value="${s.weeklyMax}"></div><div><label>Baseline marks at start</label><input id="s4" type="number" value="${s.baseline}"></div></div>
+   <h3>Phases</h3>${s.phases.map((p,i)=>`<div class="row"><div><label>Name</label><input id="pn${i}" value="${esc(p.name)}"></div><div><label>Start</label><input id="ps${i}" type="date" value="${p.start}"></div><div><label>End</label><input id="pe${i}" type="date" value="${p.end}"></div><div><label>Target marks</label><input id="pt${i}" type="number" value="${p.target}"></div><div><label>Focus</label><input id="pf${i}" value="${esc(p.focus)}"></div></div>`).join('')}
+   <h3>Milestones</h3><div class="row" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">${s.milestones.map((m,i)=>`<div style="display:flex;gap:6px"><input id="md${i}" type="date" value="${m.date}"><input id="mm${i}" type="number" value="${m.marks}" style="width:80px"></div>`).join('')}</div>
+   <div class="chk" style="padding:0 0 10px"><input type="checkbox" id="sul" ${s.unlockPast?'checked':''}><label for="sul">Allow editing locked weeks (normally locks Sunday 11:30 PM)</label></div>
+   <button class="btn ok">Save settings</button></form>
+  <div class="card"><h3>Data</h3><div class="tools"><button class="btn" onclick="dl('abundx-apex-backup-'+today()+'.json',JSON.stringify(S,null,1),'application/json')">Download backup (JSON)</button>
+   <button class="btn alt" onclick="$('#imp').click()">Restore from backup</button><input id="imp" type="file" accept=".json" hidden onchange="restore(this)">
+   <button class="btn bad" onclick="if(confirm('Delete ALL data in this browser?')&&confirm('Really? This cannot be undone.')){S=DEF();save();go('dashboard')}">Erase all data</button></div>
+   <div class="sub">Data lives in this browser's localStorage only. Download a backup regularly — clearing site data deletes it.</div></div>`;
+}
+function saveSettings(e){
+  e.preventDefault();const s=S.settings;
+  const P=s.phases.map((p,i)=>({...p,name:v('pn'+i),start:v('ps'+i),end:v('pe'+i),target:n('pt'+i),focus:v('pf'+i)}));
+  for(const p of P)if(!p.start||!p.end||p.start>p.end)return alert(p.name+': invalid dates.');
+  s.phases=P;s.start=v('s0');s.exam=v('s1');s.weeklyMin=n('s2');s.weeklyMax=n('s3');s.baseline=n('s4');s.unlockPast=$('#sul').checked;
+  s.milestones=s.milestones.map((m,i)=>({date:v('md'+i),marks:n('mm'+i)})).sort((a,b)=>a.date<b.date?-1:1);
+  save();alert('Saved.');render();
+}
+function restore(inp){
+  const f=inp.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.logs||!o.settings)throw Error('not a tracker backup');if(!confirm('Replace current data with this backup?'))return;S={...DEF(),...o,settings:{...DEF().settings,...o.settings}};save();go('dashboard')}catch(e){alert('Invalid backup: '+e.message)}};
+  r.readAsText(f);
+}
+
+render();
+</script>
+</body>
+</html>
