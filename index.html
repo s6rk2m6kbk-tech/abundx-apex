@@ -379,7 +379,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1247,6 +1247,42 @@ function vMocks(){
   <div class="card"><h3>All mocks</h3><div class="tw"><table><tr><th>Date</th><th>#</th><th>Marks</th><th>P/C/M</th><th>Acc</th><th>E/M/H acc</th><th>vs class avg</th><th>Rank</th><th>%ile</th><th>Files</th><th></th></tr>
   ${[...ms].reverse().map(x=>`<tr><td>${fmtS(x.date)}</td><td>${x.num}</td><td><b>${x.marks}</b></td><td>${x.phy??'–'}/${x.chem??'–'}/${x.math??'–'}</td><td>${x.accuracy!=null?r1(x.accuracy)+'%':'—'}</td><td>${[x.ea?x.ec/x.ea:null,x.ma?x.mc/x.ma:null,x.ha?x.hc/x.ha:null].map(z=>z==null?'–':r0(z*100)).join('/')}</td><td>${x.av!=null?(x.marks-x.av>=0?'+':'')+(x.marks-x.av):'—'}</td><td>${x.rank?x.rank+'/'+x.students:'—'}</td><td>${x.percentile!=null?r1(x.percentile):'—'}</td><td style="white-space:nowrap">${fileLinks(x)}</td><td style="white-space:nowrap"><button class="btn s" onclick="mockView='${x.id}';vMocks();window.scrollTo(0,0)">Report</button> <button class="btn s alt" onclick="editMock='${x.id}';vMocks();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delMock('${x.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No mocks yet.</td></tr>'}</table></div></div>`;
   if(ms.length)mockCharts(ms);
+}
+/* ---------- QUESTION CALCULATOR ---------- */
+const QPLAN_GOAL=50000;
+const isStudyDay=(d,spw)=>spw>=7||(spw===6&&d!==0)||(spw===5&&d!==0&&d!==6);
+const studyDaysIn=(start,n,spw)=>{let c=0;for(let i=0;i<n;i++)if(isStudyDay(pd(addD(start,i)).getDay(),spw))c++;return c};
+const calDaysFor=(start,need,spw)=>{let c=0,i=0;while(c<need&&i<20000){if(isStudyDay(pd(addD(start,i)).getDay(),spw))c++;i++}return i};
+const qn=x=>x==null||!isFinite(x)?'—':Math.round(x).toLocaleString('en-IN');
+function vCalc(){
+  const t=today(),pe=S.settings.phases[S.settings.phases.length-1].end,left=Math.max(1,diff(t,pe)+1);
+  const done=totalQ(),since=Math.max(1,diff(S.settings.start,t)+1),pace=done/since,need=Math.max(0,QPLAN_GOAL-done)/left;
+  const spw=id=>`<select id="${id}" onchange="calcUpdate()"><option value="7">7 days a week</option><option value="6">6 days (Sunday off)</option><option value="5">5 days (weekends off)</option></select>`;
+  const inp=(id,lab,val,ex='')=>`<div><label for="${id}">${lab}</label><input id="${id}" type="number" min="0" value="${val}" ${ex} oninput="calcUpdate()"></div>`;
+  const tile=(id,lab)=>`<div class="card"><div class="sub">${lab}</div><div class="big" id="${id}">—</div></div>`;
+  $('#app').innerHTML=`<h2>Question Calculator</h2><div class="sub" style="margin-bottom:12px">Work out how many questions you will solve, how many a day you need, or how many days it will take. Results update as you type.</div>
+  <div class="card"><h3>1. How many questions will I solve?</h3><div class="row">${inp('c1_q','Questions per day',150)}${inp('c1_d','Number of days',30)}<div><label for="c1_s">Days I study</label>${spw('c1_s')}</div><div><label for="c1_t">Starting from</label><input id="c1_t" type="date" value="${t}" oninput="calcUpdate()"></div></div>
+   <div class="grid"><div class="card"><div class="sub">Total questions</div><div class="big" id="r1_tot">—</div></div>${tile('r1_sd','Study days')}${tile('r1_wk','Per week')}<div class="card"><div class="sub">Last day</div><div class="big" id="r1_end" style="font-size:26px">—</div></div></div></div>
+  <div class="card"><h3>2. How many questions a day do I need?</h3><div class="row">${inp('c2_g','Goal (total questions)',QPLAN_GOAL)}${inp('c2_d','Days to do it in',left)}<div><label for="c2_s">Days I study</label>${spw('c2_s')}</div></div>
+   <p><button type="button" class="btn s" onclick="document.getElementById('c2_g').value=${QPLAN_GOAL};document.getElementById('c2_d').value=${left};calcUpdate()">Plan goal: ${QPLAN_GOAL.toLocaleString('en-IN')} by ${fmt(pe)}</button> <button type="button" class="btn s alt" onclick="document.getElementById('c2_g').value=${S.settings.weeklyMin};document.getElementById('c2_d').value=7;calcUpdate()">Weekly target: ${S.settings.weeklyMin}</button></p>
+   <div class="grid">${tile('r2_pd','Questions per study day')}${tile('r2_wk','Per week')}${tile('r2_sd','Study days available')}</div></div>
+  <div class="card"><h3>3. How many days will it take?</h3><div class="row">${inp('c3_g','Goal (total questions)',10000)}${inp('c3_q','Questions per day',150)}<div><label for="c3_s">Days I study</label>${spw('c3_s')}</div></div>
+   <div class="grid">${tile('r3_sd','Study days needed')}${tile('r3_cd','Calendar days')}<div class="card"><div class="sub">Finish date (from today)</div><div class="big" id="r3_end" style="font-size:26px">—</div></div></div></div>
+  <div class="card"><h3>My pace so far</h3><div class="grid"><div class="card"><div class="sub">Logged so far</div><div class="big">${qn(done)}</div><div class="sub">since ${fmt(S.settings.start)}</div></div>
+   <div class="card"><div class="sub">Average per day</div><div class="big">${qn(pace)}</div><div class="sub">${qn(pace*7)} per week</div></div>
+   <div class="card"><div class="sub">Needed per day from today</div><div class="big">${qn(need)}</div><div class="sub">to reach ${QPLAN_GOAL.toLocaleString('en-IN')} by ${fmt(pe)}</div></div></div>
+   <div class="sub" style="margin-top:10px">${pace>=need?'At your current pace you will reach the goal.':`Your current pace is ${qn(need-pace)} questions a day short of the plan goal.`} Only questions you have logged (and weekly totals you gave me) are counted.</div></div>`;
+  calcUpdate();
+}
+function calcUpdate(){
+  const g=id=>document.getElementById(id),num=id=>{const x=g(id);return x&&x.value!==''?Number(x.value):null},set=(id,v)=>{const e=g(id);if(e)e.textContent=v};
+  const q1=num('c1_q'),d1=num('c1_d'),s1=Number(g('c1_s').value),t1=g('c1_t').value;
+  if(q1!=null&&d1!=null&&t1){const sd=studyDaysIn(t1,Math.floor(d1),s1);set('r1_tot',qn(q1*sd));set('r1_sd',qn(sd));set('r1_wk',qn(q1*s1));set('r1_end',d1>=1?fmt(addD(t1,Math.floor(d1)-1)):'—')}
+  else['r1_tot','r1_sd','r1_wk','r1_end'].forEach(i=>set(i,'—'));
+  const g2=num('c2_g'),d2=num('c2_d'),s2=Number(g('c2_s').value),sd2=d2!=null?studyDaysIn(today(),Math.floor(d2),s2):0;
+  if(g2!=null&&sd2>0){const pd2=Math.ceil(g2/sd2);set('r2_pd',qn(pd2));set('r2_wk',qn(pd2*s2));set('r2_sd',qn(sd2))}else['r2_pd','r2_wk','r2_sd'].forEach(i=>set(i,'—'));
+  const g3=num('c3_g'),q3=num('c3_q'),s3=Number(g('c3_s').value);
+  if(g3!=null&&q3>0){const sd=Math.ceil(g3/q3),cd=calDaysFor(today(),sd,s3);set('r3_sd',qn(sd));set('r3_cd',qn(cd));set('r3_end',fmt(addD(today(),Math.max(0,cd-1))))}else['r3_sd','r3_cd','r3_end'].forEach(i=>set(i,'—'));
 }
 /* ---------- TEST PAPERS LIBRARY (files live in this browser's IndexedDB, keyed id:kind like mock files) ---------- */
 const PK=['paper','key','report'];
