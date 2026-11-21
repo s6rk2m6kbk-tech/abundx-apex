@@ -379,7 +379,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -618,8 +618,8 @@ function stock(id,cfg){
 }
 /* chart builders */
 /* MSTR (Strategy Inc) comparison. Daily closes are a snapshot, not live. */
-const MSTR_ASOF='2026-11-04';
-const MSTR_DATA='2026-05-01:177.17,2026-05-04:183.8,2026-05-05:186.9,2026-05-06:186.82,2026-05-07:179.84,2026-05-08:187.59,2026-05-11:195.94,2026-05-12:184.42,2026-05-13:178.03,2026-05-14:186.97,2026-05-15:177.42,2026-05-18:166.63,2026-05-19:164.63,2026-05-20:165.81,2026-05-21:164.85,2026-05-22:159.89,2026-05-26:159.93,2026-05-27:154.2,2026-05-28:151.64,2026-05-29:159.09,2026-06-01:149.78,2026-06-02:136.08,2026-06-03:126.55,2026-06-04:129.37,2026-06-05:120.44,2026-06-08:127.2,2026-06-09:117.02,2026-06-10:115.35,2026-06-11:120.15,2026-06-12:123.97,2026-06-15:131.14,2026-06-16:122.81,2026-06-17:116.56,2026-06-18:112.53,2026-06-22:109.46,2026-06-23:103.84,2026-06-24:94.13,2026-06-25:85.33,2026-06-26:82.31,2026-06-29:92.68,2026-06-30:86.93,2026-07-01:93.39,2026-07-02:100.77,2026-07-06:100.77,2026-07-07:97.36,2026-07-08:93.87,2026-07-09:93.89,2026-07-10:94.64,2026-07-13:92.1,2026-07-14:97.58,2026-07-15:97.47,2026-07-16:94.03,2026-07-17:94.85,2026-07-20:97.82,2026-07-21:101.95,2026-07-22:100.01,2026-07-23:93.63,2026-07-24:91.67,2026-07-27:98.65,2026-07-28:96.16,2026-07-29:93.33,2026-07-30:97.74,2026-07-31:93.28,2026-08-03:94.86,2026-08-04:97.65,2026-08-05:98.37,2026-08-06:96.85,2026-08-07:100.01,2026-08-10:97.33,2026-08-11:96.09,2026-08-12:94.83,2026-08-13:97.1,2026-08-14:93.04,2026-08-17:97.68,2026-08-18:92.52,2026-08-19:104.25,2026-08-20:112.39,2026-08-21:119.25,2026-08-24:122.63,2026-08-25:126.83,2026-08-26:123.19,2026-08-27:137.4,2026-08-28:127.31,2026-08-31:132.94,2026-09-01:124.88,2026-09-02:123.19,2026-09-03:144.82,2026-09-04:142.8,2026-09-08:136.52,2026-09-09:132.7,2026-09-10:128.56,2026-09-11:130.97,2026-09-14:136.94,2026-09-15:129.6,2026-09-16:126.18,2026-09-17:132.25,2026-09-18:153.92,2026-09-21:168.5,2026-09-22:167.33,2026-09-23:162.2,2026-09-24:161.61,2026-09-25:158.61,2026-09-28:157.14,2026-09-29:154.67,2026-09-30:153.09,2026-10-01:160.5,2026-10-02:160.01,2026-10-05:164.43,2026-10-06:164.55,2026-10-07:153.37,2026-10-08:151.47,2026-10-09:154.34,2026-10-12:152.68,2026-10-13:152.18,2026-10-14:143.24,2026-10-15:151.29,2026-10-16:136.83,2026-10-19:136.02,2026-10-20:142.72,2026-10-21:153.48,2026-10-22:145.8,2026-10-23:146.01,2026-10-26:139.82,2026-10-27:141.4,2026-10-28:145.16,2026-10-29:141.62,2026-10-30:130.51,2026-11-02:130.76,2026-11-03:135.63,2026-11-04:142.54';
+const MSTR_ASOF='2026-11-20';
+const MSTR_DATA='2026-05-01:177.17,2026-05-04:183.8,2026-05-05:186.9,2026-05-06:186.82,2026-05-07:179.84,2026-05-08:187.59,2026-05-11:195.94,2026-05-12:184.42,2026-05-13:178.03,2026-05-14:186.97,2026-05-15:177.42,2026-05-18:166.63,2026-05-19:164.63,2026-05-20:165.81,2026-05-21:164.85,2026-05-22:159.89,2026-05-26:159.93,2026-05-27:154.2,2026-05-28:151.64,2026-05-29:159.09,2026-06-01:149.78,2026-06-02:136.08,2026-06-03:126.55,2026-06-04:129.37,2026-06-05:120.44,2026-06-08:127.2,2026-06-09:117.02,2026-06-10:115.35,2026-06-11:120.15,2026-06-12:123.97,2026-06-15:131.14,2026-06-16:122.81,2026-06-17:116.56,2026-06-18:112.53,2026-06-22:109.46,2026-06-23:103.84,2026-06-24:94.13,2026-06-25:85.33,2026-06-26:82.31,2026-06-29:92.68,2026-06-30:86.93,2026-07-01:93.39,2026-07-02:100.77,2026-07-06:100.77,2026-07-07:97.36,2026-07-08:93.87,2026-07-09:93.89,2026-07-10:94.64,2026-07-13:92.1,2026-07-14:97.58,2026-07-15:97.47,2026-07-16:94.03,2026-07-17:94.85,2026-07-20:97.82,2026-07-21:101.95,2026-07-22:100.01,2026-07-23:93.63,2026-07-24:91.67,2026-07-27:98.65,2026-07-28:96.16,2026-07-29:93.33,2026-07-30:97.74,2026-07-31:93.28,2026-08-03:94.86,2026-08-04:97.65,2026-08-05:98.37,2026-08-06:96.85,2026-08-07:100.01,2026-08-10:97.33,2026-08-11:96.09,2026-08-12:94.83,2026-08-13:97.1,2026-08-14:93.04,2026-08-17:97.68,2026-08-18:92.52,2026-08-19:104.25,2026-08-20:112.39,2026-08-21:119.25,2026-08-24:122.63,2026-08-25:126.83,2026-08-26:123.19,2026-08-27:137.4,2026-08-28:127.31,2026-08-31:132.94,2026-09-01:124.88,2026-09-02:123.19,2026-09-03:144.82,2026-09-04:142.8,2026-09-08:136.52,2026-09-09:132.7,2026-09-10:128.56,2026-09-11:130.97,2026-09-14:136.94,2026-09-15:129.6,2026-09-16:126.18,2026-09-17:132.25,2026-09-18:153.92,2026-09-21:168.5,2026-09-22:167.33,2026-09-23:162.2,2026-09-24:161.61,2026-09-25:158.61,2026-09-28:157.14,2026-09-29:154.67,2026-09-30:153.09,2026-10-01:160.5,2026-10-02:160.01,2026-10-05:164.43,2026-10-06:164.55,2026-10-07:153.37,2026-10-08:151.47,2026-10-09:154.34,2026-10-12:152.68,2026-10-13:152.18,2026-10-14:143.24,2026-10-15:151.29,2026-10-16:136.83,2026-10-19:136.02,2026-10-20:142.72,2026-10-21:153.48,2026-10-22:145.8,2026-10-23:146.01,2026-10-26:139.82,2026-10-27:141.4,2026-10-28:145.16,2026-10-29:141.62,2026-10-30:130.51,2026-11-02:130.76,2026-11-03:135.63,2026-11-04:142.54,2026-11-05:129.3,2026-11-06:128.93,2026-11-09:125.59,2026-11-10:121.07,2026-11-11:122.35,2026-11-12:114.41,2026-11-13:111.62,2026-11-16:103.03,2026-11-17:96.5,2026-11-18:90.32,2026-11-19:86.13,2026-11-20:77.8';
 const mstrPts=()=>MSTR_DATA.split(',').map(x=>{const q=x.split(':');return {t:tms(q[0]),y:+q[1]}});
 function mstrChart(id){
   const ms=mocks();if(!ms.length)return stock(id,{series:[{name:'x',pts:[]}]});
@@ -1247,6 +1247,70 @@ function vMocks(){
   <div class="card"><h3>All mocks</h3><div class="tw"><table><tr><th>Date</th><th>#</th><th>Marks</th><th>P/C/M</th><th>Acc</th><th>E/M/H acc</th><th>vs class avg</th><th>Rank</th><th>%ile</th><th>Files</th><th></th></tr>
   ${[...ms].reverse().map(x=>`<tr><td>${fmtS(x.date)}</td><td>${x.num}</td><td><b>${x.marks}</b></td><td>${x.phy??'–'}/${x.chem??'–'}/${x.math??'–'}</td><td>${x.accuracy!=null?r1(x.accuracy)+'%':'—'}</td><td>${[x.ea?x.ec/x.ea:null,x.ma?x.mc/x.ma:null,x.ha?x.hc/x.ha:null].map(z=>z==null?'–':r0(z*100)).join('/')}</td><td>${x.av!=null?(x.marks-x.av>=0?'+':'')+(x.marks-x.av):'—'}</td><td>${x.rank?x.rank+'/'+x.students:'—'}</td><td>${x.percentile!=null?r1(x.percentile):'—'}</td><td style="white-space:nowrap">${fileLinks(x)}</td><td style="white-space:nowrap"><button class="btn s" onclick="mockView='${x.id}';vMocks();window.scrollTo(0,0)">Report</button> <button class="btn s alt" onclick="editMock='${x.id}';vMocks();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delMock('${x.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No mocks yet.</td></tr>'}</table></div></div>`;
   if(ms.length)mockCharts(ms);
+}
+/* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
+const OTHER=PROFILE==='malik'?'kartik':'malik';
+function otherData(){
+  try{const o=JSON.parse(localStorage.getItem(PROFILES[OTHER].key));if(o&&o.mocks)return o}catch(e){}
+  if(OTHER==='kartik'){const d=DEFK();KARTIK_MOCKS.forEach(m=>d.mocks.push(m));return d}
+  return null;
+}
+function profStats(D){
+  const ms=[...(D.mocks||[])].sort((a,b)=>a.date<b.date?-1:1),ph=ms.filter(m=>m.phy!=null),ls=Object.values(D.logs||{}),byW={};
+  ls.forEach(l=>{const k=mon(l.date);byW[k]=(byW[k]||0)+qTot(l)});
+  Object.entries(D.weekQ||{}).forEach(([k,v])=>{byW[k]=Math.max(byW[k]||0,v)});
+  const q=sum(Object.values(byW)),lq=sum(ls.map(qTot)),wks=Object.keys(byW).length,bl=D.backlog||[],P=ph.map(m=>m.phy);
+  return {ms,ph,q,wks,perWeek:wks?q/wks:null,days:ls.length,acc:lq?sum(ls.map(l=>(l.accuracy||0)*qTot(l)))/lq:null,
+    sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy).filter(x=>x!=null)),
+    open:bl.filter(b=>b.status!=='Resolved').length,done:bl.filter(b=>b.status==='Resolved').length,
+    pAvg:avg(P),pBest:P.length?Math.max(...P):null,pLast:P.length?P[P.length-1]:null,pFirst:P.length?P[0]:null,start:D.settings&&D.settings.start,
+    tAvg:ms.length?avg(ms.map(m=>m.marks)):null};
+}
+function vCompare(){
+  const OD=otherData(),me=PROFILES[PROFILE].name,ot=PROFILES[OTHER].name;
+  if(!OD){$('#app').innerHTML=`<h2>Compare</h2><div class="card"><div class="sub">No saved data for ${ot} in this browser yet. Open the profile menu at the top, switch to ${ot}, then come back.</div></div>`;return}
+  const A=profStats(S),B=profStats(OD),nm=x=>x==null?'—':r1(x),ni=x=>x==null?'—':Math.round(x).toLocaleString('en-IN');
+  const rows=[
+   ['Subjects',PROFILE==='malik'?'Physics, Chemistry, Maths':'Physics',OTHER==='malik'?'Physics, Chemistry, Maths':'Physics'],
+   ['Plan started',A.start?fmt(A.start):'—',B.start?fmt(B.start):'—'],
+   ['Tests with Physics marks',A.ph.length,B.ph.length,1,'hi'],
+   ['Physics average (/100)',nm(A.pAvg),nm(B.pAvg),A.pAvg==null||B.pAvg==null?0:A.pAvg-B.pAvg,'hi'],
+   ['Physics best',A.pBest??'—',B.pBest??'—',A.pBest==null||B.pBest==null?0:A.pBest-B.pBest,'hi'],
+   ['Physics latest',A.pLast??'—',B.pLast??'—',A.pLast==null||B.pLast==null?0:A.pLast-B.pLast,'hi'],
+   ['Physics change, first to latest',A.pFirst==null?'—':(A.pLast-A.pFirst>=0?'+':'')+(A.pLast-A.pFirst),B.pFirst==null?'—':(B.pLast-B.pFirst>=0?'+':'')+(B.pLast-B.pFirst),A.pFirst==null||B.pFirst==null?0:(A.pLast-A.pFirst)-(B.pLast-B.pFirst),'hi'],
+   ['Overall marks average',A.tAvg==null?'—':nm(A.tAvg)+(PROFILE==='malik'?' / 300':' / 100'),B.tAvg==null?'—':nm(B.tAvg)+(OTHER==='malik'?' / 300':' / 100')],
+   ['Questions logged',ni(A.q),ni(B.q),A.q-B.q,'hi'],
+   ['Average per week',ni(A.perWeek),ni(B.perWeek),A.perWeek==null||B.perWeek==null?0:A.perWeek-B.perWeek,'hi'],
+   ['Days with a log',A.days,B.days,A.days-B.days,'hi'],
+   ['Accuracy',A.acc==null?'—':nm(A.acc)+'%',B.acc==null?'—':nm(B.acc)+'%',A.acc==null||B.acc==null?0:A.acc-B.acc,'hi'],
+   ['Average sleep',A.sleep==null?'—':nm(A.sleep)+' h',B.sleep==null?'—':nm(B.sleep)+' h'],
+   ['Average energy (1–10)',nm(A.energy),nm(B.energy)],
+   ['Backlog items open',A.open,B.open,B.open-A.open,'hi'],
+   ['Backlog items resolved',A.done,B.done,A.done-B.done,'hi']];
+  const td=(v,d,side)=>{const win=d&&(side==='a'?d>0:d<0);return `<td style="${win?'font-weight:700;color:var(--ok)':''}">${v}</td>`};
+  // head to head on Physics: other's tests (plus absences from the class sheets) matched to my test on the same or next/previous day
+  const otherTests=[...B.ph.map(m=>({date:m.date,phy:m.phy}))];
+  if(OTHER==='kartik')FRIENDS[0].tests.forEach(t=>{if(t.phy==null&&!otherTests.some(x=>Math.abs(diff(x.date,t.date))<=1))otherTests.push({date:t.date,phy:null})});
+  otherTests.sort((a,b)=>a.date<b.date?-1:1);
+  const h2h=otherTests.map(t=>{const m=A.ph.find(x=>Math.abs(diff(x.date,t.date))<=1);return {date:t.date,a:m?m.phy:null,b:t.phy}});
+  const both=h2h.filter(x=>x.a!=null&&x.b!=null),wa=both.filter(x=>x.a>x.b).length,wb=both.filter(x=>x.b>x.a).length,ties=both.length-wa-wb;
+  const gap=both.length?avg(both.map(x=>x.a-x.b)):null;
+  if(both.length)rows.splice(4,0,['Physics average, same tests only',nm(avg(both.map(x=>x.a))),nm(avg(both.map(x=>x.b))),avg(both.map(x=>x.a))-avg(both.map(x=>x.b)),'hi']);
+  const tile=(l,v,s)=>`<div class="card"><div class="sub">${l}</div><div class="big">${v}</div><div class="sub">${s}</div></div>`;
+  $('#app').innerHTML=`<h2>Compare: ${esc(me)} vs ${esc(ot)}</h2><div class="sub" style="margin-bottom:12px">Everything we can compare side by side. Kartik studies Physics only, so Physics is the main comparison. Figures come from the data saved in this browser.</div>
+  <div class="grid">${tile('Head to head (Physics)',`${wa} - ${wb}`,both.length?`${esc(me)} ${wa} win${wa==1?'':'s'}, ${esc(ot)} ${wb} win${wb==1?'':'s'}${ties?`, ${ties} tie${ties==1?'':'s'}`:''} in ${both.length} test${both.length==1?'':'s'}`:'No test taken by both yet')}
+   ${tile('Average Physics gap',gap==null?'—':(gap>=0?'+':'')+r1(gap),gap==null?'On tests both took':(gap>=0?`${esc(me)} ahead on average`:`${esc(ot)} ahead on average`)+', on tests both took')}
+   ${tile('Questions logged',`${ni(A.q)} / ${ni(B.q)}`,`${esc(me)} / ${esc(ot)}`)}</div>
+  <div class="card"><h3>Physics marks over time</h3>${sc('cmp1',300)}</div>
+  <div class="card"><h3>Side by side</h3><div class="tw"><table><tr><th></th><th>${esc(me)}</th><th>${esc(ot)}</th></tr>
+   ${rows.map(r=>`<tr><td>${r[0]}</td>${td(r[1],r[3],'a')}${td(r[2],r[3],'b')}</tr>`).join('')}</table></div><div class="sub" style="margin-top:8px">Green marks the better figure. Where one side has no data, nothing is highlighted.</div></div>
+  <div class="card"><h3>Test by test (Physics, out of 100)</h3><div class="tw"><table><tr><th>Date</th><th>${esc(me)}</th><th>${esc(ot)}</th><th>${esc(me)} minus ${esc(ot)}</th></tr>
+   ${h2h.map(x=>{const d=x.a!=null&&x.b!=null?x.a-x.b:null;return `<tr><td>${fmt(x.date)}</td><td>${x.a??'—'}</td><td>${x.b==null?'<span class="sub">absent</span>':x.b}</td><td>${d==null?'—':`<span class="${d>=0?'ok':'bad'}">${d>0?'+':''}${d}</span>`}</td></tr>`}).join('')||'<tr><td colspan=4 class="sub">No tests yet.</td></tr>'}</table></div></div>
+  <div class="card"><div class="sub">The data for each person lives in the browser where it was entered. To add ${esc(ot)}'s daily logs, backlog or new tests, switch to ${esc(ot)} in the profile menu at the top and enter them there. They then show up here on this browser.</div></div>`;
+  const pts=(arr)=>arr.map(m=>({t:tms(m.date),y:m.phy}));
+  const sa=pts(A.ph),sb=pts(B.ph);
+  if(sa.length&&sb.length)stock('cmp1',{multi:true,dec:0,zero:true,series:[{name:me+' (Physics)',color:'var(--blue)',pts:sa},{name:ot+' (Physics)',color:'var(--warn)',pts:sb}]});
+  else if(sa.length||sb.length)stock('cmp1',{multi:true,dec:0,zero:true,series:[{name:(sa.length?me:ot)+' (Physics)',color:'var(--blue)',pts:sa.length?sa:sb}]});
 }
 /* ---------- QUESTION CALCULATOR ---------- */
 const QPLAN_GOAL=50000;
