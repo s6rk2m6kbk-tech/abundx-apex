@@ -1251,7 +1251,7 @@ function vMocks(){
 /* ---------- TEST PAPERS LIBRARY (files live in this browser's IndexedDB, keyed id:kind like mock files) ---------- */
 const PK=['paper','key','report'];
 /* question papers published with the site (blank papers, no personal details): id:kind -> file in /papers */
-const PUB={'M20261002:paper':'papers/arjuna-xi-jee-2026-10-02-question-paper.pdf','M20261024:paper':'papers/arjuna-xi-jee-2026-10-24-question-paper.pdf','M20261031:paper':'papers/arjuna-xi-jee-2026-10-31-question-paper.pdf','M20261114:paper':'papers/arjuna-xi-jee-main-2026-11-14-test-booklet.pdf','P20261121:paper':'papers/arjuna-xi-practice-test-2026-11-21.pdf'};
+const PUB={'M20260926:paper':'papers/arjuna-xi-jee-2026-09-26-question-paper.pdf','M20261002:paper':'papers/arjuna-xi-jee-2026-10-02-question-paper.pdf','M20261024:paper':'papers/arjuna-xi-jee-2026-10-24-question-paper.pdf','M20261031:paper':'papers/arjuna-xi-jee-2026-10-31-question-paper.pdf','M20261114:paper':'papers/arjuna-xi-jee-main-2026-11-14-test-booklet.pdf','P20261121:paper':'papers/arjuna-xi-practice-test-2026-11-21.pdf'};
 function paperEntries(){
   return [...S.mocks.map(m=>({id:m.id,date:m.date,title:m.type||'Mock test',tag:'Mock #'+m.num,files:m.files||(m.files={})})),
     ...(S.pending||[]).map(p=>({id:p.id,date:p.date,title:p.type,tag:'Result pending',files:p.files||(p.files={})})),
