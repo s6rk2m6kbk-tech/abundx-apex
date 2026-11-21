@@ -287,6 +287,12 @@ function load(){
   if(!d.seedT9){d.seedT9=true;if(!d.mocks.some(m=>m.id==='M20261114'))d.mocks.push({...mkTest(11,'2026-11-14',60,64,52),id:'M20261114',type:'Arjuna Classes JEE Main Class XI part test (75 Q, 3 h)',total:75,
       notes:'Test booklet: 75 Q, 300 marks, 3 h, +4 / -1 for MCQ, +4 / 0 for numerical. Syllabus: Physics Thermal Properties of Matter; Chemistry Ionic Equilibrium; Maths Circle, Parabola, Ellipse. Marks from the OMR sheet: Physics 64, Chemistry 60, Math 52, total 176 (no grace). Numerical answers as written: Phy 21 = 420, 22 = 6x10^-2, 23 = 20, 24 = 2000 K, 25 = 7 mins; Chem 46 = 1.7, 47 = 5, 48 = unclear, 49 = 6, 50 blank; Math 71 = 4, 72 = 2, 73 = 8, 74 = 6, 75 = 25. No class result sheet yet, so no rank.'});
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedP1){d.seedP1=true;d.pending=d.pending||[];
+    if(!d.pending.some(p=>p.id==='P20261121'))d.pending.push({id:'P20261121',date:'2026-11-21',type:'Arjuna Classes practice test, Class XI (JEE Main pattern)',
+      info:'75 questions, 300 marks, 3 hours. +4 for a correct answer, -1 for a wrong answer, 0 if unattempted, in both sections. Each subject has 20 MCQ and 5 integer-answer questions.',
+      syllabus:[['Physics','Isothermal, adiabatic, isochoric, isobaric and polytropic processes; work done as area under the P-V curve'],['Chemistry','Aromatic, non-aromatic and anti-aromatic compounds; hyperconjugation'],['Math','Conic sections: circle, parabola, ellipse, hyperbola (basics)']],
+      note:'Test taken on 21 Nov 2026. Result not out yet. Marks and class figures to be added when the result sheet arrives.'});
+    try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   return d;
 }
@@ -373,7 +379,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1220,7 +1226,9 @@ function vMocks(){
   if(mockView&&S.mocks.find(x=>x.id===mockView))return vMockReport(mockView);
   const ms=mocks(),m=editMock?S.mocks.find(x=>x.id===editMock)||{}:{};
   const f=(id,lab,val,extra='',type='number')=>`<div><label for="${id}">${lab}</label><input id="${id}" type="${type}" ${extra} value="${esc(val??'')}"></div>`;
-  $('#app').innerHTML=`<h2>Mock Tests</h2>
+  const pend=(S.pending||[]).map(p=>`<div class="card" style="border-top:4px solid var(--warn)"><div class="sub" style="color:var(--warn);font-weight:600;letter-spacing:.14em">RESULT PENDING</div><h3 style="margin:6px 0">${esc(p.type)} &middot; ${fmt(p.date)}</h3>
+    <div class="sub">${esc(p.info)}</div><div style="margin:10px 0">${p.syllabus.map(([s,t])=>`<div><b style="color:${SUBJ_COL[s]||INK()}">${s}:</b> ${esc(t)}</div>`).join('')}</div><div class="sub">${esc(p.note)}</div><p style="margin:10px 0 0"><button class="btn s" onclick="go('papers')">Add the paper or key</button></p></div>`).join('');
+  $('#app').innerHTML=`<h2>Mock Tests</h2>${pend}
   <div class="card"><h3>${editMock?'Edit mock':'Log a mock'}</h3><form onsubmit="saveMock(event)">
   <div class="row">${f('mdate','Date',m.date||today(),`max="${today()}"`,'date')}${f('mnum','Test #',m.num??(ms.length+1),'min=1')}${f('mtype','Type',m.type||'Full Mock (100 Q, 3 hrs)','','text')}</div>
   <div class="row">${f('mat','Attempted',m.attempted,'min=0')}${f('mco','Correct',m.correct,'min=0')}${f('min_','Incorrect',m.incorrect,'min=0')}${f('mmk','Marks (/'+MAXM+')',m.marks,'min=0 max='+MAXM)}</div>
@@ -1239,6 +1247,41 @@ function vMocks(){
   <div class="card"><h3>All mocks</h3><div class="tw"><table><tr><th>Date</th><th>#</th><th>Marks</th><th>P/C/M</th><th>Acc</th><th>E/M/H acc</th><th>vs class avg</th><th>Rank</th><th>%ile</th><th>Files</th><th></th></tr>
   ${[...ms].reverse().map(x=>`<tr><td>${fmtS(x.date)}</td><td>${x.num}</td><td><b>${x.marks}</b></td><td>${x.phy??'–'}/${x.chem??'–'}/${x.math??'–'}</td><td>${x.accuracy!=null?r1(x.accuracy)+'%':'—'}</td><td>${[x.ea?x.ec/x.ea:null,x.ma?x.mc/x.ma:null,x.ha?x.hc/x.ha:null].map(z=>z==null?'–':r0(z*100)).join('/')}</td><td>${x.av!=null?(x.marks-x.av>=0?'+':'')+(x.marks-x.av):'—'}</td><td>${x.rank?x.rank+'/'+x.students:'—'}</td><td>${x.percentile!=null?r1(x.percentile):'—'}</td><td style="white-space:nowrap">${fileLinks(x)}</td><td style="white-space:nowrap"><button class="btn s" onclick="mockView='${x.id}';vMocks();window.scrollTo(0,0)">Report</button> <button class="btn s alt" onclick="editMock='${x.id}';vMocks();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delMock('${x.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No mocks yet.</td></tr>'}</table></div></div>`;
   if(ms.length)mockCharts(ms);
+}
+/* ---------- TEST PAPERS LIBRARY (files live in this browser's IndexedDB, keyed id:kind like mock files) ---------- */
+const PK=['paper','key','report'];
+function paperEntries(){
+  return [...S.mocks.map(m=>({id:m.id,date:m.date,title:m.type||'Mock test',tag:'Mock #'+m.num,files:m.files||(m.files={})})),
+    ...(S.pending||[]).map(p=>({id:p.id,date:p.date,title:p.type,tag:'Result pending',files:p.files||(p.files={})})),
+    ...(S.papers||[]).map(p=>({id:p.id,date:p.date,title:p.title,tag:'Other paper',files:p.files||(p.files={})}))].sort((a,b)=>a.date<b.date?1:-1);
+}
+const entryById=id=>[...S.mocks,...(S.pending||[]),...(S.papers||[])].find(x=>x.id===id);
+async function savePaper(e){
+  e.preventDefault();const f=document.getElementById('pf_file').files[0];if(!f)return alert('Choose a PDF or image first.');
+  if(f.size>25*1024*1024)return alert('File is larger than 25 MB.');
+  let id=v('pf_test');const kind=v('pf_kind');
+  try{
+    if(id==='new'){const t=v('pf_title').trim(),d=v('pf_date');if(!t||!d)return alert('Enter a title and date for the new paper.');
+      id='PP'+Date.now();(S.papers=S.papers||[]).push({id,date:d,title:t,files:{}})}
+    await fput(id+':'+kind,f);const en=entryById(id);en.files=en.files||{};en.files[kind]={name:f.name,size:f.size};save();
+  }catch(err){return alert('Could not store file: '+err.message)}
+  vPapers();
+}
+async function saveFileAs(id,kind){const b=await fget(id+':'+kind);if(!b)return alert('File not found in this browser.');const en=entryById(id),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(en&&en.files[kind]&&en.files[kind].name)||'paper.pdf';a.click()}
+async function rmPaperFile(id,kind){if(!confirm('Remove this file?'))return;await fdel(id+':'+kind);const en=entryById(id);delete en.files[kind];save();vPapers()}
+function delPaperEntry(id){if(!confirm('Delete this paper entry and its files?'))return;const p=S.papers.find(x=>x.id===id);Object.keys(p.files||{}).forEach(k=>fdel(id+':'+k));S.papers=S.papers.filter(x=>x.id!==id);save();vPapers()}
+function vPapers(){
+  const E=paperEntries(),n=E.reduce((a,en)=>a+Object.keys(en.files).length,0);
+  const cell=(en,k)=>en.files[k]?`<button class="btn s" title="${esc(en.files[k].name)}" onclick="openFile('${en.id}','${k}')">View</button> <button class="btn s alt" onclick="saveFileAs('${en.id}','${k}')">Save</button> <button class="btn s bad" onclick="rmPaperFile('${en.id}','${k}')">×</button>`:'<span class="sub">not added</span>';
+  $('#app').innerHTML=`<h2>Test Papers</h2><div class="sub" style="margin-bottom:12px">Every test with its question paper, answer key and class report. Files are stored in this browser only.</div>
+  <div class="card"><h3>Add a file</h3><form onsubmit="savePaper(event)"><div class="row">
+   <div><label for="pf_test">Test</label><select id="pf_test" onchange="document.getElementById('pf_new').style.display=this.value==='new'?'':'none'">${E.map(en=>`<option value="${en.id}">${fmtS(en.date)} · ${esc(en.title)} (${esc(en.tag)})</option>`).join('')}<option value="new">+ A paper that is not in the list</option></select></div>
+   <div><label for="pf_kind">Type</label><select id="pf_kind">${PK.map(k=>`<option value="${k}">${FK[k]}</option>`).join('')}</select></div>
+   <div><label for="pf_file">File (PDF or image, max 25 MB)</label><input id="pf_file" type="file" accept=".pdf,application/pdf,image/*"></div></div>
+   <div class="row" id="pf_new" style="display:none"><div><label for="pf_title">Title</label><input id="pf_title" type="text" placeholder="e.g. Arjuna Practice Test, Class XI"></div><div><label for="pf_date">Date</label><input id="pf_date" type="date" value="${today()}"></div></div>
+   <p><button class="btn ok">Add file</button></p></form></div>
+  <div class="card"><h3>All papers (${E.length} tests, ${n} files)</h3><div class="tw"><table><tr><th>Date</th><th>Test</th>${PK.map(k=>`<th>${FK[k]}</th>`).join('')}<th></th></tr>
+  ${E.map(en=>`<tr><td style="white-space:nowrap">${fmt(en.date)}</td><td><b>${esc(en.title)}</b><div class="sub">${esc(en.tag)}</div></td>${PK.map(k=>`<td style="white-space:nowrap">${cell(en,k)}</td>`).join('')}<td>${en.tag==='Other paper'?`<button class="btn s bad" onclick="delPaperEntry('${en.id}')">Delete</button>`:''}</td></tr>`).join('')||'<tr><td colspan=6 class="sub">No tests yet.</td></tr>'}</table></div></div>`;
 }
 function vMockReport(id){
   const ms=mocks(),i=ms.findIndex(x=>x.id===id),m=ms[i],prev=i>0?ms[i-1]:null,ph=phaseFor(m.date),exp=expectedMarks(m.date);
