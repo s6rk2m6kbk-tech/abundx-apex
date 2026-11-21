@@ -1250,6 +1250,8 @@ function vMocks(){
 }
 /* ---------- TEST PAPERS LIBRARY (files live in this browser's IndexedDB, keyed id:kind like mock files) ---------- */
 const PK=['paper','key','report'];
+/* question papers published with the site (blank papers, no personal details): id:kind -> file in /papers */
+const PUB={'M20261024:paper':'papers/arjuna-xi-jee-2026-10-24-question-paper.pdf','M20261114:paper':'papers/arjuna-xi-jee-main-2026-11-14-test-booklet.pdf','P20261121:paper':'papers/arjuna-xi-practice-test-2026-11-21.pdf'};
 function paperEntries(){
   return [...S.mocks.map(m=>({id:m.id,date:m.date,title:m.type||'Mock test',tag:'Mock #'+m.num,files:m.files||(m.files={})})),
     ...(S.pending||[]).map(p=>({id:p.id,date:p.date,title:p.type,tag:'Result pending',files:p.files||(p.files={})})),
@@ -1271,9 +1273,9 @@ async function saveFileAs(id,kind){const b=await fget(id+':'+kind);if(!b)return 
 async function rmPaperFile(id,kind){if(!confirm('Remove this file?'))return;await fdel(id+':'+kind);const en=entryById(id);delete en.files[kind];save();vPapers()}
 function delPaperEntry(id){if(!confirm('Delete this paper entry and its files?'))return;const p=S.papers.find(x=>x.id===id);Object.keys(p.files||{}).forEach(k=>fdel(id+':'+k));S.papers=S.papers.filter(x=>x.id!==id);save();vPapers()}
 function vPapers(){
-  const E=paperEntries(),n=E.reduce((a,en)=>a+Object.keys(en.files).length,0);
-  const cell=(en,k)=>en.files[k]?`<button class="btn s" title="${esc(en.files[k].name)}" onclick="openFile('${en.id}','${k}')">View</button> <button class="btn s alt" onclick="saveFileAs('${en.id}','${k}')">Save</button> <button class="btn s bad" onclick="rmPaperFile('${en.id}','${k}')">×</button>`:'<span class="sub">not added</span>';
-  $('#app').innerHTML=`<h2>Test Papers</h2><div class="sub" style="margin-bottom:12px">Every test with its question paper, answer key and class report. Files are stored in this browser only.</div>
+  const E=paperEntries(),n=E.reduce((a,en)=>a+PK.filter(k=>en.files[k]||PUB[en.id+':'+k]).length,0);
+  const cell=(en,k)=>en.files[k]?`<button class="btn s" title="${esc(en.files[k].name)}" onclick="openFile('${en.id}','${k}')">View</button> <button class="btn s alt" onclick="saveFileAs('${en.id}','${k}')">Save</button> <button class="btn s bad" onclick="rmPaperFile('${en.id}','${k}')">×</button>`:PUB[en.id+':'+k]?`<a class="btn s" href="${PUB[en.id+':'+k]}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">View</a> <a class="btn s alt" href="${PUB[en.id+':'+k]}" download style="text-decoration:none;display:inline-block">Save</a>`:'<span class="sub">not added</span>';
+  $('#app').innerHTML=`<h2>Test Papers</h2><div class="sub" style="margin-bottom:12px">Every test with its question paper, answer key and class report. Papers marked View / Save come with the site; files you add yourself are stored in this browser only.</div>
   <div class="card"><h3>Add a file</h3><form onsubmit="savePaper(event)"><div class="row">
    <div><label for="pf_test">Test</label><select id="pf_test" onchange="document.getElementById('pf_new').style.display=this.value==='new'?'':'none'">${E.map(en=>`<option value="${en.id}">${fmtS(en.date)} · ${esc(en.title)} (${esc(en.tag)})</option>`).join('')}<option value="new">+ A paper that is not in the list</option></select></div>
    <div><label for="pf_kind">Type</label><select id="pf_kind">${PK.map(k=>`<option value="${k}">${FK[k]}</option>`).join('')}</select></div>
