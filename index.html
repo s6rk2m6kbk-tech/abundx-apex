@@ -293,6 +293,7 @@ function load(){
       syllabus:[['Physics','Isothermal, adiabatic, isochoric, isobaric and polytropic processes; work done as area under the P-V curve'],['Chemistry','Aromatic, non-aromatic and anti-aromatic compounds; hyperconjugation'],['Math','Conic sections: circle, parabola, ellipse, hyperbola (basics)']],
       note:'Test taken on 21 Nov 2026. Result not out yet. Marks and class figures to be added when the result sheet arrives.'});
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+  if(!d.seedEx){d.seedEx=true;d.settings.excusedThrough='2026-11-22';try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   return d;
 }
@@ -342,7 +343,7 @@ function isLocked(date){if(S.settings.unlockPast)return false;const sunEnd=pd(ad
 function alerts(){
   const red=[],good=[],t=today(),st=S.settings;
   // missed log
-  if(t>st.start){const y=addD(t,-1);if(y>=st.start&&!S.logs[y])red.push(`Missed study log for ${fmtS(y)} (${dow(y)}). Log it now if you studied.`)}
+  if(t>st.start){const y=addD(t,-1);if(y>=st.start&&y>(st.excusedThrough||'')&&!S.logs[y])red.push(`Missed study log for ${fmtS(y)} (${dow(y)}). Log it now if you studied.`)}
   const cur=mon(t),last=addD(cur,-7),prev=addD(cur,-14);
   const wl=weekStats(last),wp=weekStats(prev),wc=weekStats(cur);
   if(wl.days){
@@ -379,7 +380,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['Coach',vCoach],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -875,7 +876,7 @@ function weekData(key){
   if(w.acc!=null&&prev.acc!=null&&prev.acc-w.acc>5){flags.push(`Accuracy down ${r1(prev.acc-w.acc)} pts`);recs.push('Slow down on new Q for 2 days and redo errors from the last 3 sessions before adding volume.')}
   if(w.sleep!=null&&w.sleep<6.5){flags.push(`Sleep avg ${r1(w.sleep)} h`);recs.push('Hard-stop at 11:30 PM; sleep is the one locked constraint.')}
   if(w.energy!=null&&w.energy<5){flags.push(`Energy avg ${r1(w.energy)}/10`);recs.push('Burnout risk: use the free time on Sat/Sun for real rest, not extra Q.')}
-  const missing=7-w.days;if(w.days&&missing>0&&addD(key,6)<today())flags.push(`${missing} day(s) without a log`);
+  const exT=S.settings.excusedThrough||'',missing=[0,1,2,3,4,5,6].filter(i=>{const x=addD(key,i);return !S.logs[x]&&x>exT}).length;if(w.days&&missing>0&&addD(key,6)<today())flags.push(`${missing} day(s) without a log`);
   const od=S.backlog.filter(b=>b.status!=='Resolved'&&diff(b.date,today())>SLA[b.priority]);
   if(od.length){flags.push(`${od.length} backlog item(s) past SLA`);recs.push('Clear overdue backlog items in Session 3 first: '+od.slice(0,3).map(b=>b.topic).join(', ')+'.')}
   if(!recs.length)recs.push(w.days?'On track - keep the same routine.':'No data for this week.');
@@ -1097,7 +1098,7 @@ function realityLines(d){
   const logs14=logs().filter(l=>l.date<=d&&l.date>addD(d,-14));
   if(logs14.length>=3){const av=sum(logs14.map(qTot))/logs14.length,doneQ=sum(logs().filter(l=>l.date<=d).map(qTot)),daysToEnd=Math.max(1,diff(d,planEnd.date)),req=Math.max(0,(50000-doneQ)/daysToEnd);
     L.push(`Your last ${logs14.length} logged days average <b>${r0(av)}</b> Q/day. The 50,000 Q plan needs about <b>${r0(req)}</b> Q/day from here. ${av>=req?'You are on pace.':'You are short by '+r0(req-av)+' Q every day.'}`)}
-  const wk=weekStats(mon(d)),missed=[];for(let i=0;i<7;i++){const x=addD(mon(d),i);if(x<=d&&x>=st.start&&!S.logs[x])missed.push(x)}
+  const wk=weekStats(mon(d)),missed=[];for(let i=0;i<7;i++){const x=addD(mon(d),i);if(x<=d&&x>=st.start&&x>(st.excusedThrough||'')&&!S.logs[x])missed.push(x)}
   if(missed.length)L.push(`<b>${missed.length}</b> day(s) this week with no log. If you did not log it, it did not happen.`);
   const open=S.backlog.filter(b=>b.date<=d&&(!b.resolved||b.resolved>d)),od=open.filter(b=>diff(b.date,d)>SLA[b.priority]);
   if(open.length)L.push(`<b>${open.length}</b> backlog topic(s) still open${od.length?`, <b>${od.length}</b> already past their deadline`:''}.`);
@@ -1247,6 +1248,60 @@ function vMocks(){
   <div class="card"><h3>All mocks</h3><div class="tw"><table><tr><th>Date</th><th>#</th><th>Marks</th><th>P/C/M</th><th>Acc</th><th>E/M/H acc</th><th>vs class avg</th><th>Rank</th><th>%ile</th><th>Files</th><th></th></tr>
   ${[...ms].reverse().map(x=>`<tr><td>${fmtS(x.date)}</td><td>${x.num}</td><td><b>${x.marks}</b></td><td>${x.phy??'–'}/${x.chem??'–'}/${x.math??'–'}</td><td>${x.accuracy!=null?r1(x.accuracy)+'%':'—'}</td><td>${[x.ea?x.ec/x.ea:null,x.ma?x.mc/x.ma:null,x.ha?x.hc/x.ha:null].map(z=>z==null?'–':r0(z*100)).join('/')}</td><td>${x.av!=null?(x.marks-x.av>=0?'+':'')+(x.marks-x.av):'—'}</td><td>${x.rank?x.rank+'/'+x.students:'—'}</td><td>${x.percentile!=null?r1(x.percentile):'—'}</td><td style="white-space:nowrap">${fileLinks(x)}</td><td style="white-space:nowrap"><button class="btn s" onclick="mockView='${x.id}';vMocks();window.scrollTo(0,0)">Report</button> <button class="btn s alt" onclick="editMock='${x.id}';vMocks();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delMock('${x.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No mocks yet.</td></tr>'}</table></div></div>`;
   if(ms.length)mockCharts(ms);
+}
+/* ---------- COACH: advice worked out from the user's own data with fixed rules (not an AI model) ---------- */
+const rawTotal=m=>m.marks-sum(Object.values(m.grace||{}));
+function coachFacts(){
+  const st=S.settings,t=today(),ms=mocks().filter(m=>m.marks!=null),last=ms.slice(-3),L=logs();
+  const subj=[['Physics','phy'],['Chemistry','chem'],['Math','math']].map(([n,k])=>{const vals=last.map(m=>m[k]==null?null:m[k]-((m.grace&&m.grace[k])||0)).filter(x=>x!=null);return {n,k,vals,avg:avg(vals)}}).filter(s=>s.vals.length).sort((a,b)=>a.avg-b.avg);
+  const latest=ms[ms.length-1],rank={High:0,Medium:1,Low:2};
+  const open=S.backlog.filter(b=>b.status!=='Resolved').map(b=>({...b,age:diff(b.date,t),over:diff(b.date,t)>SLA[b.priority]}));
+  const bl=[...open].sort((a,b)=>(rank[a.priority]-rank[b.priority])||(b.age-a.age));
+  const pe=st.phases[st.phases.length-1].end,left=Math.max(1,diff(t,pe)+1),done=totalQ(),since=Math.max(1,diff(st.start,t)+1),lastLog=L.length?L[L.length-1].date:null;
+  return {st,t,ms,last,latest,exp:latest?expectedMarks(latest.date):null,subj,weakest:subj[0],strongest:subj[subj.length-1],open,bl,od:bl.filter(b=>b.over),pe,left,done,
+    need:Math.max(0,QPLAN_GOAL-done)/left,pace:done/since,wk:weekStats(mon(t)),lastLog,sinceLog:(()=>{const ref=[lastLog,st.excusedThrough].filter(Boolean).sort().pop();return ref?diff(ref,t):null})(),
+    sleep:avg(L.slice(-7).filter(l=>l.sleep!=null).map(l=>l.sleep)),target:st.milestones[st.milestones.length-1].marks,mTarget:st.milestones[st.milestones.length-1].date,raws:last.map(rawTotal)};
+}
+function coachAdvice(f){
+  const A=[],bl3=f.bl.slice(0,3).map(b=>`${esc(b.topic)} (${esc(b.subject)}, ${b.priority}, ${b.age} days)`).join('; ');
+  if(f.sinceLog==null)A.push([3,'Start logging',`No daily logs yet. Log today's questions so the app can track your pace.`]);
+  else if(f.sinceLog>=2)A.push([3,'Log your recent days',(f.lastLog&&f.lastLog>=(f.st.excusedThrough||'')?`Your last log was ${fmtS(f.lastLog)}, ${f.sinceLog} days ago.`:`Nothing has been logged since ${fmtS(f.st.excusedThrough)}.`)+' Log what you did so your pace and accuracy are real.']);
+  const gap=f.need-f.pace;
+  A.push(gap>5?[3,'Raise your daily questions',`To reach ${QPLAN_GOAL.toLocaleString('en-IN')} questions by ${fmt(f.pe)} you need about ${qn(f.need)} a day. You are averaging ${qn(f.pace)} a day, ${qn(gap)} short.`]:[0,'Question pace is on target',`You are averaging ${qn(f.pace)} a day against ${qn(f.need)} needed.`]);
+  if(f.latest&&f.exp!=null){const d=f.latest.marks-f.exp;A.push([d<0?2:0,d<0?'Marks are behind the plan':'Marks are on plan',`Your latest mock (${fmtS(f.latest.date)}) was ${f.latest.marks}, ${r0(Math.abs(d))} ${d<0?'below':'above'} the plan for that date (${r0(f.exp)}). The target is ${f.target}.`])}
+  if(f.raws.length>=3&&Math.max(...f.raws)-Math.min(...f.raws)<=6)A.push([2,'Marks have stopped rising',`Your last 3 mocks were ${f.raws.join(', ')} before grace marks. Redo every wrong question from them before adding new ones.`]);
+  if(f.weakest&&f.subj.length>1)A.push([2,`Focus on ${f.weakest.n}`,`${f.weakest.n} is your lowest subject, averaging ${r0(f.weakest.avg)}/100 over your last ${f.weakest.vals.length} mocks (${f.strongest.n}: ${r0(f.strongest.avg)}).${f.weakest.vals[f.weakest.vals.length-1]>f.weakest.avg?` Its latest score was ${f.weakest.vals[f.weakest.vals.length-1]}, so it is improving.`:''} Start your first study session with it.`]);
+  if(f.open.length)A.push([f.od.length?3:1,f.od.length?`${f.od.length} backlog topic${f.od.length==1?' is':'s are'} overdue`:`${f.open.length} backlog topics open`,`Clear these first: ${bl3}.`]);
+  if(f.sleep!=null&&f.sleep<6.5)A.push([2,'Sleep is too low',`You averaged ${r1(f.sleep)} hours over your last logs. Protect your sleep window, because tired practice does not stick.`]);
+  return A.sort((a,b)=>b[0]-a[0]).slice(0,6);
+}
+function coachAnswer(key,f){
+  const ul=a=>'<ul>'+a.map(x=>`<li>${x}</li>`).join('')+'</ul>',noD='I need some data first. Log a mock test or a day and ask again.';
+  if(key==='today'){const q=Math.round(f.st.weeklyMin/7);return `<b>A plan for today</b>`+ul([f.weakest?`Session 1: ${f.weakest.n}, your lowest subject (${r0(f.weakest.avg)}/100 recently). Work on its weakest chapters.`:'Session 1: your weakest subject.',f.bl.length?`Session 2: clear backlog topics: ${f.bl.slice(0,3).map(b=>esc(b.topic)+' ('+esc(b.subject)+')').join(', ')}.`:'Session 2: practice questions from your main book.',`Aim for about ${q} questions today (weekly minimum ${f.st.weeklyMin} divided by 7).`,'Finish by redoing every question you got wrong, then log the day.'])}
+  if(key==='flat'){if(!f.last.length)return noD;const sj=f.subj.slice().sort((a,b)=>['Physics','Chemistry','Math'].indexOf(a.n)-['Physics','Chemistry','Math'].indexOf(b.n));
+    return `<b>Your last ${f.last.length} mocks</b>`+ul([`Totals as recorded: ${f.last.map(m=>m.marks).join(', ')}. Without grace marks: ${f.raws.join(', ')}.`,...sj.map(s=>`${s.n}: ${s.vals.join(', ')} (raw, without grace)`),f.raws.length>=3&&Math.max(...f.raws)-Math.min(...f.raws)<=6?'The totals are flat. The same kinds of mistakes are probably repeating, so redo the wrong questions before adding new ones.':f.raws[f.raws.length-1]>f.raws[0]?(f.last.some(m=>m.grace&&Object.keys(m.grace).length)&&Math.max(...f.last.map(m=>m.marks))-Math.min(...f.last.map(m=>m.marks))<=6?'Without grace marks your marks are rising, so the flat totals come from grace marks hiding the gain.':'Your marks are rising.'):'Your raw marks are not rising. Look at the subject that moves up and down the most.'])}
+  if(key==='track'){if(!f.latest)return noD;const d=f.latest.marks-f.exp,months=Math.max(1,diff(f.t,f.mTarget)/30),per=(f.target-f.latest.marks)/months;
+    return `<b>Are you on track?</b>`+ul([`Latest mock ${f.latest.marks} (${fmtS(f.latest.date)}). The plan expected ${r0(f.exp)} on that date, so you are ${r0(Math.abs(d))} ${d<0?'behind':'ahead'}.`,`Target: ${f.target} by ${fmt(f.mTarget)}. That is ${r0(f.target-f.latest.marks)} more marks, about ${r1(per)} a month.`,`Days to the exam: ${f.dl??diff(f.t,f.st.exam)}.`])}
+  if(key==='weak'){if(!f.subj.length)return noD;return `<b>Subjects, weakest first</b>`+ul(f.subj.map(s=>`${s.n}: average ${r0(s.avg)}/100 (${s.vals.join(', ')}). ${s===f.subj[0]?'Spend the most time here.':''}`))}
+  if(key==='week'){const q=f.wk.q,dow=(pd(f.t).getDay()+6)%7,daysLeft=7-dow,rem=Math.max(0,f.st.weeklyMin-q);
+    return `<b>This week</b>`+ul([`Target: ${f.st.weeklyMin} to ${f.st.weeklyMax} questions a week.`,`Logged so far this week: ${q}.`,rem>0?`Still needed for the minimum: ${rem}. With ${daysLeft} day${daysLeft==1?'':'s'} left (including today) that is about ${Math.ceil(rem/daysLeft)} a day.`:'You have reached the weekly minimum.',...(q===0?['Nothing is logged this week yet. If you solved questions, log them so this number is real.']:[])])}
+  if(key==='backlog'){if(!f.bl.length)return 'Your backlog is empty. Nothing to clear.';return `<b>Backlog, in the order to clear it</b>`+ul(f.bl.slice(0,8).map(b=>`${esc(b.topic)} (${esc(b.subject)}): ${b.priority} priority, ${b.age} days old${b.over?', <span class="bad">overdue</span>':''}`))+(f.bl.length>8?`<div class="sub">And ${f.bl.length-8} more.</div>`:'')}
+  return '';
+}
+const COACH_Q=[['today','What should I study today?'],['week','How many questions this week?'],['weak','Which subject is weakest?'],['backlog','Which backlog topic first?'],['track','Am I on track?'],['flat','Why are my marks flat?']];
+function coachAsk(k){const f=coachFacts();document.getElementById('coachOut').innerHTML=coachAnswer(k,f)||'';}
+function coachText(e){e.preventDefault();const q=v('coachQ').toLowerCase().trim(),m=[['backlog',/backlog|topic|pending|overdue/],['week',/week|how many/],['weak',/weak|worst|lowest|subject/],['flat',/flat|stuck|plateau|improv|why/],['track',/track|target|goal|plan|behind|ahead|expected/],['today',/today|study|next|what should/]].find(([,r])=>r.test(q));
+  document.getElementById('coachOut').innerHTML=m?coachAnswer(m[0],coachFacts()):`I can answer: ${COACH_Q.map(x=>'"'+x[1]+'"').join(', ')}. Try one of the buttons above.`}
+function vCoach(){
+  const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.</div>
+  <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
+   <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
+   <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
+  <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
+  <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
+   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">Or type a question</label><input id="coachQ" type="text" placeholder="e.g. what should I study today?"></div></form>
+   <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
 const OTHER=PROFILE==='malik'?'kartik':'malik';
