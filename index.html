@@ -1302,7 +1302,34 @@ function coachSummary(){
     backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
-let COACH_CHAT=[];
+let COACH_CHAT=[],COACH_ATT=[];
+const b64buf=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+async function fileToAtt(f){
+  if(f.type==='application/pdf'){
+    if(f.size>3.5e6)throw new Error(f.name+' is over 3.5 MB. Use a smaller PDF or a few pages.');
+    return{name:f.name,media_type:'application/pdf',data:b64buf(await f.arrayBuffer())};
+  }
+  if(/^image\//.test(f.type)){
+    let bmp;try{bmp=await createImageBitmap(f)}catch(e){throw new Error(f.name+' could not be read. Try a JPG or PNG.')}
+    const k=Math.min(1,1600/Math.max(bmp.width,bmp.height)),c=document.createElement('canvas');
+    c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);
+    return{name:f.name,media_type:'image/jpeg',data:c.toDataURL('image/jpeg',.85).split(',')[1]};
+  }
+  throw new Error(f.name+' is not a photo or PDF.');
+}
+async function coachPick(inp){
+  const fs=[...inp.files];inp.value='';
+  for(const f of fs){
+    if(COACH_ATT.length>=3){alert('You can attach up to 3 files per message.');break}
+    try{COACH_ATT.push(await fileToAtt(f))}catch(e){alert(e.message)}
+  }
+  coachChips();
+}
+function coachChips(){
+  const d=document.getElementById('coachAtt');if(!d)return;
+  d.innerHTML=COACH_ATT.map((a,i)=>`<span class="sub" style="display:inline-block;margin:4px 6px 0 0;padding:3px 9px;border:1px solid var(--line);border-radius:12px">📎 ${esc(a.name)} <a href="#" onclick="COACH_ATT.splice(${i},1);coachChips();return false" aria-label="Remove">✕</a></span>`).join('');
+}
 const mdLite=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
 function coachRender(pending){
   const o=document.getElementById('coachOut');if(!o)return;
@@ -1313,9 +1340,9 @@ function coachRender(pending){
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="COACH_CHAT=[];coachRender();return false">New chat</a></div>':'');
   o.scrollIntoView({block:'end',behavior:'smooth'});
 }
-async function coachAI(q){
+async function coachAI(q,att){
   const hist=COACH_CHAT.filter(m=>!m.error).map(m=>({role:m.role,content:m.content}));
-  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary()})});
+  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
   return j.answer;
@@ -1325,24 +1352,28 @@ function coachRule(q){
   return m?coachAnswer(m[0],coachFacts()):`I can answer: ${COACH_Q.map(x=>'"'+x[1]+'"').join(', ')}. Try one of the buttons above.`;
 }
 async function coachText(e){
-  e.preventDefault();const q=v('coachQ').trim(),out=document.getElementById('coachOut');if(!q)return;
+  e.preventDefault();let q=v('coachQ').trim();const out=document.getElementById('coachOut');
+  if(!q&&!(COACH_API&&COACH_ATT.length))return;
   if(COACH_API){
+    const att=COACH_ATT.splice(0);coachChips();
+    if(!q)q='Please read the attached file(s) and help me with them.';
     const inp=document.getElementById('coachQ');
-    coachRender(true,COACH_CHAT.push({role:'user',content:q}));if(inp)inp.value='';
-    try{const a=await coachAI(q);COACH_CHAT.push({role:'assistant',content:a});coachRender();return}
+    coachRender(true,COACH_CHAT.push({role:'user',content:q+(att.length?'\n📎 '+att.map(a=>a.name).join(', '):'')}));if(inp)inp.value='';
+    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a});coachRender();return}
     catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
   }
   out.innerHTML=coachRule(q);
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation and sees your logged data.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message; PDFs under 3.5 MB).':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
   <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
-   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div><button class="btn" type="submit">Send</button></form>
+   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
+   <div id="coachAtt"></div>
    <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
