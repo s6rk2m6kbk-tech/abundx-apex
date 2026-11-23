@@ -1290,17 +1290,46 @@ function coachAnswer(key,f){
 }
 const COACH_Q=[['today','What should I study today?'],['week','How many questions this week?'],['weak','Which subject is weakest?'],['backlog','Which backlog topic first?'],['track','Am I on track?'],['flat','Why are my marks flat?']];
 function coachAsk(k){const f=coachFacts();document.getElementById('coachOut').innerHTML=coachAnswer(k,f)||'';}
-function coachText(e){e.preventDefault();const q=v('coachQ').toLowerCase().trim(),m=[['backlog',/backlog|topic|pending|overdue/],['week',/week|how many/],['weak',/weak|worst|lowest|subject/],['flat',/flat|stuck|plateau|improv|why/],['track',/track|target|goal|plan|behind|ahead|expected/],['today',/today|study|next|what should/]].find(([,r])=>r.test(q));
-  document.getElementById('coachOut').innerHTML=m?coachAnswer(m[0],coachFacts()):`I can answer: ${COACH_Q.map(x=>'"'+x[1]+'"').join(', ')}. Try one of the buttons above.`}
+/* AI coach: set COACH_API to the deployed coach server address (see coach-worker/). Empty = rule-based answers only. */
+const COACH_API='https://abundx-coach.abundx-coach.workers.dev';
+function coachSummary(){
+  const f=coachFacts();
+  return {student:PROFILES[PROFILE].name,today:f.t,daysToExam:diff(f.t,f.st.exam),targetMarks:f.target,targetDate:f.mTarget,
+    latestMock:f.latest?{date:f.latest.date,marks:f.latest.marks,rawMarks:rawTotal(f.latest),planExpected:Math.round(f.exp)}:null,
+    lastMocks:f.last.map(m=>({date:m.date,marks:m.marks,rawMarks:rawTotal(m),physics:m.phy,chemistry:m.chem,math:m.math,graceMarks:m.grace||null})),
+    subjectsLast3Raw:Object.fromEntries(f.subj.map(s=>[s.n,{average:Math.round(s.avg),scores:s.vals}])),
+    questions:{loggedTotal:f.done,averagePerDay:Math.round(f.pace),neededPerDay:Math.round(f.need),goal:QPLAN_GOAL,thisWeek:f.wk.q,weeklyMin:f.st.weeklyMin,weeklyMax:f.st.weeklyMax},
+    backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
+    daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
+}
+async function coachAI(q){
+  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,facts:coachSummary()})});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
+  return j.answer;
+}
+function coachRule(q){
+  const m=[['backlog',/backlog|topic|pending|overdue/],['week',/week|how many/],['weak',/weak|worst|lowest|subject/],['flat',/flat|stuck|plateau|improv|why/],['track',/track|target|goal|plan|behind|ahead|expected/],['today',/today|study|next|what should/]].find(([,r])=>r.test(q.toLowerCase()));
+  return m?coachAnswer(m[0],coachFacts()):`I can answer: ${COACH_Q.map(x=>'"'+x[1]+'"').join(', ')}. Try one of the buttons above.`;
+}
+async function coachText(e){
+  e.preventDefault();const q=v('coachQ').trim(),out=document.getElementById('coachOut');if(!q)return;
+  if(COACH_API){
+    out.innerHTML='<span class="sub">The AI coach is thinking...</span>';
+    try{const a=await coachAI(q);out.innerHTML=`<span class="sub" style="letter-spacing:.14em;font-weight:700">AI COACH</span><div style="margin-top:6px">${esc(a).replace(/\n/g,'<br>')}</div>`;return}
+    catch(err){out.innerHTML=`<div class="sub" style="margin-bottom:8px">${esc(err.message)} Showing the rule-based answer instead.</div>`+coachRule(q);return}
+  }
+  out.innerHTML=coachRule(q);
+}
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Type any question and the AI coach answers using the same data. It only knows what you have logged.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
   <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
-   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">Or type a question</label><input id="coachQ" type="text" placeholder="e.g. what should I study today?"></div></form>
+   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="400" placeholder="e.g. what should I study today?"></div></form>
    <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
