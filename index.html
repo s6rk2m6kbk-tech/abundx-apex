@@ -1383,6 +1383,95 @@ function coachChips(){
   d.innerHTML=COACH_ATT.map((a,i)=>`<span class="sub" style="display:inline-block;margin:4px 6px 0 0;padding:3px 9px;border:1px solid var(--line);border-radius:12px">📎 ${esc(a.name)} <a href="#" onclick="COACH_ATT.splice(${i},1);coachChips();return false" aria-label="Remove">✕</a></span>`).join('');
 }
 const mdLite=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+/* ---- AI edits to any tracker data: preview, safety check, undo snapshots ---- */
+const AUTO_KEY='abundx_ai_auto',UNDO_KEY='abundx_undo_'+PROFILE,BADK=new Set(['__proto__','constructor','prototype']);
+const autoOn=()=>{try{return localStorage.getItem(AUTO_KEY)==='1'}catch(e){return false}};
+function setAuto(on){try{on?localStorage.setItem(AUTO_KEY,'1'):localStorage.removeItem(AUTO_KEY)}catch(e){}}
+function snapPush(data,summary){
+  let a=[];try{a=JSON.parse(localStorage.getItem(UNDO_KEY)||'[]')}catch(e){}
+  const id=Date.now()+Math.floor(Math.random()*1000);a.unshift({id,summary:String(summary||'AI change').slice(0,120),data});a=a.slice(0,5);
+  while(a.length){try{localStorage.setItem(UNDO_KEY,JSON.stringify(a));return id}catch(e){a.pop()}}
+  return null;
+}
+function snapRestore(id){
+  let a=[];try{a=JSON.parse(localStorage.getItem(UNDO_KEY)||'[]')}catch(e){}
+  const s=a.find(x=>x.id===id);if(!s)return false;
+  S=JSON.parse(s.data);save();return true;
+}
+function dataDump(){
+  const lim=n=>JSON.stringify(S,(k,v)=>typeof v==='string'&&v.length>n?v.slice(0,n)+'…[cut]':v);
+  let s=lim(300);if(s.length>100000)s=lim(120);
+  if(s.length>100000){const c=JSON.parse(lim(80));if(c.settings)delete c.settings.resources;s=JSON.stringify(c)}
+  return s.length>140000?'':s;
+}
+function pathParts(p){const a=String(p).split('.').filter(x=>x!=='');if(!a.length||a.some(k=>BADK.has(k)))throw new Error('Not a valid path: '+p);return a}
+const getAt=(root,parts)=>{let o=root;for(const k of parts){if(o==null||typeof o!=='object')return undefined;o=o[k]}return o};
+function ensureParent(parts){let o=S;for(let i=0;i<parts.length-1;i++){const k=parts[i];if(o[k]==null||typeof o[k]!=='object')o[k]=/^\d+$/.test(parts[i+1])?[]:{};o=o[k]}return o}
+const rowMatch=(o,w)=>o&&typeof o==='object'&&Object.entries(w||{}).every(([k,v])=>JSON.stringify(o[k])===JSON.stringify(v));
+function opsApply(ops){
+  for(const op of ops){
+    const p=pathParts(op.path),key=p[p.length-1];
+    if(op.op==='set'){ensureParent(p)[key]=op.value}
+    else if(op.op==='delete'){const par=getAt(S,p.slice(0,-1));if(par==null||typeof par!=='object')continue;Array.isArray(par)?par.splice(+key,1):delete par[key]}
+    else if(op.op==='push'){const par=ensureParent(p);if(!Array.isArray(par[key]))par[key]=[];par[key].push(op.value)}
+    else if(op.op==='update_where'){
+      const c=getAt(S,p);if(c==null||typeof c!=='object')throw new Error('Nothing at '+op.path);let n=0;
+      Object.values(c).forEach(it=>{if(rowMatch(it,op.where)){Object.assign(it,op.set||{});n++}});
+      if(!n)throw new Error('No record matched in '+op.path);
+    }else if(op.op==='remove_where'){
+      const c=getAt(S,p);if(c==null||typeof c!=='object')throw new Error('Nothing at '+op.path);let n=0;
+      if(Array.isArray(c)){for(let i=c.length-1;i>=0;i--)if(rowMatch(c[i],op.where)){c.splice(i,1);n++}}
+      else Object.keys(c).forEach(k=>{if(rowMatch(c[k],op.where)){delete c[k];n++}});
+      if(!n)throw new Error('No record matched in '+op.path);
+    }else throw new Error('Unknown operation '+op.op);
+  }
+}
+function viewErrs(){
+  const keep=view,errs={};
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','calc','analytics','compare','reports','settings']){
+    if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
+    Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
+  }
+  view=keep;mockView=null;return errs;
+}
+function editApply(a){
+  const pre=JSON.stringify(S),base=viewErrs();
+  try{
+    opsApply(a.ops);
+    if(S.logs&&typeof S.logs==='object')for(const k of Object.keys(S.logs)){
+      const l=S.logs[k];if(l==null||typeof l!=='object'){delete S.logs[k];continue}
+      l.date=k;if(!l.phase)l.phase=phaseFor(k).name;
+      ['coaching','pager','textbook','pyq'].forEach(c=>{l[c]=Number(l[c])||0});
+      ['accuracy','energy','focus','sleep'].forEach(c=>{if(l[c]===undefined)l[c]=null})
+    }
+    const after=viewErrs(),bad=Object.keys(after).filter(v=>!(v in base));
+    if(bad.length)throw new Error('That would break the '+bad.map(v=>VIEWS[v][0]).join(', ')+' page ('+after[bad[0]]+'), so nothing was changed.');
+  }catch(e){S=JSON.parse(pre);const y=scrollY;render();scrollTo(0,y);throw e}
+  save();const id=snapPush(pre,a.summary);const y=scrollY;render();scrollTo(0,y);return id;
+}
+function opLines(ops){
+  const sh=v=>{let s=JSON.stringify(v);if(s===undefined)return 'nothing';return s.length>70?s.slice(0,70)+'…':s};
+  const out=[];
+  for(const op of ops.slice(0,14)){
+    let line;try{
+      const p=pathParts(op.path);
+      if(op.op==='set')line=`Set <b>${esc(op.path)}</b> to ${esc(sh(op.value))} <span class="sub">(now ${esc(sh(getAt(S,p)))})</span>`;
+      else if(op.op==='delete')line=`Delete <b>${esc(op.path)}</b> <span class="sub">(now ${esc(sh(getAt(S,p)))})</span>`;
+      else if(op.op==='push')line=`Add to <b>${esc(op.path)}</b>: ${esc(sh(op.value))}`;
+      else{const c=getAt(S,p),n=c&&typeof c==='object'?Object.values(c).filter(it=>rowMatch(it,op.where)).length:0;
+        line=op.op==='update_where'?`Change ${n} record(s) in <b>${esc(op.path)}</b> where ${esc(sh(op.where))}: ${esc(sh(op.set))}`:`Remove ${n} record(s) from <b>${esc(op.path)}</b> where ${esc(sh(op.where))}`}
+    }catch(e){line='Invalid step: '+esc(String(op.path))}
+    out.push(`<li>${line}</li>`);
+  }
+  if(ops.length>14)out.push(`<li class="sub">and ${ops.length-14} more steps</li>`);
+  return '<ul style="margin:6px 0 0 18px;padding:0">'+out.join('')+'</ul>';
+}
+function coachUndo(mi,ai){
+  const a=COACH_CHAT[mi]?.actions?.[ai];if(!a||a.state!=='saved'||!a.undo)return;
+  if(!confirm('Put your data back to how it was just before this change? Anything you changed after it is lost too.'))return;
+  if(!snapRestore(a.undo)){a.note='The undo copy is no longer available.';return coachRender()}
+  a.state='undone';a.note='Your data is back to how it was before this change.';const y=scrollY;render();scrollTo(0,y);
+}
 /* ---- Files the AI makes (built on this device, nothing is uploaded) ---- */
 const FILE_INFO={pdf:['PDF document','pdf','application/pdf'],doc:['Word document','doc','application/msword'],png:['Image (PNG)','png','image/png'],svg:['Image (SVG)','svg','image/svg+xml'],csv:['Spreadsheet (CSV)','csv','text/csv'],txt:['Text file','txt','text/plain'],md:['Markdown file','md','text/markdown']};
 const FILES={};
@@ -1474,6 +1563,18 @@ function coachRender(pending){
       return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">\u{1F4C4} <b>${nm}</b> <span class="sub">${inf[0]}</span>`
         +(f.error?`<div class="sub bad" style="margin-top:4px">${esc(f.error)}</div>`:!a.content?'<div class="sub" style="margin-top:4px">This file was too large to keep. Ask for it again.</div>':f.blob?`<div style="margin-top:8px"><button class="btn s ok" onclick="coachDownload('${key}')">Download</button></div>`+prev:'<div class="sub" style="margin-top:4px">Preparing the file...</div>')+'</div>';
     }
+    if(a.type==='open_page'){
+      const nm=(VIEWS[a.page]||[])[0];
+      return nm?`<div style="margin:6px 0"><button class="btn s alt" onclick="go('${a.page}')">Open ${esc(nm)} ›</button></div>`:'';
+    }
+    if(a.type==='edit_data'){
+      const head=a.state==='saved'?'✅ Applied: ':a.state==='cancelled'?'Cancelled: ':a.state==='undone'?'Undone: ':'Change your tracker data? ';
+      return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${head}<b>${esc(a.summary||'Edit data')}</b>`
+        +(a.state==='undone'?'':opLines(a.ops))
+        +(a.note?`<div class="${a.state?'sub':'sub bad'}" style="margin-top:6px">${esc(a.note)}</div>`:'')
+        +(!a.state?`<div style="margin-top:8px"><button class="btn s ok" onclick="coachConfirm(${mi},${ai})">Apply</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`:'')
+        +(a.state==='saved'&&a.undo?`<div style="margin-top:8px"><button class="btn s alt" onclick="coachUndo(${mi},${ai})">Undo</button></div>`:'')+'</div>';
+    }
     const del=a.type==='delete_questions',day=`<b>${fmtS(a.date)} ${dow(a.date)}</b>`,l0=S.logs[a.date],cur=a.state?'?':(l0?qTot(l0):0);
     const has=(t)=>a.state?'':t;
     const lbl=!del?`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for ${day}`
@@ -1484,7 +1585,8 @@ function coachRender(pending){
     const head=a.state==='saved'?(del?'✅ Deleted: ':'✅ Saved to your tracker: '):a.state==='cancelled'?'Cancelled: ':(del?'Delete from your tracker? ':'Save to your tracker? ');
     return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${head}${lbl}`
       +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
-      +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
+      +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)
+      +(a.state==='saved'&&a.undo?`<div style="margin-top:8px"><button class="btn s alt" onclick="coachUndo(${mi},${ai})">Undo</button></div>`:'')+'</div>'}).join('');
   o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
   chatsSave();coachHist();coachFileKick();
@@ -1494,6 +1596,11 @@ function coachCancel(mi,ai){const a=COACH_CHAT[mi]?.actions?.[ai];if(!a||a.state
 function coachConfirm(mi,ai){
   const m=COACH_CHAT[mi],a=m?.actions?.[ai];if(!a||a.state)return;
   const fail=t=>{a.note=t;coachRender()};
+  const pre=JSON.stringify(S);
+  if(a.type==='edit_data'){
+    try{a.undo=editApply(a);a.state='saved';a.note='Done. Tap Undo if that was not what you wanted.'}catch(e){a.note=e.message}
+    return coachRender();
+  }
   if(a.date>today())return fail('That date is in the future, so I did not save it.');
   if(a.date<S.settings.start)return fail('That date is before your plan started ('+fmtS(S.settings.start)+').');
   if(isLocked(a.date))return fail('That week is locked. Turn on "Allow editing locked weeks" in Settings to change it.');
@@ -1502,7 +1609,7 @@ function coachConfirm(mi,ai){
     if(a.scope==='week_total'){
       const wk=mon(a.date);
       if(!S.weekQ||S.weekQ[wk]==null)return fail('There is no typed weekly total for that week.');
-      delete S.weekQ[wk];save();a.state='saved';a.note=`The week of ${fmtS(wk)} now counts only the days you logged (${weekStats(wk).q} questions).`;return coachRender();
+      delete S.weekQ[wk];save();a.undo=snapPush(pre,'Cleared weekly total');a.state='saved';a.note=`The week of ${fmtS(wk)} now counts only the days you logged (${weekStats(wk).q} questions).`;return coachRender();
     }
     const l=S.logs[a.date];
     if(!l||qTot(l)===0)return fail('No questions are logged on that day.');
@@ -1516,20 +1623,20 @@ function coachConfirm(mi,ai){
         Object.values(K).sort((x,y)=>(l[y]||0)-(l[x]||0)).forEach(c=>{const t=Math.min(n,l[c]||0);l[c]=(l[c]||0)-t;n-=t;removed+=t})}
     }
     if(qTot(l)===0&&l.quick)delete S.logs[a.date];
-    save();a.state='saved';
+    save();a.undo=snapPush(pre,'Deleted questions');a.state='saved';
     a.note=`Removed ${removed}. ${fmtS(a.date)} now has ${S.logs[a.date]?qTot(S.logs[a.date]):0} questions.`+(S.logs[a.date]&&S.logs[a.date].quick===undefined?' Your accuracy, energy and sleep for that day were kept.':'')+((S.weekQ||{})[mon(a.date)]!=null?` The week of ${fmtS(mon(a.date))} still shows its typed total (${S.weekQ[mon(a.date)]}) if that is higher.`:'');
     return coachRender();
   }
   const k=K[a.source]||'textbook';
   const l=S.logs[a.date]||{date:a.date,phase:phaseFor(a.date).name,coaching:0,pager:0,textbook:0,pyq:0,accuracy:null,energy:null,focus:null,sleep:null,quick:true,topics:'',weak:'',notes:'Logged from the AI chat. Open Daily Log to add accuracy, energy and sleep.'};
   l[k]=a.mode==='set'?a.count:(l[k]||0)+a.count;
-  S.logs[a.date]=l;save();
+  S.logs[a.date]=l;save();a.undo=snapPush(pre,'Logged questions');
   a.state='saved';a.note=`${fmtS(a.date)} now has ${qTot(l)} questions in total.`+(qTot(l)>200?' That is over the 200 a day cap.':'');
   coachRender();
 }
 async function coachAI(q,att){
   const hist=COACH_CHAT.filter(m=>!m.error).map(m=>({role:m.role,content:m.content}));
-  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),today:today(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
+  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),today:today(),appData:dataDump(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
   return j;
@@ -1546,21 +1653,23 @@ async function coachText(e){
     if(!q)q='Please read the attached file(s) and help me with them.';
     const inp=document.getElementById('coachQ');
     coachRender(true,COACH_CHAT.push({role:'user',content:q+(att.length?'\n📎 '+att.map(a=>a.name).join(', '):'')}));if(inp)inp.value='';
-    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[]});coachRender();return}
+    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[]});
+      if(autoOn()&&!att.length){const mi=COACH_CHAT.length-1;(a.actions||[]).forEach((x,ai)=>{if(['log_questions','delete_questions','edit_data'].includes(x.type))coachConfirm(mi,ai)})}
+      coachRender();return}
     catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
   }
   out.innerHTML=coachRule(q);
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). Tell it how many questions you solved (for example "I did 40 questions today") and it offers to save them to your Daily Log.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
   <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
    <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
-   <div id="coachAtt"></div>
+   <div id="coachAtt"></div>${COACH_API?`<label class="sub" style="display:block;margin-top:8px;cursor:pointer"><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"> Apply the AI's changes without asking. You can still Undo each one. Changes are never applied automatically when a file is attached.</label>`:''}
    <div id="coachOut" style="margin-top:14px;line-height:1.7"></div><div id="coachHist"></div></div>`;
   if(COACH_API){COACH_ATT=[];coachRender()}
 }
