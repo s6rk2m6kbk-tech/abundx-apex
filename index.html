@@ -1396,6 +1396,9 @@ function coachHist(){
 chatsLoad();
 /* ---------- Chat sync across devices (private code, merged by the cloud store) ---------- */
 const SYNC_KEY='abundx_sync_'+PROFILE;
+(()=>{const m=(location.hash||'').match(/^#join=([A-Za-z0-9-]{16,64})/);if(!m)return;
+  try{localStorage.setItem(SYNC_KEY,JSON.stringify({code:m[1].toUpperCase(),since:Date.now()}))}catch(e){}
+  view='chats';try{history.replaceState(null,'',location.pathname+'#chats')}catch(e){}})();
 let COACH_BUSY=false,syncBusy=false;
 const syncCfg=()=>{try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'null')}catch(e){return null}};
 const syncSet=o=>{try{localStorage.setItem(SYNC_KEY,JSON.stringify(o))}catch(e){}};
@@ -1436,12 +1439,20 @@ async function syncWipe(){
   try{await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'wipe',code:c.code,profile:PROFILE})})}catch(e){}
   try{localStorage.removeItem(SYNC_KEY)}catch(e){}vChats();
 }
+const syncLink=code=>location.origin+location.pathname+'?p='+PROFILE+'#join='+code;
+function syncCopyLink(){const c=syncCfg();if(!c)return;(navigator.clipboard?navigator.clipboard.writeText(syncLink(c.code)):Promise.reject()).then(()=>alert('Link copied. Paste it on your other device.')).catch(()=>alert('Select the link above and copy it.'))}
+function syncShare(){const c=syncCfg();if(c&&navigator.share)navigator.share({title:'My DXA AI chats',text:'Open this on your other device to get your chats:',url:syncLink(c.code)}).catch(()=>{})}
+function syncQrDraw(){const c=syncCfg(),el=document.getElementById('syncQr');if(!c||!el)return;
+  const draw=()=>{try{const q=qrcode(0,'M');q.addData(syncLink(c.code));q.make();el.innerHTML=q.createImgTag(4,6)}catch(e){el.textContent='QR unavailable'}};
+  if(window.qrcode)return draw();const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js';sc.onload=draw;sc.onerror=()=>{el.textContent='QR unavailable'};document.head.appendChild(sc)}
 function syncCard(){
   const c=syncCfg(),ago=c&&c.last?Math.max(0,Math.round((Date.now()-c.last)/60000)):null;
   if(!COACH_API)return '';
   return `<div class="card"><h3>Use your chats on any device</h3>${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Changes you make here (new chats, edits, deletes) appear on your other devices within a minute, and theirs appear here.</div>
      <div style="margin:10px 0">Your sync code: <b style="font-size:17px;letter-spacing:.08em;user-select:all">${esc(c.code)}</b> <button class="btn s alt" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(c.code)}').then(()=>alert('Copied'))">Copy</button></div>
-     <div class="sub">On another device, open this page, choose "I have a code" and enter it. Anyone who has this code can read and change these chats, so share it only with yourself. It is not a password you can reset: if you lose it, turn sync on again to get a new one.</div>
+     <div class="sub" style="margin-top:12px"><b>Open your chats on another device:</b> send yourself this link (a message to yourself, email, or scan the picture). Opening it connects that device automatically. You can also type the code under "I have a code".</div>
+     <div style="margin:8px 0"><input readonly value="${esc(syncLink(c.code))}" onclick="this.select()" style="width:100%"></div>
+     <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div id="syncQr" style="background:#fff;padding:6px;border-radius:6px;min-width:120px;min-height:120px"></div><div class="sub" style="flex:1;min-width:200px">Anyone who has this link or code can read and change these chats, so keep it to yourself. The code is not a password you can reset: if you lose it, turn sync on again to get a new one.<p style="margin-top:8px"><button class="btn s ok" onclick="syncCopyLink()">Copy link</button> ${navigator.share?'<button class="btn s alt" onclick="syncShare()">Send the link…</button>':''}</p></div></div>
      <p style="margin-top:10px"><button class="btn s ok" onclick="syncNow(true).then(vChats)">Sync now</button> <button class="btn s alt" onclick="syncOff()">Turn off on this device</button> <button class="btn s bad" onclick="syncWipe()">Delete the cloud copy</button></p>`
     :`<div class="sub" style="margin-bottom:10px">Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
      <button class="btn ok" onclick="syncOn()">Turn on sync (make a code)</button>
@@ -1473,6 +1484,7 @@ function vChats(){
    <div class="sub" style="margin-top:8px">${n} saved chat${n===1?'':'s'}</div><div id="chList">${chRows('')}</div>
    ${n?`<p style="margin-top:12px"><button class="btn s bad" onclick="chDelAll()">Delete all chats</button></p>`:''}</div>
    <p><button class="btn" onclick="go('coach')">Go to DXA AI</button></p>`;
+  syncQrDraw();
 }
 function chBub(m,i,cid){
   const editing=chEdit&&chEdit.cid===cid&&chEdit.i===i,tools=`<div style="margin:2px 0 0 ${m.role==='user'?'0':'45px'};text-align:${m.role==='user'?'right':'left'}"><a href="#" class="sub" onclick="chEdit={cid:${cid},i:${i}};vChats();return false">Edit</a> <a href="#" class="sub" style="margin-left:10px;color:var(--bad)" onclick="chMsgDel(${cid},${i});return false">Delete</a></div>`;
@@ -1759,7 +1771,7 @@ function coachRender(pending){
       +(a.state==='saved'&&a.undo?`<div style="margin-top:8px"><button class="btn s alt" onclick="coachUndo(${mi},${ai})">Undo</button></div>`:'')+'</div>'}).join('');
   const src=m=>(m.sources&&m.sources.length)?`<div class="sub" style="margin:2px 0 8px;max-width:92%">\u{1F310} Searched the web. Sources: ${m.sources.filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`).join(' · ')}</div>`:'';
   o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+(m.role==='user'?'':'<div style="margin-left:45px">'+src(m)+acts(m,mi)+'</div>')).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
-    +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
+    +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">'+(syncCfg()?'· synced across your devices':'· saved on this device only. <a href="#" onclick="go(&quot;chats&quot;);return false">Turn on sync</a> to use it on any device')+'</span></div>':'');
   chatsSave();coachHist();coachFileKick();
   if(pending||COACH_CHAT.length){const f=document.getElementById('coachForm');(f||o).scrollIntoView({block:'end',behavior:'smooth'})}
 }
