@@ -1302,8 +1302,20 @@ function coachSummary(){
     backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
+let COACH_CHAT=[];
+const mdLite=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+function coachRender(pending){
+  const o=document.getElementById('coachOut');if(!o)return;
+  const bub=(m)=>m.role==='user'
+    ?`<div style="display:flex;justify-content:flex-end;margin:8px 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
+    :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
+  o.innerHTML=COACH_CHAT.map(bub).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
+    +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="COACH_CHAT=[];coachRender();return false">New chat</a></div>':'');
+  o.scrollIntoView({block:'end',behavior:'smooth'});
+}
 async function coachAI(q){
-  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,facts:coachSummary()})});
+  const hist=COACH_CHAT.filter(m=>!m.error).map(m=>({role:m.role,content:m.content}));
+  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary()})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
   return j.answer;
@@ -1315,21 +1327,22 @@ function coachRule(q){
 async function coachText(e){
   e.preventDefault();const q=v('coachQ').trim(),out=document.getElementById('coachOut');if(!q)return;
   if(COACH_API){
-    out.innerHTML='<span class="sub">The AI coach is thinking...</span>';
-    try{const a=await coachAI(q);out.innerHTML=`<span class="sub" style="letter-spacing:.14em;font-weight:700">AI COACH</span><div style="margin-top:6px">${esc(a).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')}</div>`;return}
-    catch(err){out.innerHTML=`<div class="sub" style="margin-bottom:8px">${esc(err.message)} Showing the rule-based answer instead.</div>`+coachRule(q);return}
+    const inp=document.getElementById('coachQ');
+    coachRender(true,COACH_CHAT.push({role:'user',content:q}));if(inp)inp.value='';
+    try{const a=await coachAI(q);COACH_CHAT.push({role:'assistant',content:a});coachRender();return}
+    catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
   }
   out.innerHTML=coachRule(q);
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Type any question and the AI coach answers using the same data. It only knows what you have logged.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation and sees your logged data.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
   <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
-   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="400" placeholder="e.g. what should I study today?"></div></form>
+   <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div><button class="btn" type="submit">Send</button></form>
    <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
