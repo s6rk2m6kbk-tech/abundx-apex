@@ -1478,29 +1478,32 @@ function syncQrDraw(){const c=syncCfg(),el=document.getElementById('syncQr');if(
 function syncCard(){
   const c=syncCfg(),ago=c&&c.last?Math.max(0,Math.round((Date.now()-c.last)/60000)):null;
   if(!COACH_API)return '';
-  return `<div class="card"><h3>Use your chats on any device</h3>${c&&c.login?`<div class="sub" style="margin-bottom:8px">Signed in as <b>${esc(c.login)}</b>. <a href="#" onclick="loginOut();return false">Sign out</a></div>`:''}${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Your chats <b>and your tracker data</b> (marks, logs, backlog, goals, everything DXA AI changes) are kept the same on every linked device. Changes appear on the other devices within a minute, and theirs appear here.${c.dataReady?'':' <span class="sub">(tracker data is being set up on the first sync)</span>'}</div>
+  return `<div class="card"><h3>Use your chats on any device</h3>${c&&c.login?`<div class="sub" style="margin-bottom:8px">Signed in as <b>${esc(c.login)}</b>. <a href="#" onclick="loginOut();return false">Sign out</a>${/@/.test(c.login)?'':' · <a href="#" onclick="acctPass();return false">Change password</a>'}</div>`:''}${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Your chats <b>and your tracker data</b> (marks, logs, backlog, goals, everything DXA AI changes) are kept the same on every linked device. Changes appear on the other devices within a minute, and theirs appear here.${c.dataReady?'':' <span class="sub">(tracker data is being set up on the first sync)</span>'}</div>
      <div style="margin:10px 0">Your sync code: <b style="font-size:17px;letter-spacing:.08em;user-select:all">${esc(c.code)}</b> <button class="btn s alt" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(c.code)}').then(()=>alert('Copied'))">Copy</button></div>
      <div class="sub" style="margin-top:12px"><b>Open your chats on another device:</b> send yourself this link (a message to yourself, email, or scan the picture). Opening it connects that device automatically. You can also type the code under "I have a code".</div>
      <div style="margin:8px 0"><input readonly value="${esc(syncLink(c.code))}" onclick="this.select()" style="width:100%"></div>
      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div id="syncQr" style="background:#fff;padding:6px;border-radius:6px;min-width:120px;min-height:120px"></div><div class="sub" style="flex:1;min-width:200px">Anyone who has this link or code can read and change your chats and tracker data, so keep it to yourself. Link your device that has your real data first, then open the link on the others: a newly linked device takes on the shared data (its old local copy is kept as a backup in that browser). The code is not a password you can reset: if you lose it, turn sync on again to get a new one.<p style="margin-top:8px"><button class="btn s ok" onclick="syncCopyLink()">Copy link</button> ${navigator.share?'<button class="btn s alt" onclick="syncShare()">Send the link…</button>':''}</p></div></div>
      <p style="margin-top:10px"><button class="btn s ok" onclick="syncNow(true).then(vChats)">Sync now</button> <button class="btn s alt" onclick="syncOff()">Turn off on this device</button> <button class="btn s bad" onclick="syncWipe()">Delete the cloud copy</button></p>`
-    :`<div style="margin-bottom:14px"><div class="sub" style="margin-bottom:8px"><b>Easiest: sign in with Google.</b> Sign in with the same Google account on every device and your chats, logs, marks and everything DXA AI changes are there on all of them. No code to carry around.</div><div id="gSign" style="min-height:44px"></div></div><div class="sub" style="margin-bottom:10px"><b>Or use a private code instead.</b> Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
+    :`<div style="margin-bottom:14px"><div class="sub" style="margin-bottom:8px"><b>Easiest: sign in.</b> Use the same username and password on every device and your chats, logs, marks and everything DXA AI changes are there on all of them. No code to carry around.</div>
+     <div class="row"><div><label for="acU">Username</label><input id="acU" autocomplete="username" autocapitalize="none" placeholder="e.g. malik.apex"></div><div><label for="acP">Password</label><input id="acP" type="password" autocomplete="${acMode==='login'?'current-password':'new-password'}" placeholder="8 or more characters"></div>${acMode==='login'?'':'<div><label for="acP2">Repeat password</label><input id="acP2" type="password" autocomplete="new-password"></div>'}</div>
+     <p style="margin:8px 0">${acMode==='login'?'<button class="btn ok" onclick="acctGo(\'account_login\')">Sign in</button> <button class="btn alt" onclick="acMode=\'new\';vChats()">I am new: create an account</button>':'<button class="btn ok" onclick="acctGo(\'account_create\')">Create account</button> <button class="btn alt" onclick="acMode=\'login\';vChats()">I already have an account</button>'}</p>
+     <div class="sub">There is no password reset by email, so pick a password you will remember. Your password is never stored, only a scrambled version of it.</div><div id="gSign"></div></div><div class="sub" style="margin-bottom:10px"><b>Or use a private code instead.</b> Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
      <button class="btn ok" onclick="syncOn()">Turn on sync (make a code)</button>
      <div class="row" style="margin-top:12px"><div style="grid-column:span 3"><label for="syncCode">Already have a code from another device? (Or make your own: 16 or more letters and numbers that nobody can guess.)</label><input id="syncCode" placeholder="ABCDE-FGHJK-MNPQR-STUVW" autocomplete="off"></div><div style="align-self:end"><button class="btn alt" onclick="syncJoin()">I have a code</button></div></div>`}</div>`;
 }
 try{const _c=syncCfg();if(_c&&_c.dataReady)dsBase()}catch(e){}
 function syncBanner(){
   if(!COACH_API||syncCfg()||view==='chats'||sessionStorage.getItem('abundx_nosync_'+PROFILE))return;
-  $('#app').insertAdjacentHTML('afterbegin',`<div class="card" id="syncBan" style="border-color:var(--warn)"><b>Sync is off.</b> <span class="sub">Right now everything you and DXA AI change is saved only on this device, so your other phones and computers will not see it. Sign in once with Google and every change shows up on all your devices.</span><p style="margin-top:8px"><button class="btn s ok" onclick="syncBanOn()">Sign in to sync</button> <button class="btn s alt" onclick="try{sessionStorage.setItem('abundx_nosync_'+PROFILE,'1')}catch(e){}document.getElementById('syncBan').remove()">Not now</button></p></div>`);
+  $('#app').insertAdjacentHTML('afterbegin',`<div class="card" id="syncBan" style="border-color:var(--warn)"><b>Sync is off.</b> <span class="sub">Right now everything you and DXA AI change is saved only on this device, so your other phones and computers will not see it. Sign in once and every change shows up on all your devices.</span><p style="margin-top:8px"><button class="btn s ok" onclick="syncBanOn()">Sign in to sync</button> <button class="btn s alt" onclick="try{sessionStorage.setItem('abundx_nosync_'+PROFILE,'1')}catch(e){}document.getElementById('syncBan').remove()">Not now</button></p></div>`);
 }
 let GCID=null;
 async function loginCfg(){if(GCID!==null)return GCID;try{const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'login_cfg'})}),j=await r.json();GCID=j.clientId||''}catch(e){GCID=''}return GCID}
 function loadGsi(){return new Promise((res,rej)=>{if(window.google&&google.accounts&&google.accounts.id)return res();const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;sc.onload=()=>res();sc.onerror=()=>rej(new Error('gsi'));document.head.appendChild(sc)})}
 async function loginDraw(){
-  const el=document.getElementById('gSign');if(!el||!COACH_API)return;
+  let el=document.getElementById('gSign');if(!el||!COACH_API)return;
   const id=await loginCfg();
-  if(!id){el.innerHTML='<div class="sub">Google sign-in is not switched on yet. You can still use the sync code below.</div>';return}
-  try{await loadGsi();google.accounts.id.initialize({client_id:id,callback:loginDone,auto_select:false,use_fedcm_for_prompt:true});el.innerHTML='';google.accounts.id.renderButton(el,{theme:'filled_black',size:'large',text:'continue_with',shape:'rectangular',width:Math.min(300,Math.max(200,el.clientWidth||260))})}catch(e){el.innerHTML='<div class="sub">Could not load Google sign-in. Check your connection, or use the sync code below.</div>'}
+  if(!id){el.innerHTML='';return}
+  try{await loadGsi();google.accounts.id.initialize({client_id:id,callback:loginDone,auto_select:false,use_fedcm_for_prompt:true});el.innerHTML='<div class="sub" style="margin:8px 0">Or:</div><div id="gBtn"></div>';el=document.getElementById('gBtn');google.accounts.id.renderButton(el,{theme:'filled_black',size:'large',text:'continue_with',shape:'rectangular',width:Math.min(300,Math.max(200,el.clientWidth||260))})}catch(e){el.innerHTML='<div class="sub">Could not load Google sign-in. Check your connection, or use the sync code below.</div>'}
 }
 async function loginDone(resp){
   try{
@@ -1510,6 +1513,21 @@ async function loginDone(resp){
     view='chats';location.hash='chats';await syncNow(true);render();
   }catch(e){alert('Could not sign in. Check your connection and try again.')}
 }
+async function acctGo(op){
+  const u=(document.getElementById('acU')||{}).value||'',pw=(document.getElementById('acP')||{}).value||'';
+  if(op==='account_create'){const p2=(document.getElementById('acP2')||{}).value||'';if(pw!==p2)return alert('The two passwords do not match.')}
+  try{
+    const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op,user:u,pass:pw})}),j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.code)return alert(j.message||'Sign-in failed. Try again.');
+    syncSet({code:j.code,since:Date.now(),login:j.user});
+    view='chats';location.hash='chats';await syncNow(true);render();
+  }catch(e){alert('Could not reach the service. Check your connection and try again.')}
+}
+async function acctPass(){
+  const c=syncCfg();if(!c||!c.login)return;const o=prompt('Your current password:');if(!o)return;const n=prompt('New password (8 or more characters):');if(!n)return;
+  try{const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'account_passwd',user:c.login,pass:o,newpass:n})}),j=await r.json().catch(()=>({}));alert(r.ok?'Password changed. Use the new one on your other devices.':(j.message||'Could not change the password.'))}catch(e){alert('Could not reach the service.')}
+}
+let acMode='login';
 function loginOut(){if(confirm('Sign out on this device? Your data stays here and in your cloud copy; other devices keep syncing. Sign in again any time to reconnect.')){try{localStorage.removeItem(SYNC_KEY)}catch(e){}try{google.accounts.id.disableAutoSelect()}catch(e){}vChats()}}
 function syncBanOn(){view='chats';location.hash='chats';render()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow()});
