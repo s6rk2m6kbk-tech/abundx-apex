@@ -94,6 +94,7 @@ main>h3{margin:28px 0 12px}
 .sub{color:var(--mut);font-size:12px;letter-spacing:.06em}
 .card>.sub:first-child,.card .sub:first-child:not(:only-child){text-transform:uppercase;letter-spacing:.2em;font-size:11px;margin-bottom:6px}
 .bar{height:3px;background:var(--track);overflow:hidden;margin:12px 0 6px}.bar>i{display:block;height:100%;background:var(--tx)}
+.dbth{display:inline-block;margin:4px 10px 4px 0;text-align:center;vertical-align:top}.dbth img{display:block;width:110px;height:110px;object-fit:cover;border:1px solid var(--line);border-radius:8px;cursor:zoom-in;background:#222}.dbpdf{display:inline-block;margin:4px 12px 4px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px}#dbLb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}#dbLb img{max-width:96vw;max-height:92vh;border-radius:6px;background:#fff}
 .chip{display:inline-block;padding:2px 10px;border-radius:1px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#000;background:var(--mut)}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 .bg-ok{background:var(--ok)}.bg-warn{background:var(--warn)}.bg-bad{background:var(--bad)}.bg-mut{background:#4a4f57}
@@ -431,7 +432,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],doubts:['Doubts',vDoubts],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1627,7 +1628,7 @@ function opsApply(ops){
 }
 function viewErrs(){
   window.__VE=true;const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','commit','goals','workload','reality','recovery','timeline','memory','prod','calc','analytics','compare','reports','settings']){
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','doubts','commit','goals','workload','reality','recovery','timeline','memory','prod','calc','analytics','compare','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
@@ -2531,7 +2532,7 @@ function memSearch(q){
   const push=(kind,title,body,date,src,conf)=>{const sc=hit(title)*2+hit(body);if(sc>0)out.push({kind,title,body,date,src,conf,score:sc+(date&&diff(date,t)<30?0.5:0)})};
   memList().forEach(m=>push('Memory: '+m.type,m.key,m.value,m.updated||m.created,m.source,m.confidence));memDerived().forEach(m=>push('Computed: '+m.type,m.key,m.value,t,m.source,m.conf));
   tlAll().forEach(e=>push('Timeline',e.title,e.detail+' '+e.subject,e.date,e.source,e.kind));(S.commitments||[]).forEach(c=>push('Commitment',c.title,(c.why||'')+' '+(c.missReason||'')+' '+c.status,c.created,'Commitments',c.status));
-  (S.weakTopics||[]).forEach(w=>push('Weak topic',w.topic,(w.area||'')+' '+(w.notes||'')+' '+(w.subject||''),w.added,'Weak Topics',w.status));(S.backlog||[]).forEach(b=>push('Backlog',b.topic,b.subject+' '+b.description+' '+b.plan,b.date,'Backlog',b.status));
+  (S.weakTopics||[]).forEach(w=>push('Weak topic',w.topic,(w.area||'')+' '+(w.notes||'')+' '+(w.subject||''),w.added,'Weak Topics',w.status));(S.backlog||[]).forEach(b=>push('Backlog',b.topic,b.subject+' '+b.description+' '+b.plan,b.date,'Backlog',b.status));(S.doubts||[]).forEach(d=>push('Doubt',d.title,(d.desc||'')+' '+(d.area||'')+' '+(d.subject||'')+' '+(d.answer||''),d.created,'Doubts',d.status));
   CHATS.forEach(c=>c.msgs.filter(m=>m.role==='user').forEach(m=>push('Conversation',String(m.content).slice(0,80),String(m.content),new Date(c.ts).toISOString().slice(0,10),'DXA AI chat','You said')));
   return out.sort((a,b)=>b.score-a.score).slice(0,25);
 }
@@ -2750,6 +2751,128 @@ function cmCharts(M){
   const ms=[['Reliability (CRS)',M.n>=3?M.crs:null,GC.ok],['On-time',M.onTime,GC.blue],['Partial work done',M.partial,GC.pur],['Rescheduling',M.resc,GC.warn],['Overcommitment',M.over,GC.bad],['Abandonment',M.aband,GC.mut]].filter(x=>x[1]!=null);
   mk('cm3',{type:'bar',data:{labels:ms.map(x=>x[0]),datasets:[{label:'%',data:ms.map(x=>Math.round(x[1])),backgroundColor:ms.map(x=>x[2])}]},options:{indexAxis:'y',scales:{x:{min:0,max:100}},plugins:{legend:{display:false}}}});
 }
+
+
+/* ---------- DOUBTS: questions you are stuck on, by subject, area and type, with photos and PDFs ---------- */
+const DB_CAT=['Concept','Problem / numerical','Formula or derivation','Silly mistake','Test question','Other'],DB_ST=['Open','Asked','Resolved'],DB_PR=['High','Medium','Low'],DB_MAXPDF=8*1024*1024;
+let dbF={sub:'',cat:'',st:'open',q:''},dbEdit=null,dbTarget=null;
+const dbList=()=>Array.isArray(S.doubts)?S.doubts:(S.doubts=[]);
+const dbNewId=()=>'DB'+String(dbList().reduce((m,x)=>Math.max(m,+String(x.id).slice(2)||0),0)+1).padStart(3,'0');
+const dbSubj=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Other']:['Physics','Other'];
+const dbFid=()=>'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const dbKb=b=>b>=1048576?(b/1048576).toFixed(1)+' MB':Math.max(1,Math.round(b/1024))+' KB';
+function dbImg(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);c.toBlob(b=>{URL.revokeObjectURL(u);b?res(b):rej(new Error('Could not process '+file.name))},'image/jpeg',0.82)};im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('Could not read '+file.name+'. Use a JPG, PNG or WebP photo, or a PDF.'))};im.src=u})}
+const dbB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+async function dbCloud(op,body){const c=syncCfg();if(!c||!COACH_API)return null;try{const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op,code:c.code,profile:PROFILE,...body})});return r.ok?await r.json():null}catch(e){return null}}
+async function dbUpload(f,blob){try{blob=blob||await fget('db:'+f.id);if(!blob||!syncCfg())return;const j=await dbCloud('fput',{id:f.id,type:f.type,b64:await dbB64(blob)});if(j&&j.ok&&!f.cloud){f.cloud=true;save()}}catch(e){}}
+async function dbBlob(f){
+  let b=null;try{b=await fget('db:'+f.id)}catch(e){}
+  if(b)return b;
+  if(!f.cloud)return null;
+  const j=await dbCloud('fget',{id:f.id});if(!j||!j.b64)return null;
+  try{b=await (await fetch('data:'+(j.type||f.type)+';base64,'+j.b64)).blob();await fput('db:'+f.id,b)}catch(e){}
+  return b;
+}
+async function dbAttach(files,d){
+  const bad=[];
+  for(const file of [...files]){
+    try{
+      const pdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name),img=file.type.startsWith('image/');
+      if(!pdf&&!img){bad.push(file.name+': only photos and PDFs');continue}
+      if(pdf&&file.size>DB_MAXPDF){bad.push(file.name+': PDF is over 8 MB');continue}
+      const blob=pdf?new Blob([file],{type:'application/pdf'}):await dbImg(file),f={id:dbFid(),name:pdf?file.name:file.name.replace(/\.[^.]+$/,'')+'.jpg',type:blob.type,size:blob.size};
+      await fput('db:'+f.id,blob);(d.files=d.files||[]).push(f);dbUpload(f,blob);
+    }catch(e){bad.push((e&&e.message)||file.name)}
+  }
+  if(bad.length)alert('Some files were not added:\n'+bad.join('\n'));
+}
+function dbFiltered(){
+  const q=(dbF.q||'').trim().toLowerCase();
+  return dbList().filter(x=>(!dbF.sub||x.subject===dbF.sub)&&(!dbF.cat||x.category===dbF.cat)&&(dbF.st==='all'||(dbF.st==='open'?x.status!=='Resolved':x.status===dbF.st))&&(!q||[x.title,x.desc,x.area,x.answer,x.subject,x.category].some(t=>String(t||'').toLowerCase().includes(q))));
+}
+function dbCard(d){
+  const fs=d.files||[],stc={Open:'bg-bad',Asked:'bg-warn',Resolved:'bg-ok'}[d.status]||'';
+  const th=fs.map(f=>(f.type||'').startsWith('image/')
+    ?`<span class="dbth"><img data-fid="${f.id}" alt="${esc(f.name)}" onclick="dbLight('${f.id}')"><a href="#" class="sub" onclick="dbFileDel('${d.id}','${f.id}');return false">remove</a></span>`
+    :`<span class="dbpdf"><a href="#" onclick="dbOpen('${f.id}');return false">\u{1F4C4} ${esc(f.name)}</a> <span class="sub">${dbKb(f.size||0)}</span> <a href="#" class="sub" style="margin-left:6px" onclick="dbFileDel('${d.id}','${f.id}');return false">remove</a></span>`).join('');
+  return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(d.title)}</b> <span class="chip ${stc}">${esc(d.status)}</span> <span class="chip bg-${d.priority==='High'?'bad':d.priority==='Low'?'ok':'warn'}">${esc(d.priority||'Medium')}</span> <span class="chip">${esc(d.category||'Other')}</span></div>
+   <div class="sub">${esc(d.subject)}${d.area?' · '+esc(d.area):''} · added ${fmtS(d.created)}${d.resolved?' · resolved '+fmtS(d.resolved):''}</div>
+   ${d.desc?`<div style="margin:6px 0;white-space:pre-wrap">${esc(d.desc)}</div>`:''}
+   ${th?`<div style="margin:4px 0">${th}</div>`:''}
+   <div class="row" style="margin-top:6px"><div style="grid-column:span 3"><label>Answer / how it was solved (optional)</label><textarea rows="2" style="width:100%" onchange="dbField('${d.id}','answer',this.value)">${esc(d.answer||'')}</textarea></div><div><label>Status</label><select onchange="dbStatus('${d.id}',this.value)">${DB_ST.map(o=>`<option ${o===d.status?'selected':''}>${o}</option>`).join('')}</select></div></div>
+   <div style="margin-top:6px"><button class="btn s alt" onclick="dbTarget='${d.id}';document.getElementById('dbAdd').click()">Add photos / PDFs</button> <button class="btn s alt" onclick="dbEdit='${d.id}';vDoubts();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="dbDup('${d.id}')">Duplicate</button> <button class="btn s bad" onclick="dbDel('${d.id}')">Delete</button></div></div>`;
+}
+function dbListHtml(){
+  const L=dbFiltered(),SJ=dbSubj(),PO={High:0,Medium:1,Low:2};
+  if(!L.length)return '<div class="card"><div class="sub">No doubts match. Add one above, or change the filters.</div></div>';
+  return [...new Set([...SJ,...L.map(x=>x.subject)])].filter(sj=>L.some(x=>x.subject===sj)).map(sj=>{
+    const A=L.filter(x=>x.subject===sj),names=[...new Set(A.map(x=>x.area||''))];
+    return `<div class="card"><h3 style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)} <span class="sub">· ${A.length}</span></h3>`+names.map(n=>`<div style="margin:10px 0 2px"><b>${esc(n||'No area')}</b> <span class="sub">· ${A.filter(x=>(x.area||'')===n).length}</span></div>`+A.filter(x=>(x.area||'')===n).sort((a,b)=>(PO[a.priority]??1)-(PO[b.priority]??1)||(a.created<b.created?1:-1)).map(dbCard).join('')).join('')+'</div>'}).join('');
+}
+function dbAreaFill(cur){const sj=document.getElementById('dsu').value,el=document.getElementById('dar'),keep=cur==null?el.value:cur;el.innerHTML='<option value="">(no area)</option>'+(S.areas||[]).filter(a=>a.subject===sj).map(a=>`<option ${a.name===keep?'selected':''}>${esc(a.name)}</option>`).join('')}
+function vDoubts(){
+  dbList();if(!Array.isArray(S.areas))S.areas=[];
+  const L=dbList(),SJ=dbSubj(),e0=dbEdit?L.find(x=>x.id===dbEdit)||{}:{},eSub=e0.subject||dbF.sub||SJ[0],open=L.filter(x=>x.status!=='Resolved');
+  const sel=(id,opts,cur,ex='')=>`<select id="${id}" ${ex}>${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  const chip=(k,v,l)=>`<button class="btn s ${dbF[k]===v?'ok':'alt'}" onclick="dbF.${k}='${v}';vDoubts()">${l}</button>`;
+  $('#app').innerHTML=`<h2>Doubts</h2>
+  <div class="sub" style="margin-bottom:12px">Questions and concepts you are stuck on, kept by subject and area, with photos of the problem and PDFs (a worksheet, a solution, a test page). Mark them Open, Asked (you asked a teacher) and Resolved, and write the answer so you can revise it later. You can also tell DXA AI: "add a Physics doubt about rotational torque, High priority", "mark my Circle doubt resolved", "delete all resolved doubts".</div>
+  <div class="grid"><div class="card"><div class="sub">Still open</div><div class="big ${open.length?'bad':''}">${open.length}</div><div class="sub">High priority ${open.filter(x=>x.priority==='High').length}</div></div>
+   <div class="card"><div class="sub">Resolved</div><div class="big">${L.filter(x=>x.status==='Resolved').length}</div><div class="sub">of ${L.length} doubts</div></div>
+   ${SJ.filter(s=>s!=='Other').map(s=>`<div class="card"><div class="sub">${esc(s)}</div><div class="big">${open.filter(x=>x.subject===s).length}</div><div class="sub">open</div></div>`).join('')}</div>
+  <div class="card"><h3>${dbEdit?'Edit doubt':'Add a doubt'}</h3><form onsubmit="dbSave(event)">
+   <div class="row"><div><label>Subject</label>${sel('dsu',SJ,eSub,'onchange="dbAreaFill(\'\')"')}</div><div><label>Area</label><select id="dar"><option value="">(no area)</option>${(S.areas||[]).filter(a=>a.subject===eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Type of doubt</label>${sel('dca',DB_CAT,e0.category||'Concept')}</div><div><label>Priority</label>${sel('dpr',DB_PR,e0.priority||'Medium')}</div></div>
+   <div class="row"><div style="grid-column:span 3"><label>Doubt (short title)</label><input id="dti" required maxlength="160" value="${esc(e0.title||'')}" placeholder="e.g. Why does friction act forward on a rolling wheel?"></div><div><label>Status</label>${sel('dst',DB_ST,e0.status||'Open')}</div></div>
+   <div class="row"><div style="grid-column:span 4"><label>Details (optional)</label><textarea id="dde" rows="3" style="width:100%" placeholder="What exactly confuses you? What have you tried?">${esc(e0.desc||'')}</textarea></div></div>
+   <div class="row"><div style="grid-column:span 4"><label>Photos and PDFs (optional, you can pick several)</label><input id="dfi" type="file" multiple accept="image/*,application/pdf"><div class="sub">Photos are shrunk to a readable size. PDFs up to 8 MB. ${syncCfg()?'Sync is on, so your files also open on your other devices.':'Files stay on this device unless you turn on sync in Chat History.'}</div></div></div>
+   <button class="btn ok">${dbEdit?'Update':'Add doubt'}</button> ${dbEdit?'<button type="button" class="btn alt" onclick="dbEdit=null;vDoubts()">Cancel</button>':''}</form></div>
+  <input id="dbAdd" type="file" multiple accept="image/*,application/pdf" style="display:none" onchange="dbAddTo(this)">
+  <div class="card"><div style="margin-bottom:6px"><span class="sub">Subject:</span> ${chip('sub','','All')} ${SJ.map(c=>chip('sub',c,c)).join(' ')}</div>
+   <div class="row"><div><label>Show</label><select onchange="dbF.st=this.value;vDoubts()">${[['open','Not resolved'],['all','All'],...DB_ST.map(x=>[x,x])].map(([k,l])=>`<option value="${k}" ${dbF.st===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div><label>Type</label><select onchange="dbF.cat=this.value;vDoubts()"><option value="">All</option>${DB_CAT.map(c=>`<option ${dbF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+    <div style="grid-column:span 2"><label>Search</label><input type="search" value="${esc(dbF.q)}" placeholder="Search doubts, answers, areas..." oninput="dbF.q=this.value;document.getElementById('dbList').innerHTML=dbListHtml();dbHydrate()"></div></div></div>
+  <div id="dbList">${dbListHtml()}</div>
+  ${L.length?gCard('Doubts by subject','Open, asked and resolved.',cv('db1',200)):''}`;
+  dbHydrate();
+  if(L.length){const cols={Open:GC.bad,Asked:GC.warn,Resolved:GC.ok},S2=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
+    mk('db1',{type:'bar',data:{labels:S2,datasets:DB_ST.map(st=>({label:st,data:S2.map(s=>L.filter(x=>x.subject===s&&x.status===st).length),backgroundColor:cols[st]}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
+}
+async function dbHydrate(){
+  const L=dbList(),all=L.flatMap(d=>d.files||[]);
+  document.querySelectorAll('#app img[data-fid]').forEach(async el=>{
+    const f=all.find(x=>x.id===el.dataset.fid);if(!f)return;
+    const b=await dbBlob(f);
+    if(b)el.src=URL.createObjectURL(b);else{const s=document.createElement('span');s.className='sub';s.textContent='Photo is on another device. Turn on sync there.';el.replaceWith(s)}
+  });
+  if(syncCfg())all.filter(f=>!f.cloud).forEach(f=>dbUpload(f));
+}
+async function dbOpen(fid){
+  const f=dbList().flatMap(d=>d.files||[]).find(x=>x.id===fid);if(!f)return;
+  const w=window.open('','_blank'),b=await dbBlob(f);
+  if(!b){if(w)w.close();return alert('This file is on another device. Turn on sync there so it can be shared.')}
+  const u=URL.createObjectURL(b);if(w)w.location=u;else{const a=document.createElement('a');a.href=u;a.download=f.name;a.click()}
+}
+async function dbLight(fid){
+  const f=dbList().flatMap(d=>d.files||[]).find(x=>x.id===fid);if(!f)return;const b=await dbBlob(f);if(!b)return;
+  const o=document.createElement('div');o.id='dbLb';o.innerHTML='<img alt="">';o.firstChild.src=URL.createObjectURL(b);o.onclick=()=>o.remove();document.body.appendChild(o);
+}
+async function dbSave(e){
+  e.preventDefault();const L=dbList(),old=dbEdit?L.find(x=>x.id===dbEdit):null,st=v('dst');
+  const o={subject:v('dsu'),area:v('dar'),category:v('dca'),priority:v('dpr'),title:v('dti').trim(),desc:document.getElementById('dde').value.trim(),status:st};
+  if(!o.title)return;
+  const d=old||{id:dbNewId(),created:today(),files:[],answer:''};
+  Object.assign(d,o);if(st==='Resolved'&&!d.resolved)d.resolved=today();if(st!=='Resolved')delete d.resolved;
+  if(!old)L.push(d);
+  const fi=document.getElementById('dfi');if(fi&&fi.files.length)await dbAttach(fi.files,d);
+  dbEdit=null;save();vDoubts();
+}
+async function dbAddTo(inp){const d=dbList().find(x=>x.id===dbTarget);if(d&&inp.files.length){await dbAttach(inp.files,d);save();vDoubts()}inp.value=''}
+function dbField(id,k,val){const d=dbList().find(x=>x.id===id);if(d){d[k]=val.trim();save()}}
+function dbStatus(id,s){const d=dbList().find(x=>x.id===id);if(!d)return;d.status=s;if(s==='Resolved'){if(!d.resolved)d.resolved=today()}else delete d.resolved;save();vDoubts()}
+function dbDup(id){const d=dbList().find(x=>x.id===id);if(!d)return;const c={...d,id:dbNewId(),title:d.title+' (copy)',created:today(),files:[],status:'Open'};delete c.resolved;dbList().push(c);save();vDoubts()}
+function dbFileGone(f){fdel('db:'+f.id).catch(()=>{});if(f.cloud)dbCloud('fdel',{id:f.id})}
+function dbFileDel(did,fid){const d=dbList().find(x=>x.id===did);if(!d||!confirm('Remove this file from the doubt?'))return;const f=(d.files||[]).find(x=>x.id===fid);d.files=(d.files||[]).filter(x=>x.id!==fid);if(f)dbFileGone(f);save();vDoubts()}
+function dbDel(id){const d=dbList().find(x=>x.id===id);if(!d||!confirm('Delete this doubt'+((d.files||[]).length?' and its '+d.files.length+' file(s)':'')+'?'))return;(d.files||[]).forEach(dbFileGone);S.doubts=dbList().filter(x=>x.id!==id);save();vDoubts()}
 
 /* ---------- WORKLOAD BALANCER ---------- */
 let wlHours=null,wlWhat={from:'',to:'',h:1};
