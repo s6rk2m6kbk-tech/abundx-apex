@@ -1398,7 +1398,6 @@ function coachConfirm(mi,ai){
   l[k]=a.mode==='set'?a.count:(l[k]||0)+a.count;
   S.logs[a.date]=l;save();
   a.state='saved';a.note=`${fmtS(a.date)} now has ${qTot(l)} questions in total.`+(qTot(l)>200?' That is over the 200 a day cap.':'');
-  m.content+=' [Saved to the tracker.]';
   coachRender();
 }
 async function coachAI(q,att){
