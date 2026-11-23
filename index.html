@@ -1306,7 +1306,42 @@ function coachSummary(){
     backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
-let COACH_CHAT=[],COACH_ATT=[];
+/* Saved chats: kept in this browser, one list per profile. */
+const CHAT_KEY='abundx_chats_'+PROFILE;
+let CHATS=[],CHAT_ID=null,COACH_CHAT=[],COACH_ATT=[];
+function chatsLoad(){
+  try{const a=JSON.parse(localStorage.getItem(CHAT_KEY)||'null');if(a&&Array.isArray(a.chats)){CHATS=a.chats;CHAT_ID=a.cur}}catch(e){}
+  let c=CHATS.find(x=>x.id===CHAT_ID);
+  if(!c){c={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS.unshift(c);CHAT_ID=c.id}
+  COACH_CHAT=c.msgs;
+}
+function chatsSave(){
+  const c=CHATS.find(x=>x.id===CHAT_ID);if(!c)return;
+  c.msgs=COACH_CHAT;c.ts=Date.now();
+  const first=COACH_CHAT.find(m=>m.role==='user');c.title=first?first.content.replace(/\n.*/s,'').slice(0,60):'';
+  CHATS=CHATS.filter(x=>x.msgs.length||x.id===CHAT_ID).slice(0,30);
+  const trim=CHATS.map(x=>({...x,msgs:x.msgs.slice(-60)}));
+  try{localStorage.setItem(CHAT_KEY,JSON.stringify({cur:CHAT_ID,chats:trim}))}catch(e){}
+}
+function coachNew(){
+  const c=CHATS.find(x=>x.id===CHAT_ID);
+  if(c&&!c.msgs.length)return;
+  chatsSave();
+  const n={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS.unshift(n);CHAT_ID=n.id;COACH_CHAT=n.msgs;chatsSave();coachRender();
+}
+function coachOpen(id){const c=CHATS.find(x=>x.id===id);if(!c)return;chatsSave();CHAT_ID=id;COACH_CHAT=c.msgs;chatsSave();coachRender()}
+function coachDel(id){
+  if(!confirm('Delete this saved chat?'))return;
+  CHATS=CHATS.filter(x=>x.id!==id);
+  if(id===CHAT_ID){const n=CHATS[0]||{id:Date.now(),title:'',ts:Date.now(),msgs:[]};if(!CHATS.length)CHATS.push(n);CHAT_ID=n.id;COACH_CHAT=n.msgs}
+  chatsSave();coachRender();
+}
+function coachHist(){
+  const d=document.getElementById('coachHist');if(!d)return;
+  const old=CHATS.filter(x=>x.msgs.length&&x.id!==CHAT_ID);
+  d.innerHTML=old.length?`<h3 style="margin-top:16px">Saved chats</h3>`+old.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title||'Chat')}</div><div class="sub">${new Date(x.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} · ${x.msgs.filter(m=>m.role==='user').length} message(s)</div></div><button class="btn s alt" onclick="coachOpen(${x.id})">Open</button><button class="btn s bad" onclick="coachDel(${x.id})" aria-label="Delete">×</button></div>`).join(''):'';
+}
+chatsLoad();
 const b64buf=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
 async function fileToAtt(f){
   if(f.type==='application/pdf'){
@@ -1347,8 +1382,9 @@ function coachRender(pending){
       +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
       +(a.state?'':`<div style="margin-top:8px"><button class="btn s ok" onclick="coachConfirm(${mi},${ai})">Save</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
   o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
-    +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="COACH_CHAT=[];coachRender();return false">New chat</a></div>':'');
-  o.scrollIntoView({block:'end',behavior:'smooth'});
+    +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
+  chatsSave();coachHist();
+  if(pending||COACH_CHAT.length)o.scrollIntoView({block:'end',behavior:'smooth'});
 }
 function coachCancel(mi,ai){const a=COACH_CHAT[mi]?.actions?.[ai];if(!a||a.state)return;a.state='cancelled';coachRender()}
 function coachConfirm(mi,ai){
@@ -1399,7 +1435,8 @@ function vCoach(){
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
    <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
    <div id="coachAtt"></div>
-   <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
+   <div id="coachOut" style="margin-top:14px;line-height:1.7"></div><div id="coachHist"></div></div>`;
+  if(COACH_API){COACH_ATT=[];coachRender()}
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
 const OTHER=PROFILE==='malik'?'kartik':'malik';
