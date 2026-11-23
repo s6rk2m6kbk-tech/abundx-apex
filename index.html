@@ -2287,6 +2287,7 @@ function vCommit(){
      <div style="margin-top:8px">${f.fix?`<button class="btn s ok" onclick="cmUseFix()">Use ${fmtS(f.fix)}</button> `:''}<button class="btn s alt" onclick="cmForce()">Save anyway</button> <button class="btn s alt" onclick="cmDraft=null;vCommit()">Change it</button></div></div>`:''}</div>
   <div class="card"><h3>Active commitments (${act.length})</h3>${act.length?act.map(cmCard).join(''):'<div class="sub">Nothing active. Create one above or tell DXA AI.</div>'}</div>
   ${(()=>{const ms=L.filter(c=>c.status==='Missed'&&(!c.missReason||(c.closedOn||c.deadline)>=addD(t,-7)||(cmAct&&cmAct.id===c.id)));return ms.length?`<div class="card"><h3>Missed: needs your review (${ms.length})</h3><div class="sub">Missing a deadline is not the same as failing. Your progress is kept. Say what got in the way, reschedule the rest, or mark it done if it actually was.</div>${ms.map(cmCard).join('')}</div>`:''})()}
+  ${cmChartHtml()}
   <div class="card"><h3>Weekly review</h3><div>${esc(cmWeekly())}</div></div>
   <div class="card"><h3>Reliability</h3><div class="tw"><table><tr><th>Metric</th><th>Value</th><th>What it measures</th></tr>
    <tr><td>Commitment Reliability</td><td><b>${M.n>=3?pc(M.crs):'—'}</b></td><td>Fulfilment, weighted by priority and size. Late = 75%, missed = up to 50% of the work done, withdrawn = 0%</td></tr>
@@ -2304,6 +2305,7 @@ function vCommit(){
     <div style="grid-column:span 3"><label>Search</label><input type="search" value="${esc(cmF.q)}" placeholder="Search commitments..." oninput="cmF.q=this.value;document.getElementById('cmHist').innerHTML=cmHistHtml()"></div></div>
    <div class="sub" style="margin:8px 0">${new Date(curM+'-15').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}: <b>${ms.n}</b> made · <b>${ms.d}</b> completed · <b>${ms.m}</b> missed · <b>${ms.c}</b> withdrawn · <b>${ms.a}</b> active</div>
    <div id="cmHist">${cmHistHtml()}</div></div>`;
+  if(document.getElementById('cm2'))cmCharts(M);
   if(document.getElementById('cm1')){const mm=[...months].sort(),data=mm.map(mo);
     mk('cm1',{type:'bar',data:{labels:mm,datasets:[{label:'Completed',data:data.map(x=>x.d),backgroundColor:'#3ddc97'},{label:'Missed',data:data.map(x=>x.m),backgroundColor:'#ff5a52'},{label:'Withdrawn',data:data.map(x=>x.c),backgroundColor:'#ffb020'},{label:'Active',data:data.map(x=>x.a),backgroundColor:'#5aa9ff'}]},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
 }
@@ -2423,10 +2425,11 @@ function vTimeline(){
   if(tlView==='master'){
     const ph=[['Class 11 — Foundation','2026–2027',S.settings.start,'2027-03-31',['Establish a study routine','Complete the foundational chapters','Build consistent practice habits']],['Class 12 — Development','2027–2028','2027-04-01','2027-12-31',['Complete the remaining syllabus','Strengthen weak areas','Increase revision and testing']],['JEE 2028 — Examination phase','2028','2028-01-01',S.settings.exam,['JEE Main','JEE Advanced','Counselling and college decisions']]];
     body=`<div class="card"><h3>My JEE journey, ${S.settings.start.slice(0,4)}–2028</h3>${ph.map(([n,y,a,b,g])=>{const inn=all.filter(e=>e.date>=a&&e.date<=b),here=t>=a&&t<=b;return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${n}</b> <span class="sub">${y} · ${fmtS(a)} – ${fmtS(b)}</span>${here?' <span class="chip bg-ok">You are here</span>':''}<div class="sub" style="margin-top:3px">Planned: ${g.join(' · ')}</div><div class="sub">Recorded so far: ${inn.length} events, ${inn.filter(e=>e.importance==='Major').length} major</div></div>`}).join('')}<div class="sub" style="margin-top:6px">The goals under each phase are the plan. The counts come from your real records.</div></div>
+      ${tlChartHtml()}
       <div class="card"><h3>Everything that happened</h3>${filt}<div id="tlList">${tlListHtml()}</div></div>`;
     const co=tlCorrel();if(co.length)body+=`<div class="card"><h3>Did a strategy change coincide with a change in results?</h3><div class="sub" style="margin-bottom:8px">30 days before vs 30 days after. These are possible relationships, not proof that the change caused them: other things changed too.</div>${co.map(({e,a,b})=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(e.title)}</b> <span class="sub">${fmtS(e.date)}</span><div class="sub">Study ${r1(a.hpd)}→${r1(b.hpd)} h/day · Questions ${r0(a.qpd)}→${r0(b.qpd)}/day · Consistency ${r0(a.cons)}%→${r0(b.cons)}%${a.cm!=null&&b.cm!=null?' · Commitments fulfilled '+r0(a.cm)+'%→'+r0(b.cm)+'%':''}</div></div>`).join('')}</div>`;
   }else if(tlView==='subjects'){
-    body=SJ.map(s=>{const ev=all.filter(e=>e.subject===s||(e.category==='Examination History'&&0)).sort((a,b)=>a.date<b.date?1:-1),ms=mocks().filter(m=>m[{Physics:'phy',Chemistry:'chem',Math:'math'}[s]]!=null);
+    body=tlSubjChartHtml()+SJ.map(s=>{const ev=all.filter(e=>e.subject===s||(e.category==='Examination History'&&0)).sort((a,b)=>a.date<b.date?1:-1),ms=mocks().filter(m=>m[{Physics:'phy',Chemistry:'chem',Math:'math'}[s]]!=null);
       return `<div class="card"><h3 style="color:${SUBJ_COL[s]}">${s}</h3>${ms.length?`<div class="sub">Test marks over time: ${ms.map(m=>fmtS(m.date)+': '+m[{Physics:'phy',Chemistry:'chem',Math:'math'}[s]]).join(' → ')}</div>`:''}<div class="sub">Backlog items open now: ${openBacklogOn(t,s)} · Study time logged: ${r1(totalH('2000-01-01',t)&&hoursBy('2000-01-01',t)[s])} h</div><div style="margin-top:8px">${ev.length?ev.slice(0,25).map(tlRow).join(''):'<div class="sub">No events recorded for this subject yet.</div>'}</div></div>`}).join('');
   }else if(tlView==='prod'){
     const f=firstAct(),ms=monthsFrom(f,t),rows=ms.map(m=>{const a=m+'-01'<f?f:m+'-01',z0=addD(addD(m+'-01',32).slice(0,7)+'-01',-1),z=z0>t?t:z0;return {m,...periodMetrics(a,z)}});
@@ -2456,6 +2459,7 @@ function vTimeline(){
     <button class="btn ok">${e0?'Save correction':'Add event'}</button> ${e0?'<button type="button" class="btn alt" onclick="tlEditId=null;vTimeline()">Cancel</button>':''}</form></div>`;
   $('#app').innerHTML=`<h2>Progress Timeline</h2><div class="sub" style="margin-bottom:12px">The record of your JEE journey: ${all.length} entries. Mock tests, commitments, backlog, personal records and streaks are added automatically from your data and kept permanently. Add your own decisions and events, or tell DXA AI. Each entry shows its source and whether it was recorded, reported by you, or an AI interpretation. Nothing is overwritten: corrections keep the original.</div>
     <div class="card"><div class="tools noprint">${tab('master','Journey')} ${tab('subjects','Subjects')} ${tab('prod','Productivity')} ${tab('ach','Achievements')} ${tab('compare','Then vs Now')} ${tab('chron','Chronicle')}</div></div>${body}${form}`;
+  if(tlView==='master')tlCharts();if(tlView==='subjects')tlSubjChart();
   if(tlView==='prod'&&document.getElementById('tl1')){const r=window._tlRows||[];mk('tl1',{type:'bar',data:{labels:r.map(x=>x.m),datasets:[{label:'Hours/day',data:r.map(x=>+x.hpd.toFixed(2)),backgroundColor:'#5aa9ff',yAxisID:'y'},{type:'line',label:'Consistency %',data:r.map(x=>+x.cons.toFixed(0)),borderColor:'#ffb020',backgroundColor:'#ffb020',yAxisID:'y1'}]},options:{scales:{y:{beginAtZero:true,title:{display:true,text:'hours/day'}},y1:{position:'right',min:0,max:100,grid:{display:false}}},plugins:{legend:{position:'bottom'}}}})}
 }
 const tlListHtml=()=>{const E=tlFiltered();return E.length?E.slice(0,80).map(tlRow).join('')+(E.length>80?`<div class="sub" style="padding:8px 0">Showing the latest 80 of ${E.length}. Use the filters or search to narrow it.</div>`:''):'<div class="sub" style="padding:8px 0">Nothing matches.</div>'};
@@ -2615,6 +2619,7 @@ function vGoals(){
   const fea=d?d:null;
   $('#app').innerHTML=`<h2>Goals</h2><div class="sub" style="margin-bottom:12px">Your strategic plan: JEE Advanced 2028 broken down into yearly, quarterly, monthly and weekly goals. Every goal connects to the one above it. Goals are checked for feasibility, tracked against your real progress and never silently changed: the original deadline and every revision stay on record.</div>
   <div class="grid"><div class="card"><div class="sub">Active goals</div><div class="big">${L.filter(g=>!['Completed','Cancelled'].includes(glHealth(g))).length}</div></div><div class="card"><div class="sub">At risk or delayed</div><div class="big ${cnt('At Risk')+cnt('Delayed')?'bad':''}">${cnt('At Risk')+cnt('Delayed')}</div></div><div class="card"><div class="sub">Completed</div><div class="big">${cnt('Completed')}</div></div><div class="card"><div class="sub">Blocked</div><div class="big">${cnt('Blocked')}</div></div></div>
+  ${glChartHtml()}
   ${drift.length?`<div class="card"><h3>Goal drift</h3>${drift.map(x=>`<div style="padding:4px 0">• ${esc(x)}</div>`).join('')}<div class="sub" style="margin-top:6px">If this is a deliberate priority (for example a test is near), it is fine. Otherwise rebalance on the Workload page.</div></div>`:''}
   <div class="card"><h3>Goal hierarchy</h3>${roots.length?roots.map(g=>glCard(g,0)).join(''):'<div class="sub">No goals yet.</div>'}</div>
   <div class="card"><h3>Break a big goal into milestones</h3><div class="sub" style="margin-bottom:8px">List the chapters or topics. DXA works out how many weeks they need from your real capacity (planned hours × how much of that you actually complete × the share you give this goal), orders Maths chapters by prerequisites, and checks the deadline.</div>
@@ -2629,6 +2634,7 @@ function vGoals(){
    <div class="row"><div><label>Start</label><input id="gas" type="date" required value="${e0?e0.start:t}"></div><div><label>Deadline</label><input id="gad" type="date" required value="${e0?e0.deadline:addD(t,14)}"></div><div><label>Parent goal</label><select id="gaq"><option value="">(none)</option>${L.filter(g=>!e0||g.id!==e0.id).map(g=>`<option value="${g.id}" ${e0&&e0.parentId===g.id?'selected':''}>${esc(g.name.slice(0,50))}</option>`).join('')}</select></div><div><label>Depends on</label><select id="gax"><option value="">(none)</option>${L.filter(g=>!e0||g.id!==e0.id).map(g=>`<option value="${g.id}" ${e0&&(e0.dependsOn||[])[0]===g.id?'selected':''}>${esc(g.name.slice(0,50))}</option>`).join('')}</select></div></div>
    <div class="row"><div><label>Subject</label><select id="gau">${SJ.map(s=>`<option ${e0&&e0.subject===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Estimated hours</label><input id="gae" type="number" min="0" step="0.5" value="${e0?e0.estHours||'':''}"></div><div style="grid-column:span 2"><label>Success criteria</label><input id="gaz" value="${esc(e0?e0.success||'':'')}" placeholder="How will you know it is achieved?"></div></div>
    <button class="btn ok">${e0?'Update':'Add goal'}</button> ${e0?'<button type="button" class="btn alt" onclick="glEdit=null;vGoals()">Cancel</button>':''}</form></div>`;
+  glCharts();
 }
 function glPlan(e){e.preventDefault();const g=id=>document.getElementById(id).value;glDraft=glDecompose({name:g('gn').trim(),category:g('gc'),subject:g('gs'),chapters:g('gch').split(','),hpc:+g('ghp')||8,deadline:g('gdl'),share:Math.max(5,+g('gsh')||33),parentId:g('gp')});vGoals()}
 function glSave(e){
@@ -2642,6 +2648,79 @@ function glProg(id,p){const g=glList().find(x=>x.id===id);if(g){g.progress=p;sav
 function glStatus(id,s){const g=glList().find(x=>x.id===id);if(g){g.status=s;save();vGoals()}}
 function glMove(id,d){const g=glList().find(x=>x.id===id);if(g){g.deadline=d;save();vGoals()}}
 function glDel(id){const g=glList().find(x=>x.id===id);if(g&&confirm('Delete "'+g.name+'"'+(glKids(id).length?' and its '+glKids(id).length+' sub-goals':'')+'?')){const ids=new Set([id]);let ch=true;while(ch){ch=false;glList().forEach(x=>{if(x.parentId&&ids.has(x.parentId)&&!ids.has(x.id)){ids.add(x.id);ch=true}})}S.goals=glList().filter(x=>!ids.has(x.id));save();vGoals()}}
+
+
+/* ---------- GRAPHS for Goals, Timeline, Commitments, Workload, Reality, Recovery ---------- */
+const GC={ok:'#3ddc97',blue:'#5aa9ff',warn:'#ffb020',bad:'#ff5a52',mut:'#8b93a1',pur:'#b388ff'};
+const gShort=(x,n)=>String(x).length>n?String(x).slice(0,n-1)+'\u2026':String(x);
+const gCard=(title,sub,inner)=>`<div class="card"><h3>${title}</h3>${sub?`<div class="sub" style="margin-bottom:8px">${sub}</div>`:''}${inner}</div>`;
+const gMonthEnd=m=>addD(addD(m+'-01',32).slice(0,7)+'-01',-1);
+function glChartHtml(){
+  const L=glList().filter(g=>g.status!=='Cancelled');if(!L.length)return '';
+  const n=Math.min(14,L.filter(g=>glDepth(g)<=2).length);
+  return gCard('Goal graphs','Progress against how much of the time has passed, goal health, and your mock marks against the plan targets.',
+   `<div class="sub"><b>Progress vs time elapsed</b> (green is done, grey is where you should be by today)</div>${cv('gl1',Math.max(160,n*34+70))}
+    <div class="row" style="margin-top:12px"><div style="grid-column:span 2"><div class="sub"><b>Goal health</b></div>${cv('gl2',220)}</div><div style="grid-column:span 2"><div class="sub"><b>Mock marks vs phase targets</b></div>${cv('gl3',220)}</div></div>`);
+}
+function glCharts(){
+  const L=glList().filter(g=>g.status!=='Cancelled'),t=today();if(!L.length)return;
+  const rows=L.filter(g=>glDepth(g)<=2).slice(0,14);
+  mk('gl1',{type:'bar',data:{labels:rows.map(g=>gShort(g.name,30)),datasets:[{label:'Progress %',data:rows.map(glProgress),backgroundColor:GC.ok},{label:'Expected by today %',data:rows.map(g=>{const a=g.start||g.created||t,tot=Math.max(1,diff(a,g.deadline));return Math.round(Math.max(0,Math.min(100,diff(a,t)/tot*100)))}),backgroundColor:GC.mut}]},options:{indexAxis:'y',scales:{x:{min:0,max:100}},plugins:{legend:{position:'bottom'}}}});
+  const hc={},cols={Completed:GC.ok,'On Track':GC.blue,'Not Started':GC.mut,'At Risk':GC.warn,Delayed:GC.bad,Blocked:GC.pur};
+  L.forEach(g=>{const h=glHealth(g);hc[h]=(hc[h]||0)+1});
+  mk('gl2',{type:'doughnut',data:{labels:Object.keys(hc).map(k=>k+' ('+hc[k]+')'),datasets:[{data:Object.values(hc),backgroundColor:Object.keys(hc).map(k=>cols[k]||GC.mut)}]},options:{plugins:{legend:{position:'bottom'}}}});
+  const ms=mocks().filter(m=>m.marks!=null),ph=(S.settings.phases||[]).filter(x=>x.end&&x.target!=null),labs=[...new Set([...ms.map(m=>m.date),...ph.map(x=>x.end)])].sort();
+  mk('gl3',{type:'line',data:{labels:labs.map(d=>fmtS(d)+' '+d.slice(2,4)),datasets:[{label:'Mock marks',data:labs.map(d=>{const m=ms.filter(x=>x.date===d);return m.length?m[m.length-1].marks:null}),borderColor:GC.blue,backgroundColor:GC.blue,spanGaps:true,tension:.2},{label:'Plan target',data:labs.map(d=>{const x=ph.find(q=>q.end===d);return x?x.target:null}),borderColor:GC.warn,backgroundColor:GC.warn,borderDash:[6,4],pointStyle:'rectRot',pointRadius:6,spanGaps:true,showLine:true}]},options:{scales:{y:{beginAtZero:true}},plugins:{legend:{position:'bottom'}}}});
+}
+function tlChartHtml(){
+  const all=tlAll(),ms=mocks().filter(m=>m.marks!=null);if(!all.length&&!ms.length)return '';
+  return gCard('Timeline graphs','Your recorded events per month, and how your mock results moved.',`<div class="sub"><b>Events per month, by category</b></div>${cv('tl2',230)}<div class="sub" style="margin-top:12px"><b>Mock results over time</b></div>${cv('tl3',230)}`);
+}
+function tlCharts(){
+  const all=tlAll(),t=today(),mo=monthsFrom(addD(t,-365),t).filter(m=>all.some(e=>e.date.slice(0,7)===m)||true).slice(-12),cats=TL_CAT.filter(c=>all.some(e=>e.category===c&&mo.includes(e.date.slice(0,7))));
+  if(document.getElementById('tl2'))mk('tl2',{type:'bar',data:{labels:mo.map(m=>monthName(m)),datasets:cats.map(c=>({label:c,data:mo.map(m=>all.filter(e=>e.category===c&&e.date.slice(0,7)===m).length),backgroundColor:TL_COL[c]||GC.mut}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}});
+  const ms=mocks().filter(m=>m.marks!=null);
+  if(document.getElementById('tl3'))mk('tl3',{type:'line',data:{labels:ms.map(m=>fmtS(m.date)),datasets:[{label:'Total',data:ms.map(m=>m.marks),borderColor:GC.blue,backgroundColor:GC.blue,yAxisID:'y1',tension:.2,borderWidth:3},...[['Physics','phy'],['Chemistry','chem'],['Math','math']].map(([n,k])=>({label:n,data:ms.map(m=>m[k]??null),borderColor:SUBJ_COL[n],backgroundColor:SUBJ_COL[n],spanGaps:true,tension:.2,borderDash:[5,4]}))]},options:{scales:{y:{title:{display:true,text:'subject marks'}},y1:{position:'right',grid:{display:false},title:{display:true,text:'total'}}},plugins:{legend:{position:'bottom'}}}});
+}
+function tlSubjChartHtml(){return gCard('Study time by subject, per month','Hours from your study sessions and daily logs.',cv('tl4',230))}
+function tlSubjChart(){
+  const t=today(),f=firstAct(),mo=monthsFrom(f,t).slice(-12),SJ=PCM();
+  mk('tl4',{type:'bar',data:{labels:mo.map(m=>monthName(m)),datasets:SJ.map(s=>({label:s,data:mo.map(m=>{const a=m+'-01'<f?f:m+'-01',z=gMonthEnd(m),h=hoursBy(a,z>t?t:z);return +(h[s]||0).toFixed(1)}),backgroundColor:SUBJ_COL[s]}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,title:{display:true,text:'hours'}}},plugins:{legend:{position:'bottom'}}}});
+}
+function wlChartHtml(){return gCard('Workload graphs','Where the hours go, why each subject scored what it did, and how heavy the next 7 days are.',
+  `<div class="row"><div style="grid-column:span 2"><div class="sub"><b>Suggested hours by subject</b></div>${cv('wl1',220)}</div><div style="grid-column:span 2"><div class="sub"><b>What drives each subject's priority</b></div>${cv('wl2',220)}</div></div>
+   <div class="sub" style="margin-top:12px"><b>Next 7 days: planned hours vs work due</b></div>${cv('wl3',200)}`)}
+function wlCharts(W,heat){
+  mk('wl1',{type:'doughnut',data:{labels:W.rows.map(r=>r.s+' '+r1(r.alloc)+' h'),datasets:[{data:W.rows.map(r=>r.alloc),backgroundColor:W.rows.map(r=>SUBJ_COL[r.s]||GC.mut)}]},options:{plugins:{legend:{position:'bottom'}}}});
+  const comp=[['Backlog','B',GC.bad],['Deadlines','U',GC.warn],['Tests','T',GC.pur],['Revision demand','D',GC.blue],['Time gap','G',GC.mut]];
+  mk('wl2',{type:'bar',data:{labels:W.rows.map(r=>r.s),datasets:comp.map(([n,k,c])=>({label:n,data:W.rows.map(r=>Math.round(r[k])),backgroundColor:c}))},options:{scales:{y:{min:0,max:100,title:{display:true,text:'score (0-100)'}}},plugins:{legend:{position:'bottom'}}}});
+  mk('wl3',{type:'bar',data:{labels:heat.map(x=>fmtS(x.d)+' '+dow(x.d)),datasets:[{label:'Planned hours',data:heat.map(x=>+x.a.toFixed(1)),backgroundColor:GC.blue},{label:'Work due that day (h)',data:heat.map(x=>+x.c.toFixed(1)),backgroundColor:GC.warn}]},options:{scales:{y:{beginAtZero:true}},plugins:{legend:{position:'bottom'}}}});
+}
+function rcChartHtml(){return gCard('Reality Check graphs','Each part of the Execution Alignment Score, and planned against actual study hours for the last 14 days.',
+  `<div class="sub"><b>Score parts (100% = fully aligned)</b></div>${cv('rc1',190)}<div class="sub" style="margin-top:12px"><b>Planned vs actual hours, last 14 days</b></div>${cv('rc2',230)}`)}
+function rcCharts(D){
+  const parts=[['Plan completion',D.P,GC.blue],['Commitments fulfilled',D.C,GC.ok],['On-time',D.T,GC.warn],['Results vs plan',D.R,GC.pur],['Planning accuracy',D.pa==null?null:D.pa/100,GC.mut]].filter(x=>x[1]!=null);
+  mk('rc1',{type:'bar',data:{labels:parts.map(x=>x[0]),datasets:[{label:'%',data:parts.map(x=>Math.round(x[1]*100)),backgroundColor:parts.map(x=>x[2])}]},options:{indexAxis:'y',scales:{x:{min:0,max:100}},plugins:{legend:{display:false}}}});
+  const t=today(),days=[];for(let i=13;i>=0;i--)days.push(addD(t,-i));
+  mk('rc2',{type:'bar',data:{labels:days.map(d=>fmtS(d)),datasets:[{label:'Planned h',data:days.map(d=>+(planMin(d)/60).toFixed(1)),backgroundColor:GC.mut},{label:'Actual h',data:days.map(d=>+totalH(d,d).toFixed(1)),backgroundColor:GC.ok}]},options:{scales:{y:{beginAtZero:true}},plugins:{legend:{position:'bottom'}}}});
+}
+function rvChartHtml(P,act){return gCard('Recovery graphs',act?'Your active recovery, day by day, and the preview of the plan below.':'The recovery plan preview, day by day.',
+  `<div class="sub"><b>Plan preview: hours per day by urgency</b></div>${cv('rv1',210)}${act?`<div class="sub" style="margin-top:12px"><b>Active recovery: planned vs done hours per day</b></div>${cv('rv2',210)}`:''}`)}
+function rvCharts(P,act){
+  const tiers=[['Critical',GC.bad],['High',GC.warn],['Normal',GC.blue]];
+  mk('rv1',{type:'bar',data:{labels:P.plan.map(d=>fmtS(d.date)),datasets:tiers.map(([n,c])=>({label:n,data:P.plan.map(d=>+sum(d.items.filter(i=>i.tier===n).map(i=>i.hours)).toFixed(1)),backgroundColor:c}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,title:{display:true,text:'hours'}}},plugins:{legend:{position:'bottom'}}}});
+  if(act)mk('rv2',{type:'bar',data:{labels:act.plan.map(d=>fmtS(d.date)),datasets:[{label:'Planned h',data:act.plan.map(d=>+sum(d.items.map(i=>i.hours)).toFixed(1)),backgroundColor:GC.mut},{label:'Done h',data:act.plan.map(d=>+sum(d.items.filter(i=>i.done).map(i=>i.hours)).toFixed(1)),backgroundColor:GC.ok}]},options:{scales:{y:{beginAtZero:true}},plugins:{legend:{position:'bottom'}}}});
+}
+function cmChartHtml(){
+  if(!cmList().length)return '';
+  return gCard('Commitment graphs','How your promises ended, and your reliability measures.',`<div class="row"><div style="grid-column:span 2"><div class="sub"><b>Outcome of all commitments</b></div>${cv('cm2',220)}</div><div style="grid-column:span 2"><div class="sub"><b>Reliability measures</b></div>${cv('cm3',220)}</div></div>`);
+}
+function cmCharts(M){
+  const L=cmList(),n=st=>L.filter(c=>c.status===st).length,st=[['Completed',GC.ok],['Active',GC.blue],['Missed',GC.bad],['Cancelled',GC.warn]];
+  mk('cm2',{type:'doughnut',data:{labels:st.map(([k])=>k+' ('+n(k)+')'),datasets:[{data:st.map(([k])=>n(k)),backgroundColor:st.map(x=>x[1])}]},options:{plugins:{legend:{position:'bottom'}}}});
+  const ms=[['Reliability (CRS)',M.n>=3?M.crs:null,GC.ok],['On-time',M.onTime,GC.blue],['Partial work done',M.partial,GC.pur],['Rescheduling',M.resc,GC.warn],['Overcommitment',M.over,GC.bad],['Abandonment',M.aband,GC.mut]].filter(x=>x[1]!=null);
+  mk('cm3',{type:'bar',data:{labels:ms.map(x=>x[0]),datasets:[{label:'%',data:ms.map(x=>Math.round(x[1])),backgroundColor:ms.map(x=>x[2])}]},options:{indexAxis:'y',scales:{x:{min:0,max:100}},plugins:{legend:{display:false}}}});
+}
 
 /* ---------- WORKLOAD BALANCER ---------- */
 let wlHours=null,wlWhat={from:'',to:'',h:1};
@@ -2683,6 +2762,7 @@ function vWorkload(){
    <div class="sub" style="margin-top:6px">Score = 25% backlog + 20% deadlines + 20% tests + 20% revision demand + 15% gap. Tests are taken from Academic commitments due in the next 14 days.</div>
    <h3 style="margin-top:12px">How to use the time (illustrative, adjusted from your data)</h3><div>New lectures ${W.mix.lectures}% · Practice ${W.mix.practice}% · Revision ${W.mix.revision}% · Test analysis and planning ${W.mix.review}%</div>
    <p style="margin-top:10px"><button class="btn s ok" onclick="wlSave(${H})">Save this allocation to history</button></p></div>
+  ${wlChartHtml()}
   <div class="card"><h3>Today so far</h3><div class="tw"><table><tr><th>Subject</th><th>Planned</th><th>Logged</th><th>Left</th></tr>${W.rows.map(r=>`<tr><td>${r.s}</td><td>${r1(r.alloc)} h</td><td>${r1(todayH[r.s])} h</td><td class="${todayH[r.s]<r.alloc?'':'ok'}">${r1(Math.max(0,r.alloc-todayH[r.s]))} h</td></tr>`).join('')}</table></div><div class="sub" style="margin-top:6px">If a block is unfinished, check whether the estimate was wrong, whether it can move to tomorrow, or whether a lower-priority item should go. Unfinished work is not pushed forward automatically.</div></div>
   ${neglect.length?`<div class="card"><h3>Subject neglect</h3>${neglect.map(x=>`<div>• ${esc(x)}</div>`).join('')}</div>`:''}
   <div class="card"><h3>Capacity forecast, next 7 days</h3><div>Planned ${r1(W.weekAvail)} h. At your recent completion rate (${r0(ratio*100)}% of plan) expect about <b>${r1(exp*0.85)}–${r1(Math.min(W.weekAvail*1.1,exp*1.15))} h</b>. Treat this as a range, not a promise.</div>
@@ -2690,6 +2770,7 @@ function vWorkload(){
   <div class="card"><h3>What if I move hours?</h3><div class="row"><div><label>From</label><select onchange="wlWhat.from=this.value;vWorkload()">${SJ.map(s=>`<option ${wf===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>To</label><select onchange="wlWhat.to=this.value;vWorkload()">${SJ.map(s=>`<option ${wt===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Hours per day</label><input type="number" min="0" max="6" step="0.5" value="${what.h}" onchange="wlWhat.h=+this.value;vWorkload()"></div></div>
    ${A&&B&&wf!==wt?`<div style="margin-top:8px">${wf}: ${r1(A.alloc)} h → ${r1(Math.max(0,A.alloc-what.h))} h a day. ${wt}: ${r1(B.alloc)} h → ${r1(B.alloc+what.h)} h a day.</div><div class="sub">Assuming half of a subject's time goes to its backlog, ${wt} backlog (${r1(B.Bh)} h) would clear in ${clear(B,what.h)==null?'—':r1(clear(B,what.h))} weeks instead of ${clear(B,0)==null?'—':r1(clear(B,0))}. ${wf} backlog (${r1(A.Bh)} h) would take ${clear(A,-what.h)==null||A.alloc-what.h<=0?'much longer':r1(clear(A,-what.h))+' weeks instead of '+(clear(A,0)==null?'—':r1(clear(A,0)))}.</div>`:'<div class="sub" style="margin-top:8px">Pick two different subjects.</div>'}</div>
   <div class="card"><h3>Allocation history</h3>${hist.length?`<div class="tw"><table><tr><th>Saved</th><th>Hours</th><th>Allocation</th></tr>${[...hist].reverse().slice(0,12).map(h=>`<tr><td>${fmtS(h.date)}</td><td>${r1(h.hours)}</td><td>${Object.entries(h.alloc).map(([k,v])=>k+' '+r1(v)+' h').join(' · ')}</td></tr>`).join('')}</table></div>`:'<div class="sub">Nothing saved yet. Save an allocation to compare later.</div>'}</div>`;
+  wlCharts(W,heat);
 }
 function wlPrio(s,v){S.settings.subjPrio={...(S.settings.subjPrio||{}),[s]:v};save();vWorkload()}
 function wlSave(h){const W=wlCompute(h);if(!Array.isArray(S.allocHist))S.allocHist=[];S.allocHist.push({date:today(),hours:h,alloc:Object.fromEntries(W.rows.map(r=>[r.s,r.alloc])),reason:'Saved from the Workload page'});save();vWorkload()}
@@ -2733,9 +2814,11 @@ function vReality(){
   <div class="grid"><div class="card"><div class="sub">Execution Alignment (EAS)</div><div class="big">${pc(D.eas)}</div><div class="sub">plan ${pc(D.P==null?null:D.P*100)} · commitments ${pc(D.C==null?null:D.C*100)} · timeliness ${pc(D.T==null?null:D.T*100)} · results ${pc(D.R==null?null:D.R*100)}</div></div>
    <div class="card"><div class="sub">Plan completion</div><div class="big">${pc(D.P==null?null:D.P*100)}</div></div><div class="card"><div class="sub">Planning accuracy</div><div class="big">${pc(D.pa)}</div><div class="sub">planned vs actual hours</div></div><div class="card"><div class="sub">Overdue items</div><div class="big ${over?'bad':''}">${over}</div><div class="sub">missed commitments + overdue backlog</div></div></div>
   <div class="card"><h3>Plan vs actual</h3><div class="tw"><table><tr><th></th><th>Target</th><th>Actual</th><th>Achieved</th></tr><tr><td>Study hours</td><td>${r1(D.ph)} h</td><td>${r1(D.ah)} h</td><td>${pc(D.ph?D.ah/D.ph*100:null)}</td></tr><tr><td>Questions</td><td>${r0(D.qt)}</td><td>${D.qa}</td><td>${pc(D.qt?D.qa/D.qt*100:null)}</td></tr><tr><td>Commitments that came due</td><td>${D.cm.length}</td><td>${D.done.length} completed</td><td>${pc(D.cm.length?D.done.length/D.cm.length*100:null)}</td></tr><tr><td>Revision sessions</td><td colspan="3" class="sub">not tracked yet</td></tr></table></div><div class="sub" style="margin-top:6px">EAS = 30% plan completion + 25% commitments fulfilled + 25% on-time + 20% results (latest mock vs the plan's expected marks). A part with no data is left out and the others are scaled up. Weights are in settings.easW.</div></div>
+  ${rcChartHtml()}
   <div class="card"><h3>What the evidence says</h3>${F.length?F.map(f=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${f.lv>=3?'var(--bad)':f.lv==2?'var(--warn)':'var(--blue)'};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${f.lv>=2?'Finding':'Note'}</span> <b style="margin-left:8px">${esc(f.title)}</b><div class="sub" style="margin-top:3px">Evidence: ${esc(f.ev)}</div><div style="margin-top:3px">Suggested action: ${esc(f.act)}</div><div style="margin-top:4px"><button class="btn s alt" onclick="rcCommit(${F.indexOf(f)})">Make it a commitment</button></div></div>`).join(''):'<div class="sub">No gaps found in the records for this period. More logging gives it more to check.</div>'}</div>
   <div class="card"><h3>Can I really fit this day?</h3><div class="sub" style="margin-bottom:8px">Enter what you plan to do and the hours each needs. Today you have about ${r1(av)} h planned and you usually complete ${r0(compRatio()*100)}% of that.</div><div class="row"><div><label>Lectures (h)</label><input id="rl" type="number" min="0" step="0.5" value="8"></div><div><label>Practice (h)</label><input id="rp" type="number" min="0" step="0.5" value="4"></div><div><label>Revision (h)</label><input id="rr" type="number" min="0" step="0.5" value="3"></div><div><label>Mock test (h)</label><input id="rm" type="number" min="0" step="0.5" value="2"></div></div><button class="btn s ok" onclick="rcFit()">Check</button><div id="rcFit" style="margin-top:8px"></div></div>
   <div class="card"><h3>Reliability measures</h3><div class="sub">Commitment reliability ${M.n>=3?pc(M.crs):'—'} · On-time ${pc(M.onTime)} · Rescheduling ${pc(M.resc)} · Overcommitment ${pc(M.over)} · Abandonment ${pc(M.aband)}. Details are on the Commitments page.</div></div>`;
+  rcCharts(D);
 }
 function rcFit(){const g=id=>+document.getElementById(id).value||0,tot=g('rl')+g('rp')+g('rr')+g('rm'),av=planMin(today())/60,cap=av*compRatio();
   const v=tot>av?'bad':tot>cap?'warn':'ok',msg=tot>av?`${r1(tot)} h is more than the ${r1(av)} h you have planned. This does not fit.`:tot>cap?`${r1(tot)} h fits in the plan but is above the ${r1(cap)} h you usually complete. Expect to finish roughly ${r0(cap/tot*100)}% of it.`:`${r1(tot)} h looks realistic against your usual ${r1(cap)} h.`;
@@ -2780,6 +2863,7 @@ function vRecovery(){
   ${act?`<div class="card"><h3>Active recovery: ${esc(act.mode)}</h3><div class="sub">Started ${fmtS(act.start)} · cause: ${esc(act.cause)}${act.notes?' · '+esc(act.notes):''}</div><div class="bar" style="margin:8px 0"><i style="width:${prog(act)}%"></i></div><div class="sub">${r0(prog(act))}% of ${r1(sum(act.plan.flatMap(d=>d.items).map(i=>i.hours)))} h of recovery work done${stable(act)?' · <b class="ok">Looks stable: you have kept up for several days. You can stabilize and return to normal planning.</b>':''}</div>
     ${act.plan.map((d,di)=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${fmtS(d.date)} ${dow(d.date)}</b> <span class="sub">${r1(d.hours)} h${d.date===t?' · today':''}</span>${d.items.map((i,ii)=>`<div><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" ${i.done?'checked':''} onchange="rvTick('${act.id}',${di},${ii},this.checked)"> <span ${i.done?'style="text-decoration:line-through;color:var(--mut)"':''}>${esc(i.text)}</span> <span class="sub">${esc(i.subject)} · ${r1(i.hours)} h · ${i.tier}</span></label></div>`).join('')||'<div class="sub">Rest and review.</div>'}</div>`).join('')}
     <p style="margin-top:10px"><button class="btn s alt" onclick="rvToGoals('${act.id}')">Send today's tasks to Daily Goals</button> <button class="btn s ok" onclick="rvClose('${act.id}','Stabilized')">Stabilize: back to normal planning</button> <button class="btn s alt" onclick="rvClose('${act.id}','Cancelled')">Cancel recovery</button></p></div>`:''}
+  ${rvChartHtml(P,act)}
   <div class="card"><h3>Impact and plan</h3><div class="sub">Recoverable work: <b>${r1(P.total)} h</b> across ${P.items.length} items (${PCM().map(s=>s+' '+r1(dsub[s])+' h').join(' · ')}). ${P.def.length?P.def.length+' low-priority items are deferred, not dropped.':''}</div>
    <div class="row" style="margin-top:8px"><div><label>Share of each day for recovery: ${rvShare}%</label><input type="range" min="10" max="60" step="5" value="${rvShare}" onchange="rvShare=+this.value;vRecovery()"></div><div><label>Plan length (days)</label><input type="number" min="3" max="21" value="${rvDays}" onchange="rvDays=Math.max(3,Math.min(21,+this.value||7));vRecovery()"></div></div>
    <div class="sub" style="margin-top:6px">The rest of each day stays for new syllabus and revision, so recovery does not push everything else aside.</div>
@@ -2788,6 +2872,7 @@ function vRecovery(){
    ${P.left.length?`<div class="sub" style="margin-top:6px">${P.left.length} more items (${r1(sum(P.left.map(i=>i.hours)))} h) do not fit in ${rvDays} days at ${rvShare}%. Lengthen the plan or raise the share.</div>`:''}</div>
   <div class="card"><h3>Start recovery</h3><form onsubmit="rvStart(event)"><div class="row"><div><label>Mode</label>${sd('rvm',RC_MODE,sg.length?({'Routine Recovery':'Routine Recovery','Test Recovery':'Test Recovery'}[sg[0][0]]||'Backlog Recovery'):'Backlog Recovery')}</div><div><label>What went wrong (cause)</label>${sd('rvc',RC_CAUSE,sg[0]?sg[0][0]:'Backlog Recovery')}</div><div style="grid-column:span 2"><label>What happened? (optional, so I do not guess)</label><input id="rvn" placeholder="e.g. fever for 4 days"></div></div><button class="btn ok">Start recovery with this plan</button></form></div>
   ${R.filter(r=>r.status!=='Active').length?`<div class="card"><h3>Recovery history</h3><div class="tw"><table><tr><th>Started</th><th>Mode</th><th>Cause</th><th>Outcome</th><th>Done</th></tr>${[...R].reverse().filter(r=>r.status!=='Active').map(r=>`<tr><td>${fmtS(r.start)}</td><td>${esc(r.mode)}</td><td>${esc(r.cause)}${r.notes?'<div class="sub">'+esc(r.notes)+'</div>':''}</td><td>${esc(r.status)}${r.closed?' '+fmtS(r.closed):''}</td><td>${r0(prog(r))}%</td></tr>`).join('')}</table></div></div>`:''}`;
+  rvCharts(P,act);
 }
 function rvStart(e){e.preventDefault();if(rvList().some(r=>r.status==='Active'))return alert('A recovery is already active. Stabilize or cancel it first.');const g=id=>document.getElementById(id).value,P=rvPlan(rvShare,rvDays),dsub={};PCM().forEach(s=>dsub[s]=0);P.items.forEach(i=>{if(dsub[i.subject]!=null)dsub[i.subject]+=i.hours});
   rvList().push({id:'RC'+String(rvList().length+1).padStart(3,'0'),start:today(),mode:g('rvm'),cause:g('rvc'),notes:g('rvn').trim(),trigger:rvSignals().map(x=>x[1]),status:'Active',plan:P.plan,original:{hours:P.total,items:P.items.length,bySubject:dsub,share:rvShare},created:new Date().toISOString()});save();vRecovery()}
