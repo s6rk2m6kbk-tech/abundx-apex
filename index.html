@@ -209,7 +209,7 @@ const DEF=()=>({
       Math:[{name:'RD Sharma',note:''},{name:'Cengage Math (Mains)',note:''},{name:'Cengage Math (Advanced)',note:''},{name:'Math PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}]},
     milestones:[['2026-10-09',150],['2026-10-16',160],['2026-10-23',170],['2026-10-30',180],['2026-11-05',190],['2026-11-30',200],['2026-12-31',205],['2027-01-31',210],['2027-02-15',220],['2027-03-01',225],['2027-03-31',230],['2027-06-01',245],['2027-08-01',255],['2027-10-02',265]].map(([date,marks])=>({date,marks}))
   },
-  logs:{},mocks:[],backlog:[],weekTopics:[],days:{}
+  logs:{},mocks:[],backlog:[],weakTopics:[],days:{}
 });
 const FIRST_MOCK={id:'M20260926',date:'2026-09-26',num:5,type:'Arjuna Classes 11th JEE Mock (75 Q)',phase:'Phase 0',attempted:null,correct:41,incorrect:null,accuracy:null,marks:164,phy:48,chem:56,math:60,time:null,total:75,cp:12,cc:14,cm:15,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:269,lo:null,av:null,rank:4,students:15,percentile:(15-4)/15*100,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Roll 2129. Top: Gouransh 269; 3rd Yuvraj Singh 176 (-12); 5th Shaurya 158 (+6).',files:{}};
 const HI_TOPICS=['Straight lines','Circle','Parabola','Trigo 1','Trigo 2'];
@@ -223,7 +223,7 @@ const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna
 /* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
 const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
   phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
-  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weekTopics:[],days:{}});
+  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],days:{}});
 const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
   type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
 const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
@@ -231,7 +231,7 @@ function loadK(){
   let d=DEFK();
   try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
   if(!d.seedK){d.seedK=true;KARTIK_MOCKS.forEach(m=>{if(!d.mocks.some(x=>x.id===m.id))d.mocks.push(m)});try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-  return seedAreas(clearQuestionData(d,KEY));
+  return weakMig(seedAreas(clearQuestionData(d,KEY)));
 }
 /* One-time clear of all question counts (23 Nov 2026). A backup of the old numbers is kept on this device. */
 function clearQuestionData(d,K){
@@ -250,6 +250,15 @@ function seedAreas(d){
   let k=d.areas.reduce((m,a)=>Math.max(m,+String(a.id).slice(2)||0),0);
   (PROFILE==='malik'?['Physics','Chemistry','Math']:['Physics']).forEach(sj=>AREA_SEED[sj].forEach(([name,book])=>{if(d.areas.some(a=>a.subject===sj&&a.name===name))return;k++;d.areas.push({id:'AR'+String(k).padStart(3,'0'),subject:sj,name,book})}));
   try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}
+  return d;
+}
+function weakMig(d){
+  const m={Planned:'Weak','In Progress':'Practising',Done:'Mastered',Skipped:'Weak'};
+  if(!Array.isArray(d.weakTopics))d.weakTopics=[];
+  if(Array.isArray(d['week'+'Topics'])){
+    d['week'+'Topics'].forEach(x=>d.weakTopics.push({id:String(x.id||'').replace('WT','WK')||('WK'+(d.weakTopics.length+1)),cls:x.cls||'Class 11',subject:x.subject,area:x.area||'',topic:x.topic,book:x.book||'',status:m[x.status]||'Weak',priority:'Medium',accuracy:null,notes:x.notes||'',added:x.week||''}));
+    delete d['week'+'Topics'];try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}
+  }
   return d;
 }
 let S=load();
@@ -333,7 +342,7 @@ function load(){
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seedEx){d.seedEx=true;d.settings.excusedThrough='2026-11-22';try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-  return seedAreas(clearQuestionData(d,KEY));
+  return weakMig(seedAreas(clearQuestionData(d,KEY)));
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
 
@@ -422,7 +431,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weeks:['Week Topics',vWeeks],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1511,7 +1520,7 @@ function opsApply(ops){
 }
 function viewErrs(){
   const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','weeks','calc','analytics','compare','reports','settings']){
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','calc','analytics','compare','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
@@ -2028,71 +2037,75 @@ function saveBL(e){
 function revisit(id){const b=S.backlog.find(x=>x.id===id);b.attempts++;b.revisited=today();if(b.status==='Pending')b.status='In Progress';save();vBacklog()}
 function resolveBL(id){const b=S.backlog.find(x=>x.id===id);b.status='Resolved';b.resolved=today();save();vBacklog()}
 function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x.id!==id);save();vBacklog()}}
-/* ---------- WEEK TOPICS: what to cover each week (S.weekTopics, week = the Monday date) ---------- */
-let wkSel=null,editWT=null,wkF={cls:'',sub:''};
-const WT_ST=['Planned','In Progress','Done','Skipped'],WT_CLS=['Class 11','Class 12'];
+/* ---------- WEEK TOPICS: what to cover each week (S.weakTopics, week = the Monday date) ---------- */
+let editWT=null,wkF={cls:'',sub:'',st:'open',q:''};
+const WT_ST=['Weak','Practising','Improving','Mastered'],WT_CLS=['Class 11','Class 12'],WT_PR=['High','Medium','Low'];
 const wtSubj=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Other']:['Physics','Other'];
-const wtNewId=()=>'WT'+String((S.weekTopics||[]).reduce((m,b)=>Math.max(m,+String(b.id).slice(2)||0),0)+1).padStart(3,'0');
+const wtNewId=()=>'WK'+String((S.weakTopics||[]).reduce((m,b)=>Math.max(m,+String(b.id).slice(2)||0),0)+1).padStart(3,'0');
 const wtAreas=sj=>(S.areas||[]).filter(a=>a.subject===sj);
 function wtAreaFill(cur){
   const sj=document.getElementById('wsu').value,el=document.getElementById('war'),keep=cur==null?el.value:cur;
   el.innerHTML='<option value="">(no area)</option>'+wtAreas(sj).map(a=>`<option ${a.name===keep?'selected':''}>${esc(a.name)}</option>`).join('');
 }
-function vWeeks(){
-  if(!Array.isArray(S.weekTopics))S.weekTopics=[];if(!Array.isArray(S.areas))S.areas=[];
-  const T=S.weekTopics,wk=wkSel||mon(today()),SJ=wtSubj(),cl=x=>x.cls||'Class 11';
-  const L=T.filter(x=>x.week===wk&&(!wkF.cls||cl(x)===wkF.cls)&&(!wkF.sub||x.subject===wkF.sub)),e0=editWT?T.find(x=>x.id===editWT)||{}:{};
-  const done=L.filter(x=>x.status==='Done').length;
-  const sel=(id,opts,cur,ex='')=>`<select id="${id}" ${ex}>${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
-  const chip=(k,v,l)=>`<button class="btn s ${wkF[k]===v?'ok':'alt'}" onclick="wkF.${k}='${v}';vWeeks()">${l}</button>`;
+function wtFiltered(){
+  const q=(wkF.q||'').trim().toLowerCase(),cl=x=>x.cls||'Class 11';
+  return (S.weakTopics||[]).filter(x=>(!wkF.cls||cl(x)===wkF.cls)&&(!wkF.sub||x.subject===wkF.sub)&&(wkF.st==='all'||(wkF.st==='open'?x.status!=='Mastered':x.status===wkF.st))
+    &&(!q||[x.topic,x.area,x.book,x.notes,x.subject].some(t=>String(t||'').toLowerCase().includes(q))));
+}
+function wtList(){
+  const L=wtFiltered(),SJ=wtSubj(),cl=x=>x.cls||'Class 11',PO={High:0,Medium:1,Low:2};
   const groups=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(sj=>L.some(x=>x.subject===sj));
-  const weeks=[...new Set(T.map(x=>x.week))].sort().reverse(),eSub=e0.subject||wkF.sub||SJ[0];
-  const grp=sj=>{const A=L.filter(x=>x.subject===sj),names=[...new Set([...wtAreas(sj).map(a=>a.name),...A.map(x=>x.area||'')])].filter(n=>A.some(x=>(x.area||'')===n));
-    return `<div class="card"><h3 style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)}</h3>`+names.map(n=>{const R=A.filter(x=>(x.area||'')===n),bk=((S.areas||[]).find(a=>a.subject===sj&&a.name===n)||{}).book;
-      return `<div style="margin:10px 0 4px"><b>${esc(n||'No area')}</b>${bk?` <span class="sub">· \u{1F4D6} ${esc(bk)}</span>`:''}</div><div class="tw"><table><tr><th>Topic</th><th>Status</th><th></th></tr>${R.map(x=>`<tr><td><b>${esc(x.topic)}</b><div class="sub">${esc(cl(x))}${x.book?' · \u{1F4D6} '+esc(x.book):''}${x.notes?' · '+esc(x.notes):''}</div></td>
+  if(!L.length)return '<div class="card"><div class="sub">No weak topics match. Add one above, or change the filters.</div></div>';
+  return groups.map(sj=>{const A=L.filter(x=>x.subject===sj),names=[...new Set([...wtAreas(sj).map(a=>a.name),...A.map(x=>x.area||'')])].filter(n=>A.some(x=>(x.area||'')===n));
+    return `<div class="card"><h3 style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)} <span class="sub">· ${A.length}</span></h3>`+names.map(n=>{
+      const R=A.filter(x=>(x.area||'')===n).sort((a,b)=>(PO[a.priority]??1)-(PO[b.priority]??1)),bk=((S.areas||[]).find(a=>a.subject===sj&&a.name===n)||{}).book;
+      return `<div style="margin:10px 0 4px"><b>${esc(n||'No area')}</b>${bk?` <span class="sub">· \u{1F4D6} ${esc(bk)}</span>`:''}</div><div class="tw"><table><tr><th>Topic</th><th>Priority</th><th>Status</th><th></th></tr>${R.map(x=>`<tr><td><b>${esc(x.topic)}</b><div class="sub">${esc(cl(x))}${x.accuracy!=null&&x.accuracy!==''?' · accuracy '+esc(x.accuracy)+'%':''}${x.book?' · \u{1F4D6} '+esc(x.book):''}${x.notes?' · '+esc(x.notes):''}</div></td>
+      <td><span class="chip bg-${x.priority==='High'?'bad':x.priority==='Low'?'ok':'warn'}">${esc(x.priority||'Medium')}</span></td>
       <td><select onchange="wtStatus('${x.id}',this.value)">${WT_ST.map(o=>`<option ${o===x.status?'selected':''}>${o}</option>`).join('')}</select></td>
-      <td style="white-space:nowrap"><button class="btn s alt" onclick="editWT='${x.id}';vWeeks();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="wtDup('${x.id}',0)">Duplicate</button> <button class="btn s alt" onclick="wtDup('${x.id}',7)">Copy to next week</button> <button class="btn s bad" onclick="wtDel('${x.id}')">×</button></td></tr>`).join('')}</table></div>`}).join('')+'</div>'};
-  const stat=(sj,n)=>{const a=T.filter(x=>x.subject===sj&&(x.area||'')===n);return a.length?`${a.length} topic${a.length===1?'':'s'} · ${a.filter(x=>x.status==='Done').length} done`:'none yet'};
-  $('#app').innerHTML=`<h2>Week Topics</h2>
-  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week, by class, subject and area (Coordinate Geometry, Mechanics, Organic Chemistry...), with the book for each area. You can also ask DXA AI: "add Circle under Coordinate Geometry for Class 11 this week", "set the book for Calculus to Cengage", "duplicate this week's topics to next week", "delete everything in the week of 16 Nov".</div>
-  <div class="card"><div class="tools noprint"><button class="btn s alt" onclick="wkGo(-7)">‹ Previous week</button> <b style="padding:0 8px">${fmtS(wk)} – ${fmtS(addD(wk,6))}${wk===mon(today())?' (this week)':''}</b> <button class="btn s alt" onclick="wkGo(7)">Next week ›</button>
-   <button class="btn s alt" onclick="wkSel=null;vWeeks()">This week</button> <input type="date" value="${wk}" onchange="if(this.value){wkSel=mon(this.value);vWeeks()}" style="width:150px;padding:4px"></div>
-   <div style="margin-top:10px"><span class="sub">Class:</span> ${chip('cls','','All')} ${WT_CLS.map(c=>chip('cls',c,c)).join(' ')}</div>
-   <div style="margin-top:6px"><span class="sub">Subject:</span> ${chip('sub','','All')} ${SJ.map(c=>chip('sub',c,c)).join(' ')}</div>
-   <div class="sub" style="margin-top:8px">${L.length?`${done} of ${L.length} done`:'No topics for this week with these filters.'}</div><div class="bar"><i style="width:${L.length?done/L.length*100:0}%"></i></div></div>
-  <div class="card"><h3>${editWT?'Edit topic':'Add a topic'}</h3><form onsubmit="saveWT(event)">
+      <td style="white-space:nowrap"><button class="btn s alt" onclick="editWT='${x.id}';vWeak();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="wtDup('${x.id}')">Duplicate</button> <button class="btn s bad" onclick="wtDel('${x.id}')">×</button></td></tr>`).join('')}</table></div>`}).join('')+'</div>'}).join('');
+}
+function vWeak(){
+  if(!Array.isArray(S.weakTopics))S.weakTopics=[];if(!Array.isArray(S.areas))S.areas=[];
+  const T=S.weakTopics,SJ=wtSubj(),e0=editWT?T.find(x=>x.id===editWT)||{}:{},eSub=e0.subject||wkF.sub||SJ[0];
+  const open=T.filter(x=>x.status!=='Mastered'),sel=(id,opts,cur,ex='')=>`<select id="${id}" ${ex}>${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  const chip=(k,v,l)=>`<button class="btn s ${wkF[k]===v?'ok':'alt'}" onclick="wkF.${k}='${v}';vWeak()">${l}</button>`;
+  const stat=(sj,n)=>{const a=T.filter(x=>x.subject===sj&&(x.area||'')===n);return a.length?`${a.filter(x=>x.status!=='Mastered').length} weak · ${a.filter(x=>x.status==='Mastered').length} mastered`:'none yet'};
+  $('#app').innerHTML=`<h2>Weak Topics</h2>
+  <div class="sub" style="margin-bottom:12px">The topics you have problems in, by class, subject and area, with the book for each area. Mark them Practising, Improving and finally Mastered as you fix them. You can also ask DXA AI: "add Circle under Coordinate Geometry as a weak topic, High priority", "mark Parabola mastered", "set the book for Calculus to Cengage", "delete all Optics weak topics".</div>
+  <div class="grid"><div class="card"><div class="sub">Still weak</div><div class="big ${open.length?'bad':''}">${open.length}</div><div class="sub">High priority ${open.filter(x=>x.priority==='High').length}</div></div>
+   ${SJ.filter(s=>s!=='Other').map(s=>`<div class="card"><div class="sub">${esc(s)}</div><div class="big">${open.filter(x=>x.subject===s).length}</div><div class="sub">${T.filter(x=>x.subject===s&&x.status==='Mastered').length} mastered</div></div>`).join('')}</div>
+  <div class="card"><h3>${editWT?'Edit weak topic':'Add a weak topic'}</h3><form onsubmit="saveWT(event)">
    <div class="row"><div><label>Class</label>${sel('wcl',WT_CLS,e0.cls||wkF.cls||'Class 11')}</div><div><label>Subject</label>${sel('wsu',SJ,eSub,'onchange="wtAreaFill(\'\')"')}</div>
-    <div><label>Area</label><select id="war"><option value="">(no area)</option>${wtAreas(eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Status</label>${sel('wst',WT_ST,e0.status)}</div></div>
-   <div class="row"><div style="grid-column:span 2"><label>Topic</label><input id="wto" required value="${esc(e0.topic||'')}" placeholder="e.g. Circle: tangents and normals"></div><div><label>Book (blank = the area's book)</label><input id="wbk" value="${esc(e0.book||'')}"></div>
-    <div><label>Week (any date in the week)</label><input id="wwk" type="date" required value="${e0.week||wk}"></div></div>
-   <div class="row"><div style="grid-column:span 4"><label>Notes (optional)</label><input id="wno" value="${esc(e0.notes||'')}"></div></div>
-   <button class="btn ok">${editWT?'Update':'Add topic'}</button> ${editWT?'<button type="button" class="btn alt" onclick="editWT=null;vWeeks()">Cancel</button>':''}</form></div>
-  ${groups.map(grp).join('')}
-  ${L.length?`<div class="card"><h3>This week</h3><button class="btn s alt" onclick="wkCopy()">Copy all to next week</button> <button class="btn s bad" onclick="wkClear()">Delete all ${L.length} topics shown</button></div>`:''}
-  <div class="card"><h3>Areas and books</h3><div class="sub" style="margin-bottom:8px">Each area has its own book. Change the book, rename, add or remove areas here. Counts are across all weeks.</div>
+    <div><label>Area</label><select id="war"><option value="">(no area)</option>${wtAreas(eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Priority</label>${sel('wpr',WT_PR,e0.priority||'Medium')}</div></div>
+   <div class="row"><div style="grid-column:span 2"><label>Topic</label><input id="wto" required value="${esc(e0.topic||'')}" placeholder="e.g. Circle: tangents and normals"></div><div><label>Status</label>${sel('wst',WT_ST,e0.status)}</div><div><label>Accuracy % (optional)</label><input id="wac" type="number" min="0" max="100" value="${e0.accuracy??''}"></div></div>
+   <div class="row"><div style="grid-column:span 2"><label>Book (blank = the area's book)</label><input id="wbk" value="${esc(e0.book||'')}"></div><div style="grid-column:span 2"><label>What goes wrong (optional)</label><input id="wno" value="${esc(e0.notes||'')}" placeholder="e.g. sign mistakes, formula not remembered"></div></div>
+   <button class="btn ok">${editWT?'Update':'Add weak topic'}</button> ${editWT?'<button type="button" class="btn alt" onclick="editWT=null;vWeak()">Cancel</button>':''}</form></div>
+  <div class="card"><div style="margin-bottom:6px"><span class="sub">Class:</span> ${chip('cls','','All')} ${WT_CLS.map(c=>chip('cls',c,c)).join(' ')}</div>
+   <div style="margin-bottom:6px"><span class="sub">Subject:</span> ${chip('sub','','All')} ${SJ.map(c=>chip('sub',c,c)).join(' ')}</div>
+   <div class="row"><div><label>Show</label><select onchange="wkF.st=this.value;vWeak()">${[['open','Still weak (not mastered)'],['all','All'],...WT_ST.map(x=>[x,x])].map(([k,l])=>`<option value="${k}" ${wkF.st===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div style="grid-column:span 2"><label>Search</label><input id="wkq" type="search" value="${esc(wkF.q)}" placeholder="Search topics, areas, books, notes..." oninput="wkF.q=this.value;document.getElementById('wkList').innerHTML=wtList()"></div></div></div>
+  <div id="wkList">${wtList()}</div>
+  <div class="card"><h3>Areas and books</h3><div class="sub" style="margin-bottom:8px">Each area has its own book. Change the book, rename, add or remove areas here.</div>
    ${SJ.filter(sj=>sj!=='Other').map(sj=>`<div style="margin:12px 0 4px"><b style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)}</b></div><div class="tw"><table><tr><th>Area</th><th>Book</th><th>Progress</th><th></th></tr>${wtAreas(sj).map(a=>`<tr><td><b>${esc(a.name)}</b></td><td><input value="${esc(a.book||'')}" placeholder="Set the book" onchange="areaBookSet('${a.id}',this.value)" style="min-width:150px"></td><td class="sub">${stat(sj,a.name)}</td><td style="white-space:nowrap"><button class="btn s alt" onclick="areaRename('${a.id}')">Rename</button> <button class="btn s bad" onclick="areaDel('${a.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=4 class="sub">No areas yet.</td></tr>'}</table></div>`).join('')}
-   <form onsubmit="areaAdd(event)" style="margin-top:12px"><div class="row"><div><label>Subject</label>${sel('asu',SJ.filter(sj=>sj!=='Other'),SJ[0])}</div><div><label>New area name</label><input id="anm" required placeholder="e.g. Thermodynamics"></div><div><label>Book</label><input id="abk"></div></div><button class="btn ok">Add area</button></form></div>
-  ${weeks.length?`<div class="card"><h3>All weeks</h3><div class="tw"><table><tr><th>Week</th><th>Topics</th><th>Done</th></tr>${weeks.map(w=>{const a=T.filter(x=>x.week===w);return `<tr><td><a href="#" onclick="wkSel='${w}';vWeeks();scrollTo(0,0);return false">${fmtS(w)} – ${fmtS(addD(w,6))}</a></td><td>${a.length}</td><td>${a.filter(x=>x.status==='Done').length}</td></tr>`}).join('')}</table></div></div>`:''}`;
+   <form onsubmit="areaAdd(event)" style="margin-top:12px"><div class="row"><div><label>Subject</label>${sel('asu',SJ.filter(sj=>sj!=='Other'),SJ[0])}</div><div><label>New area name</label><input id="anm" required placeholder="e.g. Thermodynamics"></div><div><label>Book</label><input id="abk"></div></div><button class="btn ok">Add area</button></form></div>`;
 }
-function wkGo(d){wkSel=addD(wkSel||mon(today()),d);vWeeks()}
 function saveWT(e){
-  e.preventDefault();if(!Array.isArray(S.weekTopics))S.weekTopics=[];
-  const old=editWT?S.weekTopics.find(x=>x.id===editWT):null;
-  const o={id:old?old.id:wtNewId(),week:mon(v('wwk')),cls:v('wcl'),subject:v('wsu'),area:v('war'),topic:v('wto').trim(),book:v('wbk').trim(),status:v('wst'),notes:v('wno').trim()};
+  e.preventDefault();if(!Array.isArray(S.weakTopics))S.weakTopics=[];
+  const old=editWT?S.weakTopics.find(x=>x.id===editWT):null,ac=n('wac');
+  if(ac!=null&&(ac<0||ac>100))return alert('Accuracy 0-100.');
+  const o={id:old?old.id:wtNewId(),cls:v('wcl'),subject:v('wsu'),area:v('war'),topic:v('wto').trim(),book:v('wbk').trim(),status:v('wst'),priority:v('wpr'),accuracy:ac,notes:v('wno').trim(),added:old?old.added:today()};
   if(!o.topic)return;
-  if(old)Object.assign(old,o);else S.weekTopics.push(o);
-  wkSel=o.week;editWT=null;save();vWeeks();
+  if(old)Object.assign(old,o);else S.weakTopics.push(o);
+  editWT=null;save();vWeak();
 }
-function wtStatus(id,s){const x=S.weekTopics.find(t=>t.id===id);if(x){x.status=s;save();vWeeks()}}
-function wtDup(id,days){const x=S.weekTopics.find(t=>t.id===id);if(!x)return;S.weekTopics.push({...x,id:wtNewId(),week:addD(x.week,days),status:'Planned'});save();vWeeks()}
-function wtDel(id){const x=S.weekTopics.find(t=>t.id===id);if(x&&confirm('Delete "'+x.topic+'"?')){S.weekTopics=S.weekTopics.filter(t=>t.id!==id);save();vWeeks()}}
-function wkCopy(){const wk=wkSel||mon(today());S.weekTopics.filter(x=>x.week===wk).forEach(x=>S.weekTopics.push({...x,id:wtNewId(),week:addD(wk,7),status:'Planned'}));save();wkSel=addD(wk,7);vWeeks()}
-function wkClear(){const wk=wkSel||mon(today()),n=S.weekTopics.filter(x=>x.week===wk).length;if(n&&confirm('Delete all '+n+' topics for this week?')){S.weekTopics=S.weekTopics.filter(x=>x.week!==wk);save();vWeeks()}}
+function wtStatus(id,s){const x=S.weakTopics.find(t=>t.id===id);if(x){x.status=s;save();vWeak()}}
+function wtDup(id){const x=S.weakTopics.find(t=>t.id===id);if(!x)return;S.weakTopics.push({...x,id:wtNewId(),added:today()});save();vWeak()}
+function wtDel(id){const x=S.weakTopics.find(t=>t.id===id);if(x&&confirm('Delete "'+x.topic+'"?')){S.weakTopics=S.weakTopics.filter(t=>t.id!==id);save();vWeak()}}
 const areaNewId=()=>'AR'+String((S.areas||[]).reduce((m,a)=>Math.max(m,+String(a.id).slice(2)||0),0)+1).padStart(3,'0');
-function areaBookSet(id,val){const a=S.areas.find(x=>x.id===id);if(a){a.book=val.trim();save();vWeeks()}}
-function areaAdd(e){e.preventDefault();const sj=v('asu'),nm=v('anm').trim();if(!nm)return;if(S.areas.some(a=>a.subject===sj&&a.name.toLowerCase()===nm.toLowerCase()))return alert('That area already exists.');S.areas.push({id:areaNewId(),subject:sj,name:nm,book:v('abk').trim()});save();vWeeks()}
-function areaRename(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const nm=(prompt('New name for this area:',a.name)||'').trim();if(!nm||nm===a.name)return;S.weekTopics.forEach(x=>{if(x.subject===a.subject&&x.area===a.name)x.area=nm});a.name=nm;save();vWeeks()}
-function areaDel(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const n=S.weekTopics.filter(x=>x.subject===a.subject&&x.area===a.name).length;if(confirm('Remove the area "'+a.name+'"?'+(n?' Its '+n+' topic(s) are kept but will show as "No area".':''))){S.areas=S.areas.filter(x=>x.id!==id);save();vWeeks()}}
+function areaBookSet(id,val){const a=S.areas.find(x=>x.id===id);if(a){a.book=val.trim();save();vWeak()}}
+function areaAdd(e){e.preventDefault();const sj=v('asu'),nm=v('anm').trim();if(!nm)return;if(S.areas.some(a=>a.subject===sj&&a.name.toLowerCase()===nm.toLowerCase()))return alert('That area already exists.');S.areas.push({id:areaNewId(),subject:sj,name:nm,book:v('abk').trim()});save();vWeak()}
+function areaRename(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const nm=(prompt('New name for this area:',a.name)||'').trim();if(!nm||nm===a.name)return;S.weakTopics.forEach(x=>{if(x.subject===a.subject&&x.area===a.name)x.area=nm});a.name=nm;save();vWeak()}
+function areaDel(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const n=S.weakTopics.filter(x=>x.subject===a.subject&&x.area===a.name).length;if(confirm('Remove the area "'+a.name+'"?'+(n?' Its '+n+' topic(s) are kept but will show as "No area".':''))){S.areas=S.areas.filter(x=>x.id!==id);save();vWeak()}}
 
 /* ---------- ANALYTICS ---------- */
 function vAnalytics(){
