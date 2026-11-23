@@ -1358,20 +1358,22 @@ function coachSummary(){
 }
 /* Saved chats: kept in this browser, one list per profile. */
 const CHAT_KEY='abundx_chats_'+PROFILE;
-let CHATS=[],CHAT_ID=null,COACH_CHAT=[],COACH_ATT=[];
+let CHATS=[],CHAT_ID=null,COACH_CHAT=[],COACH_ATT=[],CHAT_DEL={};
 function chatsLoad(){
-  try{const a=JSON.parse(localStorage.getItem(CHAT_KEY)||'null');if(a&&Array.isArray(a.chats)){CHATS=a.chats;CHAT_ID=a.cur}}catch(e){}
+  try{const a=JSON.parse(localStorage.getItem(CHAT_KEY)||'null');if(a&&Array.isArray(a.chats)){CHATS=a.chats;CHAT_ID=a.cur;CHAT_DEL=a.deleted||{}}}catch(e){}
   let c=CHATS.find(x=>x.id===CHAT_ID);
   if(!c){c={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS.unshift(c);CHAT_ID=c.id}
   COACH_CHAT=c.msgs;
 }
-function chatsSave(){
+function chatsSave(noSync){
   const c=CHATS.find(x=>x.id===CHAT_ID);if(!c)return;
-  c.msgs=COACH_CHAT;c.ts=Date.now();
-  const first=COACH_CHAT.find(m=>m.role==='user');c.title=first?first.content.replace(/\n.*/s,'').slice(0,60):'';
-  CHATS=CHATS.filter(x=>x.msgs.length||x.id===CHAT_ID).slice(0,30);
+  c.msgs=COACH_CHAT;const h=(()=>{const t=JSON.stringify(c.msgs);let k=0;for(let i=0;i<t.length;i++)k=(k*31+t.charCodeAt(i))|0;return t.length+':'+k})();
+  if(c._h!==h){c._h=h;c.ts=Date.now()}
+  const first=COACH_CHAT.find(m=>m.role==='user');if(!c.customTitle)c.title=first?first.content.replace(/\n.*/s,'').slice(0,60):'';
+  CHATS=CHATS.filter(x=>x.msgs.length||x.id===CHAT_ID).slice(0,60);
   const trim=CHATS.map(x=>({...x,msgs:x.msgs.slice(-60).map(m=>m.actions&&m.actions.some(a=>a.content&&a.content.length>20000)?{...m,actions:m.actions.map(a=>a.content&&a.content.length>20000?{...a,content:''}:a)}:m)}));
-  try{localStorage.setItem(CHAT_KEY,JSON.stringify({cur:CHAT_ID,chats:trim}))}catch(e){}
+  try{localStorage.setItem(CHAT_KEY,JSON.stringify({cur:CHAT_ID,chats:trim,deleted:CHAT_DEL}))}catch(e){}
+  if(!noSync&&typeof syncSoon==='function')syncSoon();
 }
 function coachNew(){
   const c=CHATS.find(x=>x.id===CHAT_ID);
@@ -1382,7 +1384,7 @@ function coachNew(){
 function coachOpen(id){const c=CHATS.find(x=>x.id===id);if(!c)return;chatsSave();CHAT_ID=id;COACH_CHAT=c.msgs;chatsSave();coachRender()}
 function coachDel(id){
   if(!confirm('Delete this saved chat?'))return;
-  CHATS=CHATS.filter(x=>x.id!==id);
+  CHAT_DEL[String(id)]=Date.now();CHATS=CHATS.filter(x=>x.id!==id);
   if(id===CHAT_ID){const n=CHATS[0]||{id:Date.now(),title:'',ts:Date.now(),msgs:[]};if(!CHATS.length)CHATS.push(n);CHAT_ID=n.id;COACH_CHAT=n.msgs}
   chatsSave();coachRender();
 }
@@ -1392,8 +1394,64 @@ function coachHist(){
   d.innerHTML=old.length?`<h3 style="margin-top:16px">Saved chats <a href="#" class="sub" style="margin-left:8px;font-weight:400" onclick="go('chats');return false">See all history ›</a></h3>`+old.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title||'Chat')}</div><div class="sub">${new Date(x.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} · ${x.msgs.filter(m=>m.role==='user').length} message(s)</div></div><button class="btn s alt" onclick="coachOpen(${x.id})">Open</button><button class="btn s bad" onclick="coachDel(${x.id})" aria-label="Delete">×</button></div>`).join(''):'';
 }
 chatsLoad();
+/* ---------- Chat sync across devices (private code, merged by the cloud store) ---------- */
+const SYNC_KEY='abundx_sync_'+PROFILE;
+let COACH_BUSY=false,syncBusy=false;
+const syncCfg=()=>{try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'null')}catch(e){return null}};
+const syncSet=o=>{try{localStorage.setItem(SYNC_KEY,JSON.stringify(o))}catch(e){}};
+const chHash=m=>{const s=JSON.stringify(m);let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return s.length+':'+h};
+function syncSoon(){if(!syncCfg()||!COACH_API)return;clearTimeout(window._syncT);window._syncT=setTimeout(()=>syncNow(),2000)}
+async function syncNow(manual){
+  const c=syncCfg();if(!c||!c.code||!COACH_API||syncBusy)return;syncBusy=true;
+  try{
+    chatsSave(true);
+    const trim=x=>({...x,msgs:x.msgs.slice(-60)});
+    const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'sync',code:c.code,profile:PROFILE,state:{chats:CHATS.filter(x=>x.msgs.length).map(trim),deleted:CHAT_DEL}})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){syncSet({...c,err:j.message||'Sync failed.',errAt:Date.now()});return}
+    const keepEmpty=CHATS.filter(x=>!x.msgs.length&&x.id===CHAT_ID);
+    const mine=new Map(CHATS.map(x=>[String(x.id),x]));
+    let changedCur=false;
+    const next=(j.chats||[]).map(rc=>{const l=mine.get(String(rc.id));
+      if(l&&String(rc.id)===String(CHAT_ID)&&COACH_BUSY)return l;           // never swap the chat while an answer is on its way
+      if(l&&(Number(l.ts)||0)>=(Number(rc.ts)||0))return l;
+      if(String(rc.id)===String(CHAT_ID))changedCur=true;return {...rc,_h:chHash(rc.msgs)}});
+    CHAT_DEL=j.deleted||{};
+    const ids=new Set(next.map(x=>String(x.id)));keepEmpty.forEach(x=>{if(!ids.has(String(x.id)))next.unshift(x)});
+    CHATS=next;
+    if(!CHATS.some(x=>x.id===CHAT_ID)){const n=CHATS.find(x=>x.msgs.length)||{id:Date.now(),title:'',ts:Date.now(),msgs:[]};if(!CHATS.includes(n))CHATS.unshift(n);CHAT_ID=n.id;changedCur=true}
+    COACH_CHAT=CHATS.find(x=>x.id===CHAT_ID).msgs;
+    chatsSave(true);syncSet({...c,last:Date.now(),err:''});
+    if(typeof view!=='undefined'){const ae=document.activeElement,typing=ae&&['INPUT','TEXTAREA'].includes(ae.tagName)&&ae.value;
+      if(view==='chats'&&!typing)vChats();else if(view==='coach'&&(changedCur||manual)&&!COACH_BUSY)coachRender()}
+  }catch(e){syncSet({...c,err:'Could not reach the sync service.',errAt:Date.now()})}
+  finally{syncBusy=false}
+}
+function syncMakeCode(){const a=new Uint8Array(20),A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';crypto.getRandomValues(a);const s=[...a].map(x=>A[x%A.length]).join('');return s.match(/.{1,5}/g).join('-')}
+function syncOn(){if(!COACH_API)return alert('Sync needs the DXA AI service.');syncSet({code:syncMakeCode(),since:Date.now()});syncNow(true);vChats()}
+function syncJoin(){const el=document.getElementById('syncCode'),c=(el?el.value:'').trim().toUpperCase().replace(/[^A-Z0-9-]/g,'');if(c.replace(/-/g,'').length<16)return alert('That code looks too short. It has 20 letters and numbers, like ABCDE-FGHJK-MNPQR-STUVW.');syncSet({code:c,since:Date.now()});syncNow(true);vChats()}
+function syncOff(){if(confirm('Stop syncing on this device? Your chats stay here and in the cloud copy; other devices keep syncing.')){try{localStorage.removeItem(SYNC_KEY)}catch(e){}vChats()}}
+async function syncWipe(){
+  const c=syncCfg();if(!c||!confirm('Delete the cloud copy of your chats? Chats stay on the devices that have them, but they will no longer sync. This also turns sync off here.'))return;
+  try{await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'wipe',code:c.code,profile:PROFILE})})}catch(e){}
+  try{localStorage.removeItem(SYNC_KEY)}catch(e){}vChats();
+}
+function syncCard(){
+  const c=syncCfg(),ago=c&&c.last?Math.max(0,Math.round((Date.now()-c.last)/60000)):null;
+  if(!COACH_API)return '';
+  return `<div class="card"><h3>Use your chats on any device</h3>${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Changes you make here (new chats, edits, deletes) appear on your other devices within a minute, and theirs appear here.</div>
+     <div style="margin:10px 0">Your sync code: <b style="font-size:17px;letter-spacing:.08em;user-select:all">${esc(c.code)}</b> <button class="btn s alt" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(c.code)}').then(()=>alert('Copied'))">Copy</button></div>
+     <div class="sub">On another device, open this page, choose "I have a code" and enter it. Anyone who has this code can read and change these chats, so share it only with yourself. It is not a password you can reset: if you lose it, turn sync on again to get a new one.</div>
+     <p style="margin-top:10px"><button class="btn s ok" onclick="syncNow(true).then(vChats)">Sync now</button> <button class="btn s alt" onclick="syncOff()">Turn off on this device</button> <button class="btn s bad" onclick="syncWipe()">Delete the cloud copy</button></p>`
+    :`<div class="sub" style="margin-bottom:10px">Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
+     <button class="btn ok" onclick="syncOn()">Turn on sync (make a code)</button>
+     <div class="row" style="margin-top:12px"><div style="grid-column:span 3"><label for="syncCode">Already have a code from another device?</label><input id="syncCode" placeholder="ABCDE-FGHJK-MNPQR-STUVW" autocomplete="off"></div><div style="align-self:end"><button class="btn alt" onclick="syncJoin()">I have a code</button></div></div>`}</div>`;
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow()});
+setInterval(()=>{if(!document.hidden)syncNow()},60000);
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>syncNow(),800));
 /* ---------- CHAT HISTORY page: every saved DXA AI chat on this device ---------- */
-let chView=null;
+let chView=null,chEdit=null;
 const chDate=t=>new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const chAll=()=>CHATS.filter(x=>x.msgs.length).sort((a,b)=>b.ts-a.ts);
 function chRows(q){
@@ -1409,38 +1467,45 @@ function vChats(){
   if(chView&&!CHATS.some(x=>x.id===chView&&x.msgs.length))chView=null;
   if(chView)return vChatOne(CHATS.find(x=>x.id===chView));
   const n=chAll().length;
-  $('#app').innerHTML=`<h2>Chat History</h2><div class="sub" style="margin-bottom:12px">Your conversations with DXA AI. They are saved on this device only (the latest 30 chats). Tap a chat to read it, continue it, or download it.</div>
+  $('#app').innerHTML=`<h2>Chat History</h2><div class="sub" style="margin-bottom:12px">Your conversations with DXA AI (the latest 60 chats). Tap a chat to read it, rename it, edit or delete messages, continue it or download it.</div>
+  ${syncCard()}
   <div class="card"><div class="row"><div style="flex:1"><label for="chQ">Search all chats</label><input id="chQ" type="search" placeholder="Search words in any chat..." oninput="document.getElementById('chList').innerHTML=chRows(this.value)"></div></div>
    <div class="sub" style="margin-top:8px">${n} saved chat${n===1?'':'s'}</div><div id="chList">${chRows('')}</div>
    ${n?`<p style="margin-top:12px"><button class="btn s bad" onclick="chDelAll()">Delete all chats</button></p>`:''}</div>
    <p><button class="btn" onclick="go('coach')">Go to DXA AI</button></p>`;
 }
-function chBub(m){
+function chBub(m,i,cid){
+  const editing=chEdit&&chEdit.cid===cid&&chEdit.i===i,tools=`<div style="margin:2px 0 0 ${m.role==='user'?'0':'45px'};text-align:${m.role==='user'?'right':'left'}"><a href="#" class="sub" onclick="chEdit={cid:${cid},i:${i}};vChats();return false">Edit</a> <a href="#" class="sub" style="margin-left:10px;color:var(--bad)" onclick="chMsgDel(${cid},${i});return false">Delete</a></div>`;
+  if(editing)return `<div style="margin:8px 0"><textarea id="chEditBox" rows="6" style="width:100%">${esc(m.content)}</textarea><div style="margin-top:6px"><button class="btn s ok" onclick="chMsgSave(${cid},${i})">Save</button> <button class="btn s alt" onclick="chEdit=null;vChats()">Cancel</button></div></div>`;
   const acts=(m.actions||[]).map(a=>{
     const t=a.type==='create_file'?'\u{1F4C4} File: '+esc(a.filename||'')+'.'+esc(a.format||''):a.type==='edit_data'?'Data change: '+esc(a.summary||'')+(a.state?' ('+a.state+')':''):a.type==='log_questions'?'Log '+a.count+' questions on '+esc(a.date)+(a.state?' ('+a.state+')':''):a.type==='delete_questions'?'Delete questions on '+esc(a.date)+(a.state?' ('+a.state+')':''):'';
     return t?`<div class="sub" style="margin:2px 0">${t}</div>`:''}).join('');
   const src=(m.sources&&m.sources.length)?`<div class="sub" style="margin:2px 0">\u{1F310} Sources: ${m.sources.filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`).join(' · ')}</div>`:'';
-  return m.role==='user'
-    ?`<div style="display:flex;justify-content:flex-end;margin:8px 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
-    :`<div style="margin:8px 0;display:flex;gap:9px;align-items:flex-start"><img src="dxa-ai.png" alt="DXA AI" width="36" height="36" style="width:36px;height:36px;border-radius:50%;flex:none;margin-top:2px;background:#000"><div style="min-width:0;max-width:calc(100% - 46px)"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div>${src}${acts}</div></div>`;
+  return (m.role==='user'
+    ?`<div style="display:flex;justify-content:flex-end;margin:8px 0 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
+    :`<div style="margin:8px 0 0;display:flex;gap:9px;align-items:flex-start"><img src="dxa-ai.png" alt="DXA AI" width="36" height="36" style="width:36px;height:36px;border-radius:50%;flex:none;margin-top:2px;background:#000"><div style="min-width:0;max-width:calc(100% - 46px)"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div>${src}${acts}</div></div>`)+tools;
 }
 function vChatOne(c){
-  $('#app').innerHTML=`<h2>Chat History</h2><p><button class="btn s alt" onclick="chView=null;vChats()">‹ All chats</button></p>
+  $('#app').innerHTML=`<h2>Chat History</h2><p><button class="btn s alt" onclick="chView=null;chEdit=null;vChats()">‹ All chats</button></p>
   <div class="card"><h3>${esc(c.title||'Chat')}</h3><div class="sub">${chDate(c.ts)} · ${c.msgs.filter(m=>m.role==='user').length} message(s)</div>
-   <p style="margin:10px 0"><button class="btn s ok" onclick="chContinue(${c.id})">Continue this chat</button> <button class="btn s alt" onclick="chDownload(${c.id})">Download as text</button> <button class="btn s bad" onclick="chDel(${c.id})">Delete</button></p>
-   <div style="line-height:1.7">${c.msgs.map(chBub).join('')}</div></div>`;
+   <p style="margin:10px 0"><button class="btn s ok" onclick="chContinue(${c.id})">Continue this chat</button> <button class="btn s alt" onclick="chRename(${c.id})">Rename</button> <button class="btn s alt" onclick="chDownload(${c.id})">Download as text</button> <button class="btn s bad" onclick="chDel(${c.id})">Delete chat</button></p>
+   <div style="line-height:1.7">${c.msgs.map((m,i)=>chBub(m,i,c.id)).join('')}</div></div>`;
 }
+function chTouch(c){c.ts=Date.now();c._h=chHash(c.msgs);chatsSave()}
+function chRename(id){const c=CHATS.find(x=>x.id===id);if(!c)return;const t=(prompt('Name for this chat:',c.title||'')||'').trim();if(!t)return;c.title=t.slice(0,80);c.customTitle=true;chTouch(c);vChats()}
+function chMsgSave(cid,i){const c=CHATS.find(x=>x.id===cid),el=document.getElementById('chEditBox');if(!c||!el||!c.msgs[i])return;const v=el.value.trim();if(!v)return alert('A message cannot be empty. Use Delete to remove it.');c.msgs[i].content=v;chEdit=null;chTouch(c);vChats()}
+function chMsgDel(cid,i){const c=CHATS.find(x=>x.id===cid);if(!c||!c.msgs[i]||!confirm('Delete this message?'))return;c.msgs.splice(i,1);if(!c.msgs.length){chDel(cid,true);return}chTouch(c);vChats()}
 function chOpen(id){chView=id;vChats();scrollTo(0,0)}
 function chContinue(id){coachOpen(id);chView=null;go('coach')}
-function chDel(id){
-  if(!confirm('Delete this saved chat?'))return;
-  CHATS=CHATS.filter(x=>x.id!==id);
+function chDel(id,quiet){
+  if(!quiet&&!confirm('Delete this saved chat?'))return;
+  CHAT_DEL[String(id)]=Date.now();CHATS=CHATS.filter(x=>x.id!==id);
   if(id===CHAT_ID){const n=CHATS[0]||{id:Date.now(),title:'',ts:Date.now(),msgs:[]};if(!CHATS.length)CHATS.push(n);CHAT_ID=n.id;COACH_CHAT=n.msgs}
   chView=null;chatsSave();vChats();
 }
 function chDelAll(){
   if(!confirm('Delete ALL saved DXA AI chats on this device? This cannot be undone.'))return;
-  const n={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS=[n];CHAT_ID=n.id;COACH_CHAT=n.msgs;chView=null;chatsSave();vChats();
+  CHATS.forEach(x=>{CHAT_DEL[String(x.id)]=Date.now()});const n={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS=[n];CHAT_ID=n.id;COACH_CHAT=n.msgs;chView=null;chatsSave();vChats();
 }
 function chDownload(id){
   const c=CHATS.find(x=>x.id===id);if(!c)return;
@@ -1759,10 +1824,10 @@ async function coachText(e){
     if(!q)q='Please read the attached file(s) and help me with them.';
     const inp=document.getElementById('coachQ');
     coachRender(true,COACH_CHAT.push({role:'user',content:q+(att.length?'\n📎 '+att.map(a=>a.name).join(', '):'')}));if(inp)inp.value='';
-    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[],sources:(a.sources||[]).slice(0,6)});
+    COACH_BUSY=true;try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[],sources:(a.sources||[]).slice(0,6)});
       if(autoOn()&&!att.length&&!a.webUsed){const mi=COACH_CHAT.length-1;(a.actions||[]).forEach((x,ai)=>{if(['log_questions','delete_questions','edit_data'].includes(x.type))coachConfirm(mi,ai)})}
       coachRender();return}
-    catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
+    catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}finally{COACH_BUSY=false}
   }
   out.innerHTML=coachRule(q);
 }
