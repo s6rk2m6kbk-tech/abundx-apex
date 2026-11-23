@@ -231,7 +231,7 @@ function loadK(){
   let d=DEFK();
   try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
   if(!d.seedK){d.seedK=true;KARTIK_MOCKS.forEach(m=>{if(!d.mocks.some(x=>x.id===m.id))d.mocks.push(m)});try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-  return clearQuestionData(d,KEY);
+  return seedAreas(clearQuestionData(d,KEY));
 }
 /* One-time clear of all question counts (23 Nov 2026). A backup of the old numbers is kept on this device. */
 function clearQuestionData(d,K){
@@ -242,6 +242,14 @@ function clearQuestionData(d,K){
   for(const k of Object.keys(logs)){const l=logs[k];if(l.quick){delete logs[k];continue}C.forEach(c=>l[c]=0)}
   d.logs=logs;d.weekQ={};
   try{localStorage.setItem(K,JSON.stringify(d))}catch(e){}
+  return d;
+}
+const AREA_SEED={Physics:[['Mechanics',''],['Gravitation',''],['Modern Physics',''],['Waves',''],['Optics',''],['Electrostatics','']],Chemistry:[['Physical Chemistry','N Awasthi'],['Organic Chemistry','MS Chouhan'],['Inorganic Chemistry','IOC (VJ Sir)']],Math:[['Coordinate Geometry',''],['Trigonometry',''],['Algebra',''],['Vectors & 3-D',''],['Calculus','']]};
+function seedAreas(d){
+  if(d.seedAreas)return d;d.seedAreas=true;if(!Array.isArray(d.areas))d.areas=[];
+  let k=d.areas.reduce((m,a)=>Math.max(m,+String(a.id).slice(2)||0),0);
+  (PROFILE==='malik'?['Physics','Chemistry','Math']:['Physics']).forEach(sj=>AREA_SEED[sj].forEach(([name,book])=>{if(d.areas.some(a=>a.subject===sj&&a.name===name))return;k++;d.areas.push({id:'AR'+String(k).padStart(3,'0'),subject:sj,name,book})}));
+  try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}
   return d;
 }
 let S=load();
@@ -325,7 +333,7 @@ function load(){
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seedEx){d.seedEx=true;d.settings.excusedThrough='2026-11-22';try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-  return clearQuestionData(d,KEY);
+  return seedAreas(clearQuestionData(d,KEY));
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
 
@@ -2021,39 +2029,56 @@ function revisit(id){const b=S.backlog.find(x=>x.id===id);b.attempts++;b.revisit
 function resolveBL(id){const b=S.backlog.find(x=>x.id===id);b.status='Resolved';b.resolved=today();save();vBacklog()}
 function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x.id!==id);save();vBacklog()}}
 /* ---------- WEEK TOPICS: what to cover each week (S.weekTopics, week = the Monday date) ---------- */
-let wkSel=null,editWT=null;
-const WT_ST=['Planned','In Progress','Done','Skipped'];
+let wkSel=null,editWT=null,wkF={cls:'',sub:''};
+const WT_ST=['Planned','In Progress','Done','Skipped'],WT_CLS=['Class 11','Class 12'];
 const wtSubj=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Other']:['Physics','Other'];
 const wtNewId=()=>'WT'+String((S.weekTopics||[]).reduce((m,b)=>Math.max(m,+String(b.id).slice(2)||0),0)+1).padStart(3,'0');
+const wtAreas=sj=>(S.areas||[]).filter(a=>a.subject===sj);
+function wtAreaFill(cur){
+  const sj=document.getElementById('wsu').value,el=document.getElementById('war'),keep=cur==null?el.value:cur;
+  el.innerHTML='<option value="">(no area)</option>'+wtAreas(sj).map(a=>`<option ${a.name===keep?'selected':''}>${esc(a.name)}</option>`).join('');
+}
 function vWeeks(){
-  if(!Array.isArray(S.weekTopics))S.weekTopics=[];
-  const T=S.weekTopics,wk=wkSel||mon(today()),L=T.filter(x=>x.week===wk),e0=editWT?T.find(x=>x.id===editWT)||{}:{};
-  const done=L.filter(x=>x.status==='Done').length,SJ=wtSubj();
-  const groups=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
-  const stc=s=>s==='Done'?'ok':s==='In Progress'?'warn':s==='Skipped'?'bad':'';
-  const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
-  const weeks=[...new Set(T.map(x=>x.week))].sort().reverse();
+  if(!Array.isArray(S.weekTopics))S.weekTopics=[];if(!Array.isArray(S.areas))S.areas=[];
+  const T=S.weekTopics,wk=wkSel||mon(today()),SJ=wtSubj(),cl=x=>x.cls||'Class 11';
+  const L=T.filter(x=>x.week===wk&&(!wkF.cls||cl(x)===wkF.cls)&&(!wkF.sub||x.subject===wkF.sub)),e0=editWT?T.find(x=>x.id===editWT)||{}:{};
+  const done=L.filter(x=>x.status==='Done').length;
+  const sel=(id,opts,cur,ex='')=>`<select id="${id}" ${ex}>${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  const chip=(k,v,l)=>`<button class="btn s ${wkF[k]===v?'ok':'alt'}" onclick="wkF.${k}='${v}';vWeeks()">${l}</button>`;
+  const groups=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(sj=>L.some(x=>x.subject===sj));
+  const weeks=[...new Set(T.map(x=>x.week))].sort().reverse(),eSub=e0.subject||wkF.sub||SJ[0];
+  const grp=sj=>{const A=L.filter(x=>x.subject===sj),names=[...new Set([...wtAreas(sj).map(a=>a.name),...A.map(x=>x.area||'')])].filter(n=>A.some(x=>(x.area||'')===n));
+    return `<div class="card"><h3 style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)}</h3>`+names.map(n=>{const R=A.filter(x=>(x.area||'')===n),bk=((S.areas||[]).find(a=>a.subject===sj&&a.name===n)||{}).book;
+      return `<div style="margin:10px 0 4px"><b>${esc(n||'No area')}</b>${bk?` <span class="sub">· \u{1F4D6} ${esc(bk)}</span>`:''}</div><div class="tw"><table><tr><th>Topic</th><th>Status</th><th></th></tr>${R.map(x=>`<tr><td><b>${esc(x.topic)}</b><div class="sub">${esc(cl(x))}${x.book?' · \u{1F4D6} '+esc(x.book):''}${x.notes?' · '+esc(x.notes):''}</div></td>
+      <td><select onchange="wtStatus('${x.id}',this.value)">${WT_ST.map(o=>`<option ${o===x.status?'selected':''}>${o}</option>`).join('')}</select></td>
+      <td style="white-space:nowrap"><button class="btn s alt" onclick="editWT='${x.id}';vWeeks();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="wtDup('${x.id}',0)">Duplicate</button> <button class="btn s alt" onclick="wtDup('${x.id}',7)">Copy to next week</button> <button class="btn s bad" onclick="wtDel('${x.id}')">×</button></td></tr>`).join('')}</table></div>`}).join('')+'</div>'};
+  const stat=(sj,n)=>{const a=T.filter(x=>x.subject===sj&&(x.area||'')===n);return a.length?`${a.length} topic${a.length===1?'':'s'} · ${a.filter(x=>x.status==='Done').length} done`:'none yet'};
   $('#app').innerHTML=`<h2>Week Topics</h2>
-  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week. You can also ask DXA AI: "add Rotation and Gauss law to this week", "duplicate this week's topics to next week", "mark all Physics topics done", "delete everything in the week of 16 Nov".</div>
+  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week, by class, subject and area (Coordinate Geometry, Mechanics, Organic Chemistry...), with the book for each area. You can also ask DXA AI: "add Circle under Coordinate Geometry for Class 11 this week", "set the book for Calculus to Cengage", "duplicate this week's topics to next week", "delete everything in the week of 16 Nov".</div>
   <div class="card"><div class="tools noprint"><button class="btn s alt" onclick="wkGo(-7)">‹ Previous week</button> <b style="padding:0 8px">${fmtS(wk)} – ${fmtS(addD(wk,6))}${wk===mon(today())?' (this week)':''}</b> <button class="btn s alt" onclick="wkGo(7)">Next week ›</button>
    <button class="btn s alt" onclick="wkSel=null;vWeeks()">This week</button> <input type="date" value="${wk}" onchange="if(this.value){wkSel=mon(this.value);vWeeks()}" style="width:150px;padding:4px"></div>
-   <div class="sub" style="margin-top:8px">${L.length?`${done} of ${L.length} done`:'No topics planned for this week yet.'}</div><div class="bar"><i style="width:${L.length?done/L.length*100:0}%"></i></div></div>
+   <div style="margin-top:10px"><span class="sub">Class:</span> ${chip('cls','','All')} ${WT_CLS.map(c=>chip('cls',c,c)).join(' ')}</div>
+   <div style="margin-top:6px"><span class="sub">Subject:</span> ${chip('sub','','All')} ${SJ.map(c=>chip('sub',c,c)).join(' ')}</div>
+   <div class="sub" style="margin-top:8px">${L.length?`${done} of ${L.length} done`:'No topics for this week with these filters.'}</div><div class="bar"><i style="width:${L.length?done/L.length*100:0}%"></i></div></div>
   <div class="card"><h3>${editWT?'Edit topic':'Add a topic'}</h3><form onsubmit="saveWT(event)">
-   <div class="row"><div><label>Subject</label>${sel('wsu',SJ,e0.subject)}</div><div style="grid-column:span 2"><label>Topic</label><input id="wto" required value="${esc(e0.topic||'')}" placeholder="e.g. Rotational motion"></div>
-    <div><label>Status</label>${sel('wst',WT_ST,e0.status)}</div></div>
-   <div class="row"><div><label>Week (any date in the week)</label><input id="wwk" type="date" required value="${e0.week||wk}"></div><div style="grid-column:span 3"><label>Notes (optional)</label><input id="wno" value="${esc(e0.notes||'')}"></div></div>
+   <div class="row"><div><label>Class</label>${sel('wcl',WT_CLS,e0.cls||wkF.cls||'Class 11')}</div><div><label>Subject</label>${sel('wsu',SJ,eSub,'onchange="wtAreaFill(\'\')"')}</div>
+    <div><label>Area</label><select id="war"><option value="">(no area)</option>${wtAreas(eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Status</label>${sel('wst',WT_ST,e0.status)}</div></div>
+   <div class="row"><div style="grid-column:span 2"><label>Topic</label><input id="wto" required value="${esc(e0.topic||'')}" placeholder="e.g. Circle: tangents and normals"></div><div><label>Book (blank = the area's book)</label><input id="wbk" value="${esc(e0.book||'')}"></div>
+    <div><label>Week (any date in the week)</label><input id="wwk" type="date" required value="${e0.week||wk}"></div></div>
+   <div class="row"><div style="grid-column:span 4"><label>Notes (optional)</label><input id="wno" value="${esc(e0.notes||'')}"></div></div>
    <button class="btn ok">${editWT?'Update':'Add topic'}</button> ${editWT?'<button type="button" class="btn alt" onclick="editWT=null;vWeeks()">Cancel</button>':''}</form></div>
-  ${groups.map(s=>`<div class="card"><h3 style="color:${SUBJ_COL[s]||INK()}">${esc(s)}</h3><div class="tw"><table><tr><th>Topic</th><th>Status</th><th></th></tr>${L.filter(x=>x.subject===s).map(x=>`<tr><td><b>${esc(x.topic)}</b>${x.notes?`<div class="sub">${esc(x.notes)}</div>`:''}</td>
-    <td><select onchange="wtStatus('${x.id}',this.value)">${WT_ST.map(o=>`<option ${o===x.status?'selected':''}>${o}</option>`).join('')}</select></td>
-    <td style="white-space:nowrap"><button class="btn s alt" onclick="editWT='${x.id}';vWeeks();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="wtDup('${x.id}',0)">Duplicate</button> <button class="btn s alt" onclick="wtDup('${x.id}',7)">Copy to next week</button> <button class="btn s bad" onclick="wtDel('${x.id}')">×</button></td></tr>`).join('')}</table></div></div>`).join('')}
-  ${L.length?`<div class="card"><h3>This week</h3><button class="btn s alt" onclick="wkCopy()">Copy all to next week</button> <button class="btn s bad" onclick="wkClear()">Delete all ${L.length} topics this week</button></div>`:''}
+  ${groups.map(grp).join('')}
+  ${L.length?`<div class="card"><h3>This week</h3><button class="btn s alt" onclick="wkCopy()">Copy all to next week</button> <button class="btn s bad" onclick="wkClear()">Delete all ${L.length} topics shown</button></div>`:''}
+  <div class="card"><h3>Areas and books</h3><div class="sub" style="margin-bottom:8px">Each area has its own book. Change the book, rename, add or remove areas here. Counts are across all weeks.</div>
+   ${SJ.filter(sj=>sj!=='Other').map(sj=>`<div style="margin:12px 0 4px"><b style="color:${SUBJ_COL[sj]||INK()}">${esc(sj)}</b></div><div class="tw"><table><tr><th>Area</th><th>Book</th><th>Progress</th><th></th></tr>${wtAreas(sj).map(a=>`<tr><td><b>${esc(a.name)}</b></td><td><input value="${esc(a.book||'')}" placeholder="Set the book" onchange="areaBookSet('${a.id}',this.value)" style="min-width:150px"></td><td class="sub">${stat(sj,a.name)}</td><td style="white-space:nowrap"><button class="btn s alt" onclick="areaRename('${a.id}')">Rename</button> <button class="btn s bad" onclick="areaDel('${a.id}')">×</button></td></tr>`).join('')||'<tr><td colspan=4 class="sub">No areas yet.</td></tr>'}</table></div>`).join('')}
+   <form onsubmit="areaAdd(event)" style="margin-top:12px"><div class="row"><div><label>Subject</label>${sel('asu',SJ.filter(sj=>sj!=='Other'),SJ[0])}</div><div><label>New area name</label><input id="anm" required placeholder="e.g. Thermodynamics"></div><div><label>Book</label><input id="abk"></div></div><button class="btn ok">Add area</button></form></div>
   ${weeks.length?`<div class="card"><h3>All weeks</h3><div class="tw"><table><tr><th>Week</th><th>Topics</th><th>Done</th></tr>${weeks.map(w=>{const a=T.filter(x=>x.week===w);return `<tr><td><a href="#" onclick="wkSel='${w}';vWeeks();scrollTo(0,0);return false">${fmtS(w)} – ${fmtS(addD(w,6))}</a></td><td>${a.length}</td><td>${a.filter(x=>x.status==='Done').length}</td></tr>`}).join('')}</table></div></div>`:''}`;
 }
 function wkGo(d){wkSel=addD(wkSel||mon(today()),d);vWeeks()}
 function saveWT(e){
   e.preventDefault();if(!Array.isArray(S.weekTopics))S.weekTopics=[];
   const old=editWT?S.weekTopics.find(x=>x.id===editWT):null;
-  const o={id:old?old.id:wtNewId(),week:mon(v('wwk')),subject:v('wsu'),topic:v('wto').trim(),status:v('wst'),notes:v('wno').trim()};
+  const o={id:old?old.id:wtNewId(),week:mon(v('wwk')),cls:v('wcl'),subject:v('wsu'),area:v('war'),topic:v('wto').trim(),book:v('wbk').trim(),status:v('wst'),notes:v('wno').trim()};
   if(!o.topic)return;
   if(old)Object.assign(old,o);else S.weekTopics.push(o);
   wkSel=o.week;editWT=null;save();vWeeks();
@@ -2063,6 +2088,11 @@ function wtDup(id,days){const x=S.weekTopics.find(t=>t.id===id);if(!x)return;S.w
 function wtDel(id){const x=S.weekTopics.find(t=>t.id===id);if(x&&confirm('Delete "'+x.topic+'"?')){S.weekTopics=S.weekTopics.filter(t=>t.id!==id);save();vWeeks()}}
 function wkCopy(){const wk=wkSel||mon(today());S.weekTopics.filter(x=>x.week===wk).forEach(x=>S.weekTopics.push({...x,id:wtNewId(),week:addD(wk,7),status:'Planned'}));save();wkSel=addD(wk,7);vWeeks()}
 function wkClear(){const wk=wkSel||mon(today()),n=S.weekTopics.filter(x=>x.week===wk).length;if(n&&confirm('Delete all '+n+' topics for this week?')){S.weekTopics=S.weekTopics.filter(x=>x.week!==wk);save();vWeeks()}}
+const areaNewId=()=>'AR'+String((S.areas||[]).reduce((m,a)=>Math.max(m,+String(a.id).slice(2)||0),0)+1).padStart(3,'0');
+function areaBookSet(id,val){const a=S.areas.find(x=>x.id===id);if(a){a.book=val.trim();save();vWeeks()}}
+function areaAdd(e){e.preventDefault();const sj=v('asu'),nm=v('anm').trim();if(!nm)return;if(S.areas.some(a=>a.subject===sj&&a.name.toLowerCase()===nm.toLowerCase()))return alert('That area already exists.');S.areas.push({id:areaNewId(),subject:sj,name:nm,book:v('abk').trim()});save();vWeeks()}
+function areaRename(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const nm=(prompt('New name for this area:',a.name)||'').trim();if(!nm||nm===a.name)return;S.weekTopics.forEach(x=>{if(x.subject===a.subject&&x.area===a.name)x.area=nm});a.name=nm;save();vWeeks()}
+function areaDel(id){const a=S.areas.find(x=>x.id===id);if(!a)return;const n=S.weekTopics.filter(x=>x.subject===a.subject&&x.area===a.name).length;if(confirm('Remove the area "'+a.name+'"?'+(n?' Its '+n+' topic(s) are kept but will show as "No area".':''))){S.areas=S.areas.filter(x=>x.id!==id);save();vWeeks()}}
 
 /* ---------- ANALYTICS ---------- */
 function vAnalytics(){
