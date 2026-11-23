@@ -395,7 +395,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['Coach',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weeks:['Week Topics',vWeeks],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weeks:['Week Topics',vWeeks],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1355,14 +1355,14 @@ function coachHist(){
   d.innerHTML=old.length?`<h3 style="margin-top:16px">Saved chats <a href="#" class="sub" style="margin-left:8px;font-weight:400" onclick="go('chats');return false">See all history ›</a></h3>`+old.map(x=>`<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.title||'Chat')}</div><div class="sub">${new Date(x.ts).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} · ${x.msgs.filter(m=>m.role==='user').length} message(s)</div></div><button class="btn s alt" onclick="coachOpen(${x.id})">Open</button><button class="btn s bad" onclick="coachDel(${x.id})" aria-label="Delete">×</button></div>`).join(''):'';
 }
 chatsLoad();
-/* ---------- CHAT HISTORY page: every saved AI coach chat on this device ---------- */
+/* ---------- CHAT HISTORY page: every saved DXA AI chat on this device ---------- */
 let chView=null;
 const chDate=t=>new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const chAll=()=>CHATS.filter(x=>x.msgs.length).sort((a,b)=>b.ts-a.ts);
 function chRows(q){
   q=(q||'').trim().toLowerCase();
   const L=chAll().filter(c=>!q||(c.title||'').toLowerCase().includes(q)||c.msgs.some(m=>String(m.content||'').toLowerCase().includes(q)));
-  if(!L.length)return `<div class="sub" style="padding:10px 0">${q?'No chats match your search.':'No saved chats yet. Start one on the Coach page.'}</div>`;
+  if(!L.length)return `<div class="sub" style="padding:10px 0">${q?'No chats match your search.':'No saved chats yet. Start one on the DXA AI page.'}</div>`;
   return L.map(c=>{const last=[...c.msgs].reverse().find(m=>m.role==='assistant'&&!m.error),us=c.msgs.filter(m=>m.role==='user').length;
     return `<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:0;cursor:pointer" onclick="chOpen(${c.id})"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.title||'Chat')}</div>
       <div class="sub">${chDate(c.ts)} · ${us} message${us===1?'':'s'}${c.id===CHAT_ID?' · current':''}</div>${last?`<div class="sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(String(last.content).replace(/\s+/g,' ').slice(0,120))}</div>`:''}</div>
@@ -1372,11 +1372,11 @@ function vChats(){
   if(chView&&!CHATS.some(x=>x.id===chView&&x.msgs.length))chView=null;
   if(chView)return vChatOne(CHATS.find(x=>x.id===chView));
   const n=chAll().length;
-  $('#app').innerHTML=`<h2>Chat History</h2><div class="sub" style="margin-bottom:12px">Your conversations with the AI coach. They are saved on this device only (the latest 30 chats). Tap a chat to read it, continue it, or download it.</div>
+  $('#app').innerHTML=`<h2>Chat History</h2><div class="sub" style="margin-bottom:12px">Your conversations with DXA AI. They are saved on this device only (the latest 30 chats). Tap a chat to read it, continue it, or download it.</div>
   <div class="card"><div class="row"><div style="flex:1"><label for="chQ">Search all chats</label><input id="chQ" type="search" placeholder="Search words in any chat..." oninput="document.getElementById('chList').innerHTML=chRows(this.value)"></div></div>
    <div class="sub" style="margin-top:8px">${n} saved chat${n===1?'':'s'}</div><div id="chList">${chRows('')}</div>
    ${n?`<p style="margin-top:12px"><button class="btn s bad" onclick="chDelAll()">Delete all chats</button></p>`:''}</div>
-   <p><button class="btn" onclick="go('coach')">Go to the AI coach</button></p>`;
+   <p><button class="btn" onclick="go('coach')">Go to DXA AI</button></p>`;
 }
 function chBub(m){
   const acts=(m.actions||[]).map(a=>{
@@ -1402,14 +1402,14 @@ function chDel(id){
   chView=null;chatsSave();vChats();
 }
 function chDelAll(){
-  if(!confirm('Delete ALL saved AI coach chats on this device? This cannot be undone.'))return;
+  if(!confirm('Delete ALL saved DXA AI chats on this device? This cannot be undone.'))return;
   const n={id:Date.now(),title:'',ts:Date.now(),msgs:[]};CHATS=[n];CHAT_ID=n.id;COACH_CHAT=n.msgs;chView=null;chatsSave();vChats();
 }
 function chDownload(id){
   const c=CHATS.find(x=>x.id===id);if(!c)return;
-  const t='Abundx Apex AI coach chat\n'+(c.title||'Chat')+'\n'+chDate(c.ts)+'\n\n'+c.msgs.map(m=>(m.role==='user'?'You: ':'Coach: ')+m.content+((m.sources||[]).length?'\nSources: '+m.sources.map(s=>s.url).join(', '):'')).join('\n\n');
+  const t='Abundx Apex DXA AI chat\n'+(c.title||'Chat')+'\n'+chDate(c.ts)+'\n\n'+c.msgs.map(m=>(m.role==='user'?'You: ':'DXA AI: ')+m.content+((m.sources||[]).length?'\nSources: '+m.sources.map(s=>s.url).join(', '):'')).join('\n\n');
   const u=URL.createObjectURL(new Blob([t],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');
-  a.href=u;a.download='ai-coach-chat-'+new Date(c.ts).toISOString().slice(0,10)+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+  a.href=u;a.download='dxa-ai-chat-'+new Date(c.ts).toISOString().slice(0,10)+'.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
 }
 const b64buf=buf=>{let s='';const u=new Uint8Array(buf);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
 async function fileToAtt(f){
@@ -1707,7 +1707,7 @@ async function coachAI(q,att){
   const hist=COACH_CHAT.filter(m=>!m.error).map(m=>({role:m.role,content:m.content}));
   const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),today:today(),appData:dataDump(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
   const j=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
+  if(!r.ok)throw new Error(j.message||'DXA AI is not available right now.');
   return j;
 }
 function coachRule(q){
@@ -1731,14 +1731,14 @@ async function coachText(e){
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, can search the internet for current information, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>DXA AI</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, can search the internet for current information, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
-  <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
-  <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
+  <div class="card"><h3>What DXA AI sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
+  <div class="card"><h3>Ask DXA AI</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
    <div id="coachOut" style="margin-top:14px;margin-bottom:14px;line-height:1.7"></div>
-   <form id="coachForm" onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
+   <form id="coachForm" onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask DXA AI anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
    <div id="coachAtt"></div>${COACH_API?`<label class="sub" style="display:block;margin-top:8px;cursor:pointer"><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"> Apply the AI's changes without asking. You can still Undo each one. Changes are never applied automatically when a file is attached or the AI searched the web.</label>`:''}
    <div id="coachHist"></div></div>`;
   if(COACH_API){COACH_ATT=[];coachRender()}
@@ -2015,7 +2015,7 @@ function vWeeks(){
   const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
   const weeks=[...new Set(T.map(x=>x.week))].sort().reverse();
   $('#app').innerHTML=`<h2>Week Topics</h2>
-  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week. You can also ask the AI coach: "add Rotation and Gauss law to this week", "duplicate this week's topics to next week", "mark all Physics topics done", "delete everything in the week of 16 Nov".</div>
+  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week. You can also ask DXA AI: "add Rotation and Gauss law to this week", "duplicate this week's topics to next week", "mark all Physics topics done", "delete everything in the week of 16 Nov".</div>
   <div class="card"><div class="tools noprint"><button class="btn s alt" onclick="wkGo(-7)">‹ Previous week</button> <b style="padding:0 8px">${fmtS(wk)} – ${fmtS(addD(wk,6))}${wk===mon(today())?' (this week)':''}</b> <button class="btn s alt" onclick="wkGo(7)">Next week ›</button>
    <button class="btn s alt" onclick="wkSel=null;vWeeks()">This week</button> <input type="date" value="${wk}" onchange="if(this.value){wkSel=mon(this.value);vWeeks()}" style="width:150px;padding:4px"></div>
    <div class="sub" style="margin-top:8px">${L.length?`${done} of ${L.length} done`:'No topics planned for this week yet.'}</div><div class="bar"><i style="width:${L.length?done/L.length*100:0}%"></i></div></div>
