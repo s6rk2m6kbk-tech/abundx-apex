@@ -140,7 +140,7 @@ ul{padding-left:18px}li{margin-bottom:4px}
 </head>
 <body>
 <div id="nightBar"></div>
-<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><button id="hAv" type="button" onclick="photoPick()" title="Change your profile photo" aria-label="Change your profile photo"></button><input id="photoIn" type="file" accept="image/*" hidden onchange="photoSet(this.files[0]);this.value=''"><select id="profSel" onchange="setProfile(this.value)" title="Switch profile" aria-label="Switch profile"><option value="malik">Malik</option><option value="kartik">Kartik</option></select><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
+<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><button id="hAv" type="button" onclick="photoPick()" title="Change your profile photo" aria-label="Change your profile photo"></button><input id="photoIn" type="file" accept="image/*" hidden onchange="photoSet(this.files[0]);this.value=''"><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
 <nav id="nav"></nav>
 <main id="app"></main>
 
@@ -149,7 +149,6 @@ ul{padding-left:18px}li{margin-bottom:4px}
 const THEME_KEY='abundx_theme';
 let theme='dark';try{theme=localStorage.getItem(THEME_KEY)==='light'?'light':'dark'}catch(e){}
 document.documentElement.dataset.theme=theme;
-window.addEventListener('DOMContentLoaded',()=>{const s=document.getElementById('profSel');if(s)s.value=PROFILE});
 const INK=()=>theme==='light'?'#1a1c20':'#e8eaed';
 /* ---------- helpers ---------- */
 const pad=n=>String(n).padStart(2,'0');
@@ -172,10 +171,10 @@ const v=id=>document.getElementById(id).value;
 const n=id=>{const x=v(id);return x===''?null:Number(x)};
 
 /* ---------- state ---------- */
-const PROFILES={malik:{key:'jee2028_tracker_v1',name:'Malik'},kartik:{key:'jee2028_tracker_kartik_v1',name:'Kartik'}};
+const PROFILES={malik:{key:'jee2028_tracker_v1',name:'Malik'}};
 let PROFILE='malik';
+try{['jee2028_tracker_kartik_v1','abundx_photo_kartik','abundx_sync_kartik','abundx_chats_kartik','abundx_timer_kartik'].forEach(k=>localStorage.removeItem(k));if(localStorage.getItem('abundx_profile')!=='malik')localStorage.setItem('abundx_profile','malik')}catch(e){}
 try{const q=new URLSearchParams(location.search).get('p');if(q&&PROFILES[q])localStorage.setItem('abundx_profile',q);const sp=localStorage.getItem('abundx_profile');if(sp&&PROFILES[sp])PROFILE=sp}catch(e){}
-function setProfile(p){try{localStorage.setItem('abundx_profile',p)}catch(e){}const u=new URL(location.href);if(u.searchParams.has('p')){u.searchParams.delete('p');u.hash='';location.replace(u.href)}else{location.hash='dashboard';location.reload()}}
 /* Profile photo: resized on this device and kept only in this browser (never uploaded) */
 const PHOTO_KEY='abundx_photo_'+PROFILE;
 const photoGet=()=>{try{return localStorage.getItem(PHOTO_KEY)||''}catch(e){return ''}};
@@ -221,19 +220,6 @@ const mkTest=(n,date,chem,phy,math)=>({id:'T'+n,date,num:n,type:'Class test T-'+
 const TESTS_SEED=[mkTest(1,'2026-07-04',52,36,32),mkTest(2,'2026-07-18',68,44,64),mkTest(3,'2026-07-25',76,64,80),mkTest(4,'2026-08-01',64,64,16)];
 const MOCK_OCT2={...mkTest(6,'2026-10-02',76,68,52),id:'M20261002',type:'Arjuna Classes 11 JEE PCM (90 Q)',total:90,notes:'OMR sheet, roll 2127. Subject marks: Physics 68, Chemistry 76, Math 52. Total 196.'};
 const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna Classes 11th JEE (75 Q, 3 h)',total:75,notes:'Paper dated 24.10.2026: 75 Q (25 per subject), +4 / -1 marking. Subject marks Physics 72, Chemistry 60, Math 16. Total 148.'};
-/* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
-const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
-  phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
-  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],timeline:[],memory:[],goals:[],recovery:[],days:{}});
-const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
-  type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
-const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
-function loadK(){
-  let d=DEFK();
-  try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
-  if(!d.seedK){d.seedK=true;KARTIK_MOCKS.forEach(m=>{if(!d.mocks.some(x=>x.id===m.id))d.mocks.push(m)});try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
-  return weakMig(seedAreas(clearQuestionData(d,KEY)));
-}
 /* One-time clear of all question counts (23 Nov 2026). A backup of the old numbers is kept on this device. */
 function clearQuestionData(d,K){
   if(d.clearQ1)return d;d.clearQ1=true;
@@ -264,9 +250,9 @@ function weakMig(d){
 }
 let S=load();
 function load(){
-  if(PROFILE!=='malik')return loadK();
   let d=DEF();
   try{const o=JSON.parse(localStorage.getItem(KEY));if(o)d={...d,...o,settings:{...d.settings,...o.settings}}}catch(e){}
+  (d.mocks||[]).forEach(m=>{if(m.notes)m.notes=m.notes.replace(/Kartik Bharadwaj/g,'another classmate')});
   if((d.settings.resV||0)<2){d.settings.resources=DEF().settings.resources;d.settings.resV=2;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if((d.settings.resV||0)<3){const c=d.settings.resources.Chemistry;if(!c.some(b=>b.name==='Pradeep'))c.push({name:'Pradeep',note:''});d.settings.resV=3;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if((d.settings.resV||0)<4){const R=d.settings.resources,add=(sub,n,note)=>{if(!R[sub].some(b=>b.name===n))R[sub].push({name:n,note})};
@@ -318,7 +304,7 @@ function load(){
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seedWT3){d.seedWT3=true;const w=d.mocks.find(x=>x.id==='M20261024');
     if(w&&w.students===18){w.students=17;w.percentile=47;w.lo=108;w.av=154.5;
-      w.notes=(w.notes||'').replace(/ Class result sheet \(24\/10\/2026\):.*$/,'')+' Class result sheet (24/10/2026): 7 absent. Removed from the list: two rows with a total above the 300-mark maximum (420 and 356), Kartik Bharadwaj (52) and Hitashi (absent), leaving 17 students. Rank 9 of 17 on raw marks (148; tied with one classmate). Class highest 232, lowest 108, average 154.5.'}
+      w.notes=(w.notes||'').replace(/ Class result sheet \(24\/10\/2026\):.*$/,'')+' Class result sheet (24/10/2026): 7 absent. Removed from the list: two rows with a total above the 300-mark maximum (420 and 356), another classmate (52) and Hitashi (absent), leaving 17 students. Rank 9 of 17 on raw marks (148; tied with one classmate). Class highest 232, lowest 108, average 154.5.'}
     try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   if(!d.seedT6){d.seedT6=true;const w=d.mocks.find(x=>x.id==='M20261024');
     if(w&&w.students===17){w.students=16;w.percentile=44;w.av=154.94;
@@ -432,7 +418,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],sync:['Sign in',vSyncGo],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],doubts:['Doubts',vDoubts],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],sync:['Sign in',vSyncGo],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],doubts:['Doubts',vDoubts],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1249,28 +1235,6 @@ function vResources(){
   <h3>Source mix by phase</h3><div class="card"><div class="tw"><table><tr><th>Phase</th><th>Dates</th><th>Claude</th><th>Core books</th><th>PYQ book</th></tr>${S.settings.phases.map(p=>`<tr><td><b>${esc(p.name)}</b><div class="sub">${esc(p.focus)}</div></td><td>${fmtS(p.start)} - ${fmtS(p.end)}</td><td>${p.mix[0]}%</td><td>${p.mix[1]}%</td><td>${p.mix[2]}%</td></tr>`).join('')}</table></div></div>
   <h3>Volume targets</h3><div class="card"><ul><li>${S.settings.weeklyMin}-${S.settings.weeklyMax} questions per week</li><li>115-135 Claude questions per day</li><li>About 50,000-55,000 questions over the plan</li><li>Sunday: mock test (100 Q) plus review</li></ul></div>`;
 }
-/* ---------- PROFILES: classmates who agreed to share their marks (public page) ---------- */
-const FRIENDS=[{id:'kartik',name:'Kartik',batch:'Arjuna Classes, 11th JEE 2028',subjects:['Physics'],
-  note:'Classmate. Studies Physics only at Arjuna Classes, so Chemistry and Maths show 0 on the class sheets.',
-  tests:[{date:'2026-10-24',phy:52},{date:'2026-10-31',phy:null},{date:'2026-11-13',phy:65}]}];
-function vProfiles(){
-  const ms=mocks(),mine=d=>ms.find(m=>m.phy!=null&&Math.abs(diff(m.date,d))<=1);
-  $('#app').innerHTML=`<h2>Profiles</h2><div class="sub" style="margin-bottom:12px">Classmates who agreed to share their marks. Physics is out of 100 (25 Q).</div>`+FRIENDS.map(f=>{
-    const t=f.tests.filter(x=>x.phy!=null),last=t[t.length-1],prev=t[t.length-2],best=Math.max(...t.map(x=>x.phy)),av=t.length?sum(t.map(x=>x.phy))/t.length:null;
-    const rows=f.tests.map(x=>{const m=mine(x.date),me=m?m.phy:null,d=x.phy!=null&&me!=null?me-x.phy:null;
-      return `<tr><td>${fmtS(x.date)}</td><td>${me==null?'-':me}</td><td>${x.phy==null?'<span class="sub">absent</span>':x.phy}</td><td>${d==null?'-':`<span class="${d>=0?'ok':'bad'}">${d>0?'+':''}${d}</span>`}</td></tr>`}).join('');
-    return `<div class="card" style="border-top:4px solid ${SUBJ_COL.Physics||INK()}"><h3>${esc(f.name)}</h3>
-      <div class="sub">${esc(f.batch)} &middot; Subjects: <b>${f.subjects.join(', ')}</b></div><div class="sub" style="margin-top:4px">${esc(f.note)}</div>
-      <div class="grid" style="margin-top:12px"><div class="card"><div class="sub">Latest Physics</div><div class="big">${last?last.phy:'-'}</div><div class="sub">${last?fmtS(last.date):''}${prev?` &middot; ${last.phy-prev.phy>=0?'+':''}${last.phy-prev.phy} vs ${fmtS(prev.date)}`:''}</div></div>
-      <div class="card"><div class="sub">Best Physics</div><div class="big">${t.length?best:'-'}</div></div>
-      <div class="card"><div class="sub">Average (${t.length} tests)</div><div class="big">${av==null?'-':r1(av)}</div></div></div>
-      <h3 style="margin-top:14px">Physics: me vs ${esc(f.name)}</h3>${sc('pf_'+f.id,280)}
-      <div class="tw" style="margin-top:10px"><table><tr><th>Test</th><th>Me (Physics)</th><th>${esc(f.name)} (Physics)</th><th>Me minus ${esc(f.name)}</th></tr>${rows}</table></div></div>`}).join('');
-  FRIENDS.forEach(f=>{const t=f.tests.filter(x=>x.phy!=null);if(!t.length)return;
-    stock('pf_'+f.id,{multi:true,dec:0,zero:true,series:[
-      {name:'Me (Physics)',color:'var(--blue)',pts:t.map(x=>{const m=mine(x.date);return m?{t:tms(x.date),y:m.phy}:null}).filter(Boolean)},
-      {name:f.name+' (Physics)',color:'var(--warn)',pts:t.map(x=>({t:tms(x.date),y:x.phy}))}]})});
-}
 function resToggle(){if(resEdit)save();resEdit=!resEdit;vResources()}
 function resAdd(sub){S.settings.resources[sub].push({name:'',note:'',cat:'core'});vResources()}
 function resDel(sub,i){S.settings.resources[sub].splice(i,1);vResources()}
@@ -1671,7 +1635,7 @@ function opsApply(ops){
 }
 function viewErrs(){
   window.__VE=true;const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','doubts','commit','goals','workload','reality','recovery','timeline','memory','prod','calc','analytics','compare','reports','settings']){
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','doubts','commit','goals','workload','reality','recovery','timeline','memory','prod','calc','analytics','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
@@ -1929,70 +1893,6 @@ function vCoach(){
    <div id="coachAtt"></div>${COACH_API?`<label class="sub" style="display:block;margin-top:8px;cursor:pointer"><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"> Apply the AI's changes without asking. You can still Undo each one. Changes are never applied automatically when a file is attached or the AI searched the web.</label>`:''}
    <div id="coachHist"></div></div>`;
   if(COACH_API){COACH_ATT=[];coachRender()}
-}
-/* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
-const OTHER=PROFILE==='malik'?'kartik':'malik';
-function otherData(){
-  try{const o=JSON.parse(localStorage.getItem(PROFILES[OTHER].key));if(o&&o.mocks)return o}catch(e){}
-  if(OTHER==='kartik'){const d=DEFK();KARTIK_MOCKS.forEach(m=>d.mocks.push(m));return d}
-  return null;
-}
-function profStats(D){
-  const ms=[...(D.mocks||[])].sort((a,b)=>a.date<b.date?-1:1),ph=ms.filter(m=>m.phy!=null),ls=Object.values(D.logs||{}),byW={};
-  ls.forEach(l=>{const k=mon(l.date);byW[k]=(byW[k]||0)+qTot(l)});
-  Object.entries(D.weekQ||{}).forEach(([k,v])=>{byW[k]=Math.max(byW[k]||0,v)});
-  const q=sum(Object.values(byW)),lq=sum(ls.map(qTot)),wks=Object.keys(byW).length,bl=D.backlog||[],P=ph.map(m=>m.phy);
-  return {ms,ph,q,wks,perWeek:wks?q/wks:null,days:ls.length,acc:wAcc(ls),
-    sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy).filter(x=>x!=null)),
-    open:bl.filter(b=>b.status!=='Resolved').length,done:bl.filter(b=>b.status==='Resolved').length,
-    pAvg:avg(P),pBest:P.length?Math.max(...P):null,pLast:P.length?P[P.length-1]:null,pFirst:P.length?P[0]:null,start:D.settings&&D.settings.start,
-    tAvg:ms.length?avg(ms.map(m=>m.marks)):null};
-}
-function vCompare(){
-  const OD=otherData(),me=PROFILES[PROFILE].name,ot=PROFILES[OTHER].name;
-  if(!OD){$('#app').innerHTML=`<h2>Compare</h2><div class="card"><div class="sub">No saved data for ${ot} in this browser yet. Open the profile menu at the top, switch to ${ot}, then come back.</div></div>`;return}
-  const A=profStats(S),B=profStats(OD),nm=x=>x==null?'—':r1(x),ni=x=>x==null?'—':Math.round(x).toLocaleString('en-IN');
-  const rows=[
-   ['Subjects',PROFILE==='malik'?'Physics, Chemistry, Maths':'Physics',OTHER==='malik'?'Physics, Chemistry, Maths':'Physics'],
-   ['Plan started',A.start?fmt(A.start):'—',B.start?fmt(B.start):'—'],
-   ['Tests with Physics marks',A.ph.length,B.ph.length,1,'hi'],
-   ['Physics average (/100)',nm(A.pAvg),nm(B.pAvg),A.pAvg==null||B.pAvg==null?0:A.pAvg-B.pAvg,'hi'],
-   ['Physics best',A.pBest??'—',B.pBest??'—',A.pBest==null||B.pBest==null?0:A.pBest-B.pBest,'hi'],
-   ['Physics latest',A.pLast??'—',B.pLast??'—',A.pLast==null||B.pLast==null?0:A.pLast-B.pLast,'hi'],
-   ['Physics change, first to latest',A.pFirst==null?'—':(A.pLast-A.pFirst>=0?'+':'')+(A.pLast-A.pFirst),B.pFirst==null?'—':(B.pLast-B.pFirst>=0?'+':'')+(B.pLast-B.pFirst),A.pFirst==null||B.pFirst==null?0:(A.pLast-A.pFirst)-(B.pLast-B.pFirst),'hi'],
-   ['Overall marks average',A.tAvg==null?'—':nm(A.tAvg)+(PROFILE==='malik'?' / 300':' / 100'),B.tAvg==null?'—':nm(B.tAvg)+(OTHER==='malik'?' / 300':' / 100')],
-   ['Questions logged',ni(A.q),ni(B.q),A.q-B.q,'hi'],
-   ['Average per week',ni(A.perWeek),ni(B.perWeek),A.perWeek==null||B.perWeek==null?0:A.perWeek-B.perWeek,'hi'],
-   ['Days with a log',A.days,B.days,A.days-B.days,'hi'],
-   ['Accuracy',A.acc==null?'—':nm(A.acc)+'%',B.acc==null?'—':nm(B.acc)+'%',A.acc==null||B.acc==null?0:A.acc-B.acc,'hi'],
-   ['Average sleep',A.sleep==null?'—':nm(A.sleep)+' h',B.sleep==null?'—':nm(B.sleep)+' h'],
-   ['Average energy (1–10)',nm(A.energy),nm(B.energy)],
-   ['Backlog items open',A.open,B.open,B.open-A.open,'hi'],
-   ['Backlog items resolved',A.done,B.done,A.done-B.done,'hi']];
-  const td=(v,d,side)=>{const win=d&&(side==='a'?d>0:d<0);return `<td style="${win?'font-weight:700;color:var(--ok)':''}">${v}</td>`};
-  // head to head on Physics: other's tests (plus absences from the class sheets) matched to my test on the same or next/previous day
-  const otherTests=[...B.ph.map(m=>({date:m.date,phy:m.phy}))];
-  if(OTHER==='kartik')FRIENDS[0].tests.forEach(t=>{if(t.phy==null&&!otherTests.some(x=>Math.abs(diff(x.date,t.date))<=1))otherTests.push({date:t.date,phy:null})});
-  otherTests.sort((a,b)=>a.date<b.date?-1:1);
-  const h2h=otherTests.map(t=>{const m=A.ph.find(x=>Math.abs(diff(x.date,t.date))<=1);return {date:t.date,a:m?m.phy:null,b:t.phy}});
-  const both=h2h.filter(x=>x.a!=null&&x.b!=null),wa=both.filter(x=>x.a>x.b).length,wb=both.filter(x=>x.b>x.a).length,ties=both.length-wa-wb;
-  const gap=both.length?avg(both.map(x=>x.a-x.b)):null;
-  if(both.length)rows.splice(4,0,['Physics average, same tests only',nm(avg(both.map(x=>x.a))),nm(avg(both.map(x=>x.b))),avg(both.map(x=>x.a))-avg(both.map(x=>x.b)),'hi']);
-  const tile=(l,v,s)=>`<div class="card"><div class="sub">${l}</div><div class="big">${v}</div><div class="sub">${s}</div></div>`;
-  $('#app').innerHTML=`<h2>Compare: ${esc(me)} vs ${esc(ot)}</h2><div class="sub" style="margin-bottom:12px">Everything we can compare side by side. Kartik studies Physics only, so Physics is the main comparison. Figures come from the data saved in this browser.</div>
-  <div class="grid">${tile('Head to head (Physics)',`${wa} - ${wb}`,both.length?`${esc(me)} ${wa} win${wa==1?'':'s'}, ${esc(ot)} ${wb} win${wb==1?'':'s'}${ties?`, ${ties} tie${ties==1?'':'s'}`:''} in ${both.length} test${both.length==1?'':'s'}`:'No test taken by both yet')}
-   ${tile('Average Physics gap',gap==null?'—':(gap>=0?'+':'')+r1(gap),gap==null?'On tests both took':(gap>=0?`${esc(me)} ahead on average`:`${esc(ot)} ahead on average`)+', on tests both took')}
-   ${tile('Questions logged',`${ni(A.q)} / ${ni(B.q)}`,`${esc(me)} / ${esc(ot)}`)}</div>
-  <div class="card"><h3>Physics marks over time</h3>${sc('cmp1',300)}</div>
-  <div class="card"><h3>Side by side</h3><div class="tw"><table><tr><th></th><th>${esc(me)}</th><th>${esc(ot)}</th></tr>
-   ${rows.map(r=>`<tr><td>${r[0]}</td>${td(r[1],r[3],'a')}${td(r[2],r[3],'b')}</tr>`).join('')}</table></div><div class="sub" style="margin-top:8px">Green marks the better figure. Where one side has no data, nothing is highlighted.</div></div>
-  <div class="card"><h3>Test by test (Physics, out of 100)</h3><div class="tw"><table><tr><th>Date</th><th>${esc(me)}</th><th>${esc(ot)}</th><th>${esc(me)} minus ${esc(ot)}</th></tr>
-   ${h2h.map(x=>{const d=x.a!=null&&x.b!=null?x.a-x.b:null;return `<tr><td>${fmt(x.date)}</td><td>${x.a??'—'}</td><td>${x.b==null?'<span class="sub">absent</span>':x.b}</td><td>${d==null?'—':`<span class="${d>=0?'ok':'bad'}">${d>0?'+':''}${d}</span>`}</td></tr>`}).join('')||'<tr><td colspan=4 class="sub">No tests yet.</td></tr>'}</table></div></div>
-  <div class="card"><div class="sub">The data for each person lives in the browser where it was entered. To add ${esc(ot)}'s daily logs, backlog or new tests, switch to ${esc(ot)} in the profile menu at the top and enter them there. They then show up here on this browser.</div></div>`;
-  const pts=(arr)=>arr.map(m=>({t:tms(m.date),y:m.phy}));
-  const sa=pts(A.ph),sb=pts(B.ph);
-  if(sa.length&&sb.length)stock('cmp1',{multi:true,dec:0,zero:true,series:[{name:me+' (Physics)',color:'var(--blue)',pts:sa},{name:ot+' (Physics)',color:'var(--warn)',pts:sb}]});
-  else if(sa.length||sb.length)stock('cmp1',{multi:true,dec:0,zero:true,series:[{name:(sa.length?me:ot)+' (Physics)',color:'var(--blue)',pts:sa.length?sa:sb}]});
 }
 /* ---------- QUESTION CALCULATOR ---------- */
 const QPLAN_GOAL=50000;
