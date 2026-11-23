@@ -2310,8 +2310,8 @@ function tlDerive(){
   return E;
 }
 function tlSync(){
-  if(!Array.isArray(S.timeline))S.timeline=[];const have=new Set(S.timeline.map(e=>e.key).filter(Boolean));let n=S.timeline.reduce((m,e)=>Math.max(m,+String(e.id).slice(2)||0),0),add=0;
-  tlDerive().forEach(e=>{if(have.has(e.key))return;n++;add++;S.timeline.push({id:'TL'+String(n).padStart(4,'0'),...e,verified:true,evidence:'',corrections:[],created:new Date().toISOString()})});
+  if(!Array.isArray(S.timeline))S.timeline=[];if(!Array.isArray(S.tlSeen))S.tlSeen=[];const have=new Set([...S.timeline.map(e=>e.key),...S.tlSeen].filter(Boolean));let n=S.timeline.reduce((m,e)=>Math.max(m,+String(e.id).slice(2)||0),0),add=0;
+  tlDerive().forEach(e=>{if(have.has(e.key))return;n++;add++;S.tlSeen.push(e.key);S.timeline.push({id:'TL'+String(n).padStart(4,'0'),...e,verified:true,evidence:'',corrections:[],created:new Date().toISOString()})});
   if(add&&!window.__VE)save();return add;
 }
 const tlAll=()=>(Array.isArray(S.timeline)?S.timeline:[]).filter(e=>!e.retracted);
