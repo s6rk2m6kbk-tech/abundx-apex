@@ -439,6 +439,7 @@ function render(){
   $('#nav').innerHTML=Object.entries(VIEWS).map(([k,[l]])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}${k==='commit'?cmBadge():''}</button>`).join('');
   Object.values(CH).forEach(c=>c.destroy());CH={};
   $('#app').innerHTML='';VIEWS[view][1]();window.scrollTo(0,0);
+  try{syncBanner()}catch(e){}
 }
 function toggleTheme(){
   theme=theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;
@@ -1485,9 +1486,14 @@ function syncCard(){
      <p style="margin-top:10px"><button class="btn s ok" onclick="syncNow(true).then(vChats)">Sync now</button> <button class="btn s alt" onclick="syncOff()">Turn off on this device</button> <button class="btn s bad" onclick="syncWipe()">Delete the cloud copy</button></p>`
     :`<div class="sub" style="margin-bottom:10px">Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
      <button class="btn ok" onclick="syncOn()">Turn on sync (make a code)</button>
-     <div class="row" style="margin-top:12px"><div style="grid-column:span 3"><label for="syncCode">Already have a code from another device?</label><input id="syncCode" placeholder="ABCDE-FGHJK-MNPQR-STUVW" autocomplete="off"></div><div style="align-self:end"><button class="btn alt" onclick="syncJoin()">I have a code</button></div></div>`}</div>`;
+     <div class="row" style="margin-top:12px"><div style="grid-column:span 3"><label for="syncCode">Already have a code from another device? (Or make your own: 16 or more letters and numbers that nobody can guess.)</label><input id="syncCode" placeholder="ABCDE-FGHJK-MNPQR-STUVW" autocomplete="off"></div><div style="align-self:end"><button class="btn alt" onclick="syncJoin()">I have a code</button></div></div>`}</div>`;
 }
 try{const _c=syncCfg();if(_c&&_c.dataReady)dsBase()}catch(e){}
+function syncBanner(){
+  if(!COACH_API||syncCfg()||view==='chats'||sessionStorage.getItem('abundx_nosync_'+PROFILE))return;
+  $('#app').insertAdjacentHTML('afterbegin',`<div class="card" id="syncBan" style="border-color:var(--warn)"><b>Sync is off.</b> <span class="sub">Right now everything you and DXA AI change is saved only on this device, so your other phones and computers will not see it. Turn on sync once and every change shows up on all your devices.</span><p style="margin-top:8px"><button class="btn s ok" onclick="syncBanOn()">Turn on sync</button> <button class="btn s alt" onclick="try{sessionStorage.setItem('abundx_nosync_'+PROFILE,'1')}catch(e){}document.getElementById('syncBan').remove()">Not now</button></p></div>`);
+}
+function syncBanOn(){view='chats';location.hash='chats';syncOn();render()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow()});
 setInterval(()=>{if(!document.hidden)syncNow()},60000);
 window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>syncNow(),800));
