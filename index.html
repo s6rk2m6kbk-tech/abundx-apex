@@ -1303,10 +1303,18 @@ function coachSummary(){
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
 async function coachAI(q){
-  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,facts:coachSummary()})});
+  const h={'content-type':'application/json'};let oc='';try{oc=localStorage.getItem('abundx_owner')||''}catch(e){}
+  if(oc&&PROFILE==='malik')h['x-owner-code']=oc;
+  const r=await fetch(COACH_API,{method:'POST',headers:h,body:JSON.stringify({question:q,facts:coachSummary()})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
   return j.answer;
+}
+function setOwnerCode(){
+  const c=prompt('Owner code (removes the daily question limit on this device). Leave blank to remove it.');
+  if(c===null)return;
+  try{c.trim()?localStorage.setItem('abundx_owner',c.trim()):localStorage.removeItem('abundx_owner')}catch(e){}
+  alert(c.trim()?'Owner code saved on this device':'Owner code removed');
 }
 function coachRule(q){
   const m=[['backlog',/backlog|topic|pending|overdue/],['week',/week|how many/],['weak',/weak|worst|lowest|subject/],['flat',/flat|stuck|plateau|improv|why/],['track',/track|target|goal|plan|behind|ahead|expected/],['today',/today|study|next|what should/]].find(([,r])=>r.test(q.toLowerCase()));
@@ -1330,7 +1338,8 @@ function vCoach(){
   <div class="card"><h3>What the coach sees</h3>${adv.map(a=>{const[tg,c]=tag(a[0]);return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${c};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${tg}</span> <b style="margin-left:8px">${esc(a[1])}</b><div class="sub" style="margin-top:4px">${a[2]}</div></div>`}).join('')||'<div class="sub">Nothing to flag yet.</div>'}</div>
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
    <form onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="400" placeholder="e.g. what should I study today?"></div></form>
-   <div id="coachOut" style="margin-top:14px;line-height:1.7"></div></div>`;
+   <div id="coachOut" style="margin-top:14px;line-height:1.7"></div>
+   ${COACH_API&&PROFILE==='malik'?'<div style="margin-top:12px"><a href="#" class="sub" onclick="setOwnerCode();return false">Owner code</a></div>':''}</div>`;
 }
 /* ---------- COMPARE: current profile vs the other profile (both read from this browser's saved data) ---------- */
 const OTHER=PROFILE==='malik'?'kartik':'malik';
