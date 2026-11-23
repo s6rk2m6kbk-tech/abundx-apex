@@ -344,7 +344,7 @@ function load(){
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   return weakMig(seedAreas(clearQuestionData(d,KEY)));
 }
-function save(){try{commitSync();goalSync()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
+function save(){try{commitSync();goalSync()}catch(e){}try{dataStamp()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
 
 /* ---------- file storage (IndexedDB, for PDFs) ---------- */
 const FDB=new Promise((res,rej)=>{const r=indexedDB.open('jee_files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
@@ -1396,6 +1396,32 @@ function coachHist(){
 chatsLoad();
 /* ---------- Chat sync across devices (private code, merged by the cloud store) ---------- */
 const SYNC_KEY='abundx_sync_'+PROFILE;
+/* Tracker data sync: every top-level key of S has a timestamp in S._mod; the newest copy of each key wins. */
+const dsHash=v=>{const t=JSON.stringify(v===undefined?null:v);let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;return t.length+':'+h};
+let DS_H={};
+function dsBase(){DS_H={};Object.keys(S).forEach(k=>{if(k!=='_mod')DS_H[k]=dsHash(S[k])})}
+function dataStamp(){
+  const c=syncCfg();if(!c||!c.dataReady||window.__VE)return;
+  const mod=S._mod||(S._mod={}),now=Date.now();
+  Object.keys(S).forEach(k=>{if(k==='_mod')return;const h=dsHash(S[k]);if(DS_H[k]!==h){DS_H[k]=h;mod[k]=now}});
+}
+function dataPayload(c){
+  const first=!c.dataReady,sent=c.sent||{},mod=S._mod||{},push={},have={};
+  Object.keys(S).forEach(k=>{if(k==='_mod')return;const ts=mod[k]||0;have[k]=ts;if(first||ts>(sent[k]||0))push[k]={ts,v:S[k]}});
+  return {first,have,push};
+}
+function dataApply(c,d,pushed){
+  if(!d)return false;
+  const mod=S._mod||(S._mod={}),sent={...(c.sent||{})};let changed=[];
+  Object.keys(pushed||{}).forEach(k=>{sent[k]=pushed[k].ts});
+  Object.entries(d.stamped||{}).forEach(([k,ts])=>{mod[k]=ts;sent[k]=ts});
+  const pulls=Object.entries(d.pull||{});
+  if(pulls.length&&!c.dataReady){try{if(!localStorage.getItem('abundx_prejoin_'+PROFILE))localStorage.setItem('abundx_prejoin_'+PROFILE,localStorage.getItem(KEY)||'')}catch(e){}}
+  pulls.forEach(([k,p])=>{S[k]=p.v;mod[k]=p.ts;sent[k]=p.ts;changed.push(k)});
+  dsBase();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  syncSet({...(syncCfg()||c),sent,dataReady:true,dataAt:Date.now()});
+  return changed.length>0;
+}
 (()=>{const m=(location.hash||'').match(/^#join=([A-Za-z0-9-]{16,64})/);if(!m)return;
   try{localStorage.setItem(SYNC_KEY,JSON.stringify({code:m[1].toUpperCase(),since:Date.now()}))}catch(e){}
   view='chats';try{history.replaceState(null,'',location.pathname+'#chats')}catch(e){}})();
@@ -1407,11 +1433,12 @@ function syncSoon(){if(!syncCfg()||!COACH_API)return;clearTimeout(window._syncT)
 async function syncNow(manual){
   const c=syncCfg();if(!c||!c.code||!COACH_API||syncBusy)return;syncBusy=true;
   try{
-    chatsSave(true);
+    chatsSave(true);let dp=null;
     const trim=x=>({...x,msgs:x.msgs.slice(-60)});
-    const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'sync',code:c.code,profile:PROFILE,state:{chats:CHATS.filter(x=>x.msgs.length).map(trim),deleted:CHAT_DEL}})});
+    const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'sync',code:c.code,profile:PROFILE,state:{chats:CHATS.filter(x=>x.msgs.length).map(trim),deleted:CHAT_DEL},data:(dp=dataPayload(c))})});
     const j=await r.json().catch(()=>({}));
-    if(!r.ok){syncSet({...c,err:j.message||'Sync failed.',errAt:Date.now()});return}
+    if(!r.ok){syncSet({...(syncCfg()||c),err:j.message||'Sync failed.',errAt:Date.now()});return}
+    let dataChanged=false;try{dataChanged=dataApply(c,j.data,dp&&dp.push)}catch(e){}
     const keepEmpty=CHATS.filter(x=>!x.msgs.length&&x.id===CHAT_ID);
     const mine=new Map(CHATS.map(x=>[String(x.id),x]));
     let changedCur=false;
@@ -1424,10 +1451,11 @@ async function syncNow(manual){
     CHATS=next;
     if(!CHATS.some(x=>x.id===CHAT_ID)){const n=CHATS.find(x=>x.msgs.length)||{id:Date.now(),title:'',ts:Date.now(),msgs:[]};if(!CHATS.includes(n))CHATS.unshift(n);CHAT_ID=n.id;changedCur=true}
     COACH_CHAT=CHATS.find(x=>x.id===CHAT_ID).msgs;
-    chatsSave(true);syncSet({...c,last:Date.now(),err:''});
+    chatsSave(true);syncSet({...(syncCfg()||c),last:Date.now(),err:''});
     if(typeof view!=='undefined'){const ae=document.activeElement,typing=ae&&['INPUT','TEXTAREA'].includes(ae.tagName)&&ae.value;
+      if(dataChanged&&!typing&&!COACH_BUSY&&!['coach','chats'].includes(view)&&!window.__VE)try{render()}catch(e){}
       if(view==='chats'&&!typing)vChats();else if(view==='coach'&&(changedCur||manual)&&!COACH_BUSY)coachRender()}
-  }catch(e){syncSet({...c,err:'Could not reach the sync service.',errAt:Date.now()})}
+  }catch(e){syncSet({...(syncCfg()||c),err:'Could not reach the sync service.',errAt:Date.now()})}
   finally{syncBusy=false}
 }
 function syncMakeCode(){const a=new Uint8Array(20),A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';crypto.getRandomValues(a);const s=[...a].map(x=>A[x%A.length]).join('');return s.match(/.{1,5}/g).join('-')}
@@ -1448,16 +1476,17 @@ function syncQrDraw(){const c=syncCfg(),el=document.getElementById('syncQr');if(
 function syncCard(){
   const c=syncCfg(),ago=c&&c.last?Math.max(0,Math.round((Date.now()-c.last)/60000)):null;
   if(!COACH_API)return '';
-  return `<div class="card"><h3>Use your chats on any device</h3>${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Changes you make here (new chats, edits, deletes) appear on your other devices within a minute, and theirs appear here.</div>
+  return `<div class="card"><h3>Use your chats on any device</h3>${c?`<div class="sub">Sync is <b class="ok">on</b>${ago!=null?' · last synced '+(ago<1?'just now':ago+' min ago'):''}${c.err?' · <span class="bad">'+esc(c.err)+'</span>':''}. Your chats <b>and your tracker data</b> (marks, logs, backlog, goals, everything DXA AI changes) are kept the same on every linked device. Changes appear on the other devices within a minute, and theirs appear here.${c.dataReady?'':' <span class="sub">(tracker data is being set up on the first sync)</span>'}</div>
      <div style="margin:10px 0">Your sync code: <b style="font-size:17px;letter-spacing:.08em;user-select:all">${esc(c.code)}</b> <button class="btn s alt" onclick="navigator.clipboard&&navigator.clipboard.writeText('${esc(c.code)}').then(()=>alert('Copied'))">Copy</button></div>
      <div class="sub" style="margin-top:12px"><b>Open your chats on another device:</b> send yourself this link (a message to yourself, email, or scan the picture). Opening it connects that device automatically. You can also type the code under "I have a code".</div>
      <div style="margin:8px 0"><input readonly value="${esc(syncLink(c.code))}" onclick="this.select()" style="width:100%"></div>
-     <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div id="syncQr" style="background:#fff;padding:6px;border-radius:6px;min-width:120px;min-height:120px"></div><div class="sub" style="flex:1;min-width:200px">Anyone who has this link or code can read and change these chats, so keep it to yourself. The code is not a password you can reset: if you lose it, turn sync on again to get a new one.<p style="margin-top:8px"><button class="btn s ok" onclick="syncCopyLink()">Copy link</button> ${navigator.share?'<button class="btn s alt" onclick="syncShare()">Send the link…</button>':''}</p></div></div>
+     <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><div id="syncQr" style="background:#fff;padding:6px;border-radius:6px;min-width:120px;min-height:120px"></div><div class="sub" style="flex:1;min-width:200px">Anyone who has this link or code can read and change your chats and tracker data, so keep it to yourself. Link your device that has your real data first, then open the link on the others: a newly linked device takes on the shared data (its old local copy is kept as a backup in that browser). The code is not a password you can reset: if you lose it, turn sync on again to get a new one.<p style="margin-top:8px"><button class="btn s ok" onclick="syncCopyLink()">Copy link</button> ${navigator.share?'<button class="btn s alt" onclick="syncShare()">Send the link…</button>':''}</p></div></div>
      <p style="margin-top:10px"><button class="btn s ok" onclick="syncNow(true).then(vChats)">Sync now</button> <button class="btn s alt" onclick="syncOff()">Turn off on this device</button> <button class="btn s bad" onclick="syncWipe()">Delete the cloud copy</button></p>`
     :`<div class="sub" style="margin-bottom:10px">Right now your chats live only on this device. Turn on sync to keep them in a private cloud copy that you can open, edit and delete from your phone, laptop or any browser. Nobody can see them without your sync code.</div>
      <button class="btn ok" onclick="syncOn()">Turn on sync (make a code)</button>
      <div class="row" style="margin-top:12px"><div style="grid-column:span 3"><label for="syncCode">Already have a code from another device?</label><input id="syncCode" placeholder="ABCDE-FGHJK-MNPQR-STUVW" autocomplete="off"></div><div style="align-self:end"><button class="btn alt" onclick="syncJoin()">I have a code</button></div></div>`}</div>`;
 }
+try{const _c=syncCfg();if(_c&&_c.dataReady)dsBase()}catch(e){}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow()});
 setInterval(()=>{if(!document.hidden)syncNow()},60000);
 window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>syncNow(),800));
