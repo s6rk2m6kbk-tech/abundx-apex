@@ -64,6 +64,7 @@ canvas.sc-c{width:100%;height:100%;display:block;touch-action:pan-y;cursor:cross
 #nightBar{display:none}
 :root[data-night="1"] #nightBar{display:block;background:linear-gradient(90deg,#6e0000,#b30000,#6e0000);color:#fff;text-align:center;padding:9px 14px;font:700 12px 'Barlow',sans-serif;letter-spacing:.28em;text-transform:uppercase;animation:nightpulse 2.4s ease-in-out infinite}
 @keyframes nightpulse{0%,100%{box-shadow:0 0 0 rgba(255,0,0,0)}50%{box-shadow:0 2px 24px rgba(255,0,0,.75)}}
+#hAv{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);padding:0;overflow:hidden;cursor:pointer;background:transparent;color:var(--tx);font:600 13px 'Barlow',sans-serif;display:inline-flex;align-items:center;justify-content:center;flex:none}#hAv img{width:100%;height:100%;object-fit:cover;display:block}
 #profSel{background:transparent;border:1px solid var(--line);color:var(--tx);border-radius:2px;padding:6px 8px;font:600 11px 'Barlow',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;width:auto}
 #profSel option{background:var(--bg);color:var(--tx)}
 #themeBtn{background:transparent;border:1px solid var(--line);color:var(--tx);width:36px;height:36px;border-radius:50%;cursor:pointer;display:grid;place-items:center;padding:0;transition:border-color .2s,background .2s}
@@ -138,7 +139,7 @@ ul{padding-left:18px}li{margin-bottom:4px}
 </head>
 <body>
 <div id="nightBar"></div>
-<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><select id="profSel" onchange="setProfile(this.value)" title="Switch profile" aria-label="Switch profile"><option value="malik">Malik</option><option value="kartik">Kartik</option></select><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
+<header><div class="brand">Abundx Apex<small>JEE 2028 Progress Tracker</small></div><div class="hmeta"><span id="hClock"></span><span class="hsep"></span><span id="hDateL"></span><span class="hsep"></span><span id="hLeft"></span><span class="hsep"></span><button id="hAv" type="button" onclick="photoPick()" title="Change your profile photo" aria-label="Change your profile photo"></button><input id="photoIn" type="file" accept="image/*" hidden onchange="photoSet(this.files[0]);this.value=''"><select id="profSel" onchange="setProfile(this.value)" title="Switch profile" aria-label="Switch profile"><option value="malik">Malik</option><option value="kartik">Kartik</option></select><span class="hsep"></span><button id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode" aria-label="Switch light or dark mode"><svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button></div></header>
 <nav id="nav"></nav>
 <main id="app"></main>
 
@@ -174,6 +175,24 @@ const PROFILES={malik:{key:'jee2028_tracker_v1',name:'Malik'},kartik:{key:'jee20
 let PROFILE='malik';
 try{const q=new URLSearchParams(location.search).get('p');if(q&&PROFILES[q])localStorage.setItem('abundx_profile',q);const sp=localStorage.getItem('abundx_profile');if(sp&&PROFILES[sp])PROFILE=sp}catch(e){}
 function setProfile(p){try{localStorage.setItem('abundx_profile',p)}catch(e){}const u=new URL(location.href);if(u.searchParams.has('p')){u.searchParams.delete('p');u.hash='';location.replace(u.href)}else{location.hash='dashboard';location.reload()}}
+/* Profile photo: resized on this device and kept only in this browser (never uploaded) */
+const PHOTO_KEY='abundx_photo_'+PROFILE;
+const photoGet=()=>{try{return localStorage.getItem(PHOTO_KEY)||''}catch(e){return ''}};
+function photoShow(){const b=document.getElementById('hAv');if(!b)return;const p=photoGet();b.innerHTML=p?`<img src="${p}" alt="${PROFILE}">`:`<span>${(PROFILE||'?').charAt(0).toUpperCase()}</span>`;const g=document.getElementById('photoBox');if(g)g.innerHTML=photoCard()}
+function photoPick(){const i=document.getElementById('photoIn');if(i)i.click()}
+function photoSet(f){
+  if(!f||!/^image\//.test(f.type))return;
+  const u=URL.createObjectURL(f),im=new Image();
+  im.onload=()=>{try{
+    const w=im.naturalWidth,h=im.naturalHeight,s=Math.min(w,h),sx=(w-s)/2,sy=h>w?Math.max(0,(h-s)*0.12):0,c=document.createElement('canvas');c.width=c.height=320;
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,320,320);x.imageSmoothingQuality='high';x.drawImage(im,sx,sy,s,s,0,0,320,320);
+    localStorage.setItem(PHOTO_KEY,c.toDataURL('image/jpeg',0.88));
+  }catch(e){alert('Could not save the photo on this device.')}URL.revokeObjectURL(u);photoShow()};
+  im.onerror=()=>{URL.revokeObjectURL(u);alert('That file could not be read as a picture.')};im.src=u;
+}
+function photoClear(){if(confirm('Remove your profile photo from this device?')){try{localStorage.removeItem(PHOTO_KEY)}catch(e){}photoShow()}}
+const photoCard=()=>{const p=photoGet();return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="width:84px;height:84px;border-radius:50%;overflow:hidden;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:32px">${p?`<img src="${p}" alt="" style="width:100%;height:100%;object-fit:cover">`:(PROFILE||'?').charAt(0).toUpperCase()}</div><div><button class="btn s ok" onclick="photoPick()">${p?'Change photo':'Choose a photo'}</button> ${p?'<button class="btn s bad" onclick="photoClear()">Remove</button>':''}</div></div>`};
+window.addEventListener('DOMContentLoaded',photoShow);
 const KEY=PROFILES[PROFILE].key;
 const MAXM=PROFILE==='malik'?300:100;
 const DEF=()=>({
@@ -2117,6 +2136,7 @@ function dl(name,text,type){const a=document.createElement('a');a.href=URL.creat
 function vSettings(){
   const s=S.settings;
   $('#app').innerHTML=`<h2>Settings</h2>
+  <div class="card"><h3>Profile photo</h3><div class="sub" style="margin-bottom:10px">Shown in the top bar. It is shrunk and saved only in this browser on this device. It is never uploaded, so nobody else can see it. Do this once on each device you use.</div><div id="photoBox">${photoCard()}</div></div>
   <div class="card"><h3>Locked constraints</h3><div class="sub">Sleep 11:30 PM–6:30 AM (7 h) · Coaching 9 AM–3 PM Mon–Fri · Study 4:30–11:30 PM · 400-day target ~50,000–55,000 Q. These are fixed and not editable.</div></div>
   <form class="card" onsubmit="saveSettings(event)"><h3>Editable parameters</h3>
    <div class="row"><div><label>Plan start</label><input id="s0" type="date" value="${s.start}"></div><div><label>Exam date</label><input id="s1" type="date" value="${s.exam}"></div>
