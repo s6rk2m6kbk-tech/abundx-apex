@@ -1414,15 +1414,29 @@ function cleanSvg(s){
 async function buildFile(a){
   const info=FILE_INFO[a.format];
   if(a.format==='pdf'||a.format==='doc'){
-    const body=(a.title?'<h1>'+mdInline(a.title)+'</h1>':'')+mdHtml(a.content);
+    const body=(a.title&&!/^\s*#\s/.test(a.content)?'<h1>'+mdInline(a.title)+'</h1>':'')+mdHtml(a.content);
     if(a.format==='doc')return new Blob(['<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>'+esc(a.title||a.filename)+'</title><style>'+DOC_CSS+'</style></head><body>'+body+'</body></html>'],{type:info[2]});
     await loadH2C();
-    const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;width:680px;background:#fff';
-    host.innerHTML='<style>'+DOC_CSS+'.d{padding:0;background:#fff}</style><div class="d">'+body+'</div>';document.body.appendChild(host);
-    try{const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4'});
-      await new Promise((res,rej)=>{try{doc.html(host.querySelector('.d'),{x:30,y:30,width:535,windowWidth:680,autoPaging:'text',margin:[30,0,30,0],html2canvas:{scale:1.6,backgroundColor:'#ffffff'},callback:res})}catch(e){rej(e)}});
+    const ifr=document.createElement('iframe');ifr.style.cssText='position:fixed;left:-10000px;top:0;width:680px;height:1000px;border:0';
+    ifr.srcdoc='<!doctype html><meta charset="utf-8"><style>'+DOC_CSS+'html,body{margin:0;padding:0;background:#fff}body{width:680px;overflow-wrap:anywhere}</style><body>'+body+'</body>';
+    const loaded=new Promise(r=>{ifr.onload=r});document.body.appendChild(ifr);
+    try{await loaded;await new Promise(r=>setTimeout(r,150));
+      const d=ifr.contentDocument,b=d.body,H=Math.ceil(b.scrollHeight);
+      const marks=[...b.querySelectorAll(':scope > *, li, tr')].map(e=>Math.round(e.getBoundingClientRect().top)).sort((x,y)=>x-y);
+      const cv=await window.html2canvas(b,{scale:2,backgroundColor:'#ffffff',width:680,height:H,windowWidth:680,windowHeight:H});
+      const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4'}),f=523/680,PAGE=Math.floor(770/f);
+      let y0=0,first=true;
+      while(y0<H-2){
+        let end=Math.min(H,y0+PAGE);
+        if(end<H){const m=marks.filter(t=>t>y0+PAGE*0.55&&t<=end).pop();if(m)end=m}
+        const sl=document.createElement('canvas');sl.width=cv.width;sl.height=Math.max(2,Math.round((end-y0)*2));
+        const x=sl.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,sl.width,sl.height);x.drawImage(cv,0,Math.round(y0*2),cv.width,sl.height,0,0,sl.width,sl.height);
+        if(!first)doc.addPage();first=false;
+        doc.addImage(sl.toDataURL('image/jpeg',0.92),'JPEG',36,36,523,(end-y0)*f);
+        y0=end;
+      }
       return doc.output('blob');
-    }finally{host.remove()}
+    }finally{ifr.remove()}
   }
   if(a.format==='svg')return new Blob([cleanSvg(a.content)],{type:info[2]});
   if(a.format==='png'){
