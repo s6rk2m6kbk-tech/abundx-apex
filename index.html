@@ -313,15 +313,19 @@ const SRC_LABEL={pager:'Claude',pyq:'PYQ book',textbook:'Core books',coaching:'C
 const resCat=b=>b.cat||(/PYQ/i.test(b.name)?'pyq':b.name==='Claude pager'?'claude':'core');
 const bookList=cat=>['\u2014',...new Set(Object.values(S.settings.resources).flat().filter(b=>b.name&&resCat(b)===cat).map(b=>b.name)),'Other'];
 const qTot=l=>(l.coaching||0)+(l.pager||0)+(l.textbook||0)+(l.pyq||0);
+/* Quick logs made from the AI chat have no accuracy/energy/focus yet; averages skip them. */
+const aqW=l=>l.accuracy==null?0:qTot(l);
+const wAcc=ls=>{const w=sum(ls.map(aqW));return w?sum(ls.map(l=>(l.accuracy||0)*aqW(l)))/w:null};
+const pc=x=>x==null?'—':x+'%';
 const logs=()=>Object.values(S.logs).sort((a,b)=>a.date<b.date?-1:1);
 function phaseFor(d){const P=S.settings.phases;let i=P.findIndex(p=>d>=p.start&&d<=p.end);if(i<0)i=d<P[0].start?0:P.length-1;return {...P[i],i}}
 function weekStats(key){
   const ls=Object.values(S.logs).filter(l=>l.date>=key&&l.date<=addD(key,6));
   const lq=sum(ls.map(qTot)),q=Math.max(lq,(S.weekQ||{})[key]||0);
-  const acc=lq?sum(ls.map(l=>l.accuracy*qTot(l)))/lq:null;
+  const acc=wAcc(ls);
   return {key,ls,q,acc,days:ls.length,
     src:{coaching:sum(ls.map(l=>l.coaching||0)),pager:sum(ls.map(l=>l.pager||0)),textbook:sum(ls.map(l=>l.textbook||0)),pyq:sum(ls.map(l=>l.pyq||0))},
-    sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy)),focus:avg(ls.map(l=>l.focus))};
+    sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy).filter(x=>x!=null)),focus:avg(ls.map(l=>l.focus).filter(x=>x!=null))};
 }
 function allWeeks(){
   const ls=logs(),wq=Object.keys(S.weekQ||{}).sort();if(!ls.length&&!wq.length)return [];
@@ -329,7 +333,7 @@ function allWeeks(){
   const out=[];for(let k=first;k<=mon(today());k=addD(k,7))out.push(weekStats(k));return out;
 }
 const totalQ=()=>sum(allWeeks().map(w=>w.q));
-const overallAcc=()=>{const t=totalQ();return t?sum(logs().map(l=>l.accuracy*qTot(l)))/t:null};
+const overallAcc=()=>{const t=totalQ()-sum(logs().filter(l=>l.accuracy==null).map(qTot));return t>0?sum(logs().map(l=>(l.accuracy||0)*aqW(l)))/t:null};
 const mocks=()=>[...S.mocks].sort((a,b)=>a.date<b.date?-1:1);
 function expectedMarks(d){
   const pts=[{date:S.settings.start,marks:S.settings.baseline},...S.settings.milestones].sort((a,b)=>a.date<b.date?-1:1);
@@ -354,7 +358,7 @@ function alerts(){
   if(wc.days&&wc.q>=st.weeklyMin)good.push(`This week's Q target already hit (${wc.q} Q).`);
   const recent=logs().slice(-7);
   const sl=avg(recent.filter(l=>l.sleep!=null).map(l=>l.sleep));if(sl!=null&&sl<6.5)red.push(`Average sleep ${r1(sl)} h over last ${recent.length} logs (<6.5 h). Sleep is locked at 11:30 PM–6:30 AM.`);
-  const en=avg(recent.map(l=>l.energy));if(en!=null&&en<5)red.push(`Average energy ${r1(en)}/10 — burnout risk.`);
+  const en=avg(recent.map(l=>l.energy).filter(x=>x!=null));if(en!=null&&en<5)red.push(`Average energy ${r1(en)}/10 — burnout risk.`);
   const ms=mocks();
   const passed=st.milestones.filter(m=>m.date<=t).sort((a,b)=>a.date<b.date?-1:1).pop();
   if(passed&&ms.length){const lm=ms[ms.length-1];if(lm.marks<passed.marks)red.push(`Behind milestone: ${passed.marks}+ was due by ${fmtS(passed.date)}; latest mock is ${lm.marks}.`)}
@@ -681,7 +685,7 @@ function vLog(){
    <button class="btn alt" onclick="logPdf(mon(today()),today())">This week</button>
    <button class="btn alt" onclick="logPdf((logs()[0]||{date:today()}).date,today())">All logs</button></div></div>
   <div class="card"><h3>Recent logs</h3><div class="tw"><table><tr><th>Date</th><th>Phase</th><th>Class</th><th>Claude</th><th>Core</th><th>PYQ</th><th>Total</th><th>Acc</th><th>En</th><th>Sleep</th><th></th></tr>
-  ${logs().slice(-21).reverse().map(x=>`<tr><td>${fmtS(x.date)} ${dow(x.date)}</td><td>${esc(x.phase)}</td><td>${x.coaching||0}</td><td>${x.pager||0}</td><td>${x.textbook||0}</td><td>${x.pyq||0}</td><td><b>${qTot(x)}</b></td><td>${x.accuracy}%</td><td>${x.energy}</td><td>${x.sleep??'—'}</td><td><button class="btn s alt" onclick="logDate='${x.date}';vLog();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delLog('${x.date}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No logs yet.</td></tr>'}</table></div></div>`;
+  ${logs().slice(-21).reverse().map(x=>`<tr><td>${fmtS(x.date)} ${dow(x.date)}</td><td>${esc(x.phase)}</td><td>${x.coaching||0}</td><td>${x.pager||0}</td><td>${x.textbook||0}</td><td>${x.pyq||0}</td><td><b>${qTot(x)}</b></td><td>${pc(x.accuracy)}</td><td>${x.energy??'—'}</td><td>${x.sleep??'—'}</td><td><button class="btn s alt" onclick="logDate='${x.date}';vLog();window.scrollTo(0,0)">Edit</button> <button class="btn s bad" onclick="delLog('${x.date}')">×</button></td></tr>`).join('')||'<tr><td colspan=11 class="sub">No logs yet.</td></tr>'}</table></div></div>`;
   calcLog();
 }
 function calcLog(){
@@ -772,7 +776,7 @@ function logPdf(from,to){
   const L=logs().filter(l=>l.date>=from&&l.date<=to);
   if(!L.length)return alert('No logs in that date range.');
   const doc=pdfNew();
-  const q=sum(L.map(qTot)),acc=q?sum(L.map(l=>l.accuracy*qTot(l)))/q:null;
+  const q=sum(L.map(qTot)),acc=wAcc(L);
   const av=k=>avg(L.filter(l=>l[k]!=null).map(l=>l[k]));
   const ph=phaseFor(L[L.length-1].date);
   let y=pdfHead(doc,'Daily Log Report',`${fmt(from)}  to  ${fmt(to)}`,`${ph.name}  |  target ${ph.target}+ marks`);
@@ -785,19 +789,19 @@ function logPdf(from,to){
   const last=to<today()?to:today(),body=[],meta=[];
   for(let wk=mon(from);wk<=last;wk=addD(wk,7)){
     const days=[];for(let i=0;i<7;i++){const d=addD(wk,i);if(d>=from&&d<=last)days.push(d)}
-    const inR=days.map(d=>S.logs[d]).filter(Boolean),wq=sum(inR.map(qTot)),wa=wq?sum(inR.map(l=>l.accuracy*qTot(l)))/wq:null;
+    const inR=days.map(d=>S.logs[d]).filter(Boolean),wq=sum(inR.map(qTot)),wa=wAcc(inR);
     body.push([{content:`WEEK OF ${fmtS(wk)} - ${fmtS(addD(wk,6))}     ${inR.length}/${days.length} DAYS LOGGED     ${wq} Q${days.length===7?`  (TARGET ${S.settings.weeklyMin}-${S.settings.weeklyMax})`:''}     ACCURACY ${wa==null?'-':r1(wa)+'%'}`,colSpan:11,styles:{fillColor:PD.ROW,textColor:PD.TX,fontStyle:'bold',halign:'left',fontSize:7}}]);meta.push(null);
     days.forEach(d=>{const l=S.logs[d];
       if(!l){body.push([{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},{content:'No log recorded',colSpan:10,styles:{textColor:PD.MUT,fontStyle:'italic',halign:'left'}}]);meta.push('none')}
-      else{body.push([{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},l.coaching||0,l.pager||0,l.textbook||0,l.pyq||0,qTot(l),l.accuracy+'%',l.energy,l.focus,l.sleep??'-',(l.onTime?'11:30 ':'')+(l.audio?'Audio':'')||'-']);meta.push(l)}});
+      else{body.push([{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},l.coaching||0,l.pager||0,l.textbook||0,l.pyq||0,qTot(l),pc(l.accuracy),l.energy??'-',l.focus??'-',l.sleep??'-',(l.onTime?'11:30 ':'')+(l.audio?'Audio':'')||'-']);meta.push(l)}});
   }
   y=pdfTbl(doc,{startY:y,body,columnStyles:{0:{cellWidth:27},5:{fontStyle:'bold'},10:{cellWidth:22}},
     head:[up(['Date','Class','Claude','Core','PYQ','Total Q','Acc','Energy','Focus','Sleep h','Habits'])],
     foot:[['TOTAL',src.coaching,src.pager,src.textbook,src.pyq,q,acc==null?'-':r1(acc)+'%',r1(av('energy')),r1(av('focus')),r1(av('sleep')),'']],
     didParseCell(h){if(h.section!=='body')return;const l=meta[h.row.index];if(!l||l==='none')return;const c=h.column.index;
       const set=g=>{const [t,b]=tint(g);h.cell.styles.textColor=t;h.cell.styles.fillColor=b};
-      if(c===6)set(l.accuracy>=85?'ok':l.accuracy>=75?'warn':'bad');
-      if(c===7)set(l.energy>=7?'ok':l.energy>=5?'warn':'bad');
+      if(c===6&&l.accuracy!=null)set(l.accuracy>=85?'ok':l.accuracy>=75?'warn':'bad');
+      if(c===7&&l.energy!=null)set(l.energy>=7?'ok':l.energy>=5?'warn':'bad');
       if(c===9&&l.sleep!=null)set(l.sleep>=7?'ok':l.sleep>=6.5?'warn':'bad')}});
   y+=4;doc.setFontSize(6.5);doc.setTextColor(...PD.MUT);doc.text('Green = good (accuracy 85+, energy 7+, sleep 7+ h)   Amber = watch   Red = low (accuracy <75, energy <5, sleep <6.5 h)   11:30 = in bed by 11:30 PM',PM,y);
   const notes=L.filter(l=>l.topics||l.weak||l.notes||(l.book&&l.book!=='—')||(l.pyqBook&&l.pyqBook!=='—')||l.years);
@@ -894,7 +898,7 @@ function weeklyPdf(key){
   const row=(lab,k)=>{const [a,b,c]=grp(k);return [{content:lab,styles:{halign:'left'}},a,b,c,w.src[k],(w.q?r0(w.src[k]/w.q*100):0)+'%']};
   y=pdfTbl(doc,{startY:y,head:[up(['Source','Mon-Fri','Sat','Sun','Total','% weekly'])],body:[row('Claude','pager'),row('PYQ book','pyq'),row('Core books','textbook'),row('Class questions','coaching')],foot:[['TOTAL','','','',`${w.q} / ${st.weeklyMin}-${st.weeklyMax}`,'100%']]});
   y=pdfEnsure(doc,y+8,50);y=pdfSec(doc,'Day by day',y+8);
-  const days=[];for(let i=0;i<7;i++){const d=addD(key,i),l=S.logs[d];days.push(l?[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},qTot(l),l.accuracy+'%',l.energy,l.focus,l.sleep??'-']:[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},{content:'No log',colSpan:5,styles:{textColor:PD.MUT,fontStyle:'italic',halign:'left'}}])}
+  const days=[];for(let i=0;i<7;i++){const d=addD(key,i),l=S.logs[d];days.push(l?[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},qTot(l),pc(l.accuracy),l.energy??'-',l.focus??'-',l.sleep??'-']:[{content:`${fmtS(d)} ${dow(d)}`,styles:{halign:'left'}},{content:'No log',colSpan:5,styles:{textColor:PD.MUT,fontStyle:'italic',halign:'left'}}])}
   y=pdfTbl(doc,{startY:y,head:[up(['Date','Total Q','Acc','Energy','Focus','Sleep h'])],body:days});
   y=pdfEnsure(doc,y+8,40);y=pdfSec(doc,'Red flags',y+8);
   if(flags.length)flags.forEach(f=>{y=pdfEnsure(doc,y,7);doc.setFillColor(...PD.BAD);doc.rect(PM,y-2.4,1.6,3,'F');doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(...PD.TX);doc.text(f,PM+4,y);y+=6});
@@ -1146,7 +1150,7 @@ function vSummary(){
     <p><button class="btn s alt" onclick="todayDate='${d}';go('today')">Open Daily Goals</button></p></div>
 
    <div class="card"><h3>Daily log</h3>
-    ${l?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin:0 0 10px">${stat('Total Q',qTot(l),'')}${stat('Accuracy',l.accuracy+'%','')}${stat('Energy / Focus',l.energy+' / '+l.focus,'')}${stat('Sleep',l.sleep!=null?l.sleep+' h':'--',l.onTime?'in bed by 11:30':'')}</div>
+    ${l?`<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin:0 0 10px">${stat('Total Q',qTot(l),'')}${stat('Accuracy',pc(l.accuracy),'')}${stat('Energy / Focus',(l.energy??'—')+' / '+(l.focus??'—'),'')}${stat('Sleep',l.sleep!=null?l.sleep+' h':'--',l.onTime?'in bed by 11:30':'')}</div>
       <div class="sub">Claude ${l.pager||0} &middot; PYQ book ${l.pyq||0} &middot; Core books ${l.textbook||0} &middot; Class ${l.coaching||0}</div>
       ${l.topics?`<div class="sub" style="margin-top:6px">Topics: ${esc(l.topics)}</div>`:''}${l.weak?`<div class="sub">Weak: ${esc(l.weak)}</div>`:''}`
     :'<div class="sub">Nothing logged for this day yet.</div>'}
@@ -1336,16 +1340,37 @@ function coachRender(pending){
   const bub=(m)=>m.role==='user'
     ?`<div style="display:flex;justify-content:flex-end;margin:8px 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
     :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
-  o.innerHTML=COACH_CHAT.map(bub).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
+  const SRC={class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'};
+  const acts=(m,mi)=>(m.actions||[]).map((a,ai)=>{
+    const lbl=`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for <b>${fmtS(a.date)} ${dow(a.date)}</b>`;
+    return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${a.state==='saved'?'✅ Saved to your tracker: ':a.state==='cancelled'?'Cancelled: ':'Save to your tracker? '}${lbl}`
+      +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
+      +(a.state?'':`<div style="margin-top:8px"><button class="btn s ok" onclick="coachConfirm(${mi},${ai})">Save</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
+  o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="COACH_CHAT=[];coachRender();return false">New chat</a></div>':'');
   o.scrollIntoView({block:'end',behavior:'smooth'});
 }
+function coachCancel(mi,ai){const a=COACH_CHAT[mi]?.actions?.[ai];if(!a||a.state)return;a.state='cancelled';coachRender()}
+function coachConfirm(mi,ai){
+  const m=COACH_CHAT[mi],a=m?.actions?.[ai];if(!a||a.state)return;
+  const fail=t=>{a.note=t;coachRender()};
+  if(a.date>today())return fail('That date is in the future, so I did not save it.');
+  if(a.date<S.settings.start)return fail('That date is before your plan started ('+fmtS(S.settings.start)+').');
+  if(isLocked(a.date))return fail('That week is locked. Turn on "Allow editing locked weeks" in Settings to change it.');
+  const k={class:'coaching',claude:'pager',core_book:'textbook',pyq_book:'pyq'}[a.source]||'textbook';
+  const l=S.logs[a.date]||{date:a.date,phase:phaseFor(a.date).name,coaching:0,pager:0,textbook:0,pyq:0,accuracy:null,energy:null,focus:null,sleep:null,quick:true,topics:'',weak:'',notes:'Logged from the AI chat. Open Daily Log to add accuracy, energy and sleep.'};
+  l[k]=a.mode==='set'?a.count:(l[k]||0)+a.count;
+  S.logs[a.date]=l;save();
+  a.state='saved';a.note=`${fmtS(a.date)} now has ${qTot(l)} questions in total.`+(qTot(l)>200?' That is over the 200 a day cap.':'');
+  m.content+=' [Saved to the tracker.]';
+  coachRender();
+}
 async function coachAI(q,att){
   const hist=COACH_CHAT.filter(m=>!m.error).map(m=>({role:m.role,content:m.content}));
-  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
+  const r=await fetch(COACH_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,history:hist,facts:coachSummary(),today:today(),attachments:(att||[]).map(a=>({media_type:a.media_type,data:a.data}))})});
   const j=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(j.message||'The AI coach is not available right now.');
-  return j.answer;
+  return j;
 }
 function coachRule(q){
   const m=[['backlog',/backlog|topic|pending|overdue/],['week',/week|how many/],['weak',/weak|worst|lowest|subject/],['flat',/flat|stuck|plateau|improv|why/],['track',/track|target|goal|plan|behind|ahead|expected/],['today',/today|study|next|what should/]].find(([,r])=>r.test(q.toLowerCase()));
@@ -1359,14 +1384,14 @@ async function coachText(e){
     if(!q)q='Please read the attached file(s) and help me with them.';
     const inp=document.getElementById('coachQ');
     coachRender(true,COACH_CHAT.push({role:'user',content:q+(att.length?'\n📎 '+att.map(a=>a.name).join(', '):'')}));if(inp)inp.value='';
-    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a});coachRender();return}
+    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[]});coachRender();return}
     catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
   }
   out.innerHTML=coachRule(q);
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages).':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). Tell it how many questions you solved (for example "I did 40 questions today") and it offers to save them to your Daily Log.':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
@@ -1388,7 +1413,7 @@ function profStats(D){
   ls.forEach(l=>{const k=mon(l.date);byW[k]=(byW[k]||0)+qTot(l)});
   Object.entries(D.weekQ||{}).forEach(([k,v])=>{byW[k]=Math.max(byW[k]||0,v)});
   const q=sum(Object.values(byW)),lq=sum(ls.map(qTot)),wks=Object.keys(byW).length,bl=D.backlog||[],P=ph.map(m=>m.phy);
-  return {ms,ph,q,wks,perWeek:wks?q/wks:null,days:ls.length,acc:lq?sum(ls.map(l=>(l.accuracy||0)*qTot(l)))/lq:null,
+  return {ms,ph,q,wks,perWeek:wks?q/wks:null,days:ls.length,acc:wAcc(ls),
     sleep:avg(ls.filter(l=>l.sleep!=null).map(l=>l.sleep)),energy:avg(ls.map(l=>l.energy).filter(x=>x!=null)),
     open:bl.filter(b=>b.status!=='Resolved').length,done:bl.filter(b=>b.status==='Resolved').length,
     pAvg:avg(P),pBest:P.length?Math.max(...P):null,pLast:P.length?P[P.length-1]:null,pFirst:P.length?P[0]:null,start:D.settings&&D.settings.start,
@@ -1638,7 +1663,7 @@ function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x
 /* ---------- ANALYTICS ---------- */
 function vAnalytics(){
   const W=allWeeks(),t=today(),cw=weekStats(mon(t)),mo=logs().filter(l=>l.date.slice(0,7)===t.slice(0,7)),ms=mocks();
-  const moQ=sum(mo.map(qTot)),moAcc=moQ?sum(mo.map(l=>l.accuracy*qTot(l)))/moQ:null;
+  const moQ=sum(mo.map(qTot)),moAcc=wAcc(mo);
   const wavg=W.length?avg(W.map(w=>w.q)):null;
   let proj='—';
   if(ms.length>=2){const x=ms.map(m=>diff(ms[0].date,m.date)),y=ms.map(m=>m.marks),mx=avg(x),my=avg(y);const den=sum(x.map(a=>(a-mx)**2));
