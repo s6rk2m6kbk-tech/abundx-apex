@@ -1316,7 +1316,7 @@ async function coachText(e){
   e.preventDefault();const q=v('coachQ').trim(),out=document.getElementById('coachOut');if(!q)return;
   if(COACH_API){
     out.innerHTML='<span class="sub">The AI coach is thinking...</span>';
-    try{const a=await coachAI(q);out.innerHTML=`<span class="sub" style="letter-spacing:.14em;font-weight:700">AI COACH</span><div style="margin-top:6px">${esc(a).replace(/\n/g,'<br>')}</div>`;return}
+    try{const a=await coachAI(q);out.innerHTML=`<span class="sub" style="letter-spacing:.14em;font-weight:700">AI COACH</span><div style="margin-top:6px">${esc(a).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')}</div>`;return}
     catch(err){out.innerHTML=`<div class="sub" style="margin-bottom:8px">${esc(err.message)} Showing the rule-based answer instead.</div>`+coachRule(q);return}
   }
   out.innerHTML=coachRule(q);
