@@ -1304,6 +1304,8 @@ function coachSummary(){
     subjectsLast3Raw:Object.fromEntries(f.subj.map(s=>[s.n,{average:Math.round(s.avg),scores:s.vals}])),
     questions:{loggedTotal:f.done,averagePerDay:Math.round(f.pace),neededPerDay:Math.round(f.need),goal:QPLAN_GOAL,thisWeek:f.wk.q,weeklyMin:f.st.weeklyMin,weeklyMax:f.st.weeklyMax},
     backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
+    recentLoggedDays:logs().slice(-10).map(l=>({date:l.date,class:l.coaching||0,claude:l.pager||0,coreBook:l.textbook||0,pyqBook:l.pyq||0,total:qTot(l)})),
+    handTypedWeeklyTotals:Object.fromEntries(Object.entries(S.weekQ||{}).slice(-8)),
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
 /* Saved chats: kept in this browser, one list per profile. */
@@ -1377,10 +1379,16 @@ function coachRender(pending){
     :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
   const SRC={class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'};
   const acts=(m,mi)=>(m.actions||[]).map((a,ai)=>{
-    const lbl=`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for <b>${fmtS(a.date)} ${dow(a.date)}</b>`;
-    return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${a.state==='saved'?'✅ Saved to your tracker: ':a.state==='cancelled'?'Cancelled: ':'Save to your tracker? '}${lbl}`
+    const del=a.type==='delete_questions',day=`<b>${fmtS(a.date)} ${dow(a.date)}</b>`,l0=S.logs[a.date],cur=l0?qTot(l0):0;
+    const lbl=!del?`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for ${day}`
+      :a.scope==='count'?`Remove <b>${a.count}</b> question${a.count===1?'':'s'}${a.source?' ('+SRC[a.source]+')':''} on ${day} (it has ${cur})`
+      :a.scope==='source'?`Remove all <b>${SRC[a.source]}</b> questions on ${day}`
+      :a.scope==='day'?`Clear all questions on ${day} (it has ${cur})`
+      :`Clear the weekly total typed in for the week of <b>${fmtS(mon(a.date))}</b> (it is ${(S.weekQ||{})[mon(a.date)]??'not set'})`;
+    const head=a.state==='saved'?(del?'✅ Deleted: ':'✅ Saved to your tracker: '):a.state==='cancelled'?'Cancelled: ':(del?'Delete from your tracker? ':'Save to your tracker? ');
+    return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${head}${lbl}`
       +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
-      +(a.state?'':`<div style="margin-top:8px"><button class="btn s ok" onclick="coachConfirm(${mi},${ai})">Save</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
+      +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
   o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
   chatsSave();coachHist();
@@ -1393,7 +1401,30 @@ function coachConfirm(mi,ai){
   if(a.date>today())return fail('That date is in the future, so I did not save it.');
   if(a.date<S.settings.start)return fail('That date is before your plan started ('+fmtS(S.settings.start)+').');
   if(isLocked(a.date))return fail('That week is locked. Turn on "Allow editing locked weeks" in Settings to change it.');
-  const k={class:'coaching',claude:'pager',core_book:'textbook',pyq_book:'pyq'}[a.source]||'textbook';
+  const K={class:'coaching',claude:'pager',core_book:'textbook',pyq_book:'pyq'};
+  if(a.type==='delete_questions'){
+    if(a.scope==='week_total'){
+      const wk=mon(a.date);
+      if(!S.weekQ||S.weekQ[wk]==null)return fail('There is no typed weekly total for that week.');
+      delete S.weekQ[wk];save();a.state='saved';a.note=`The week of ${fmtS(wk)} now counts only the days you logged (${weekStats(wk).q} questions).`;return coachRender();
+    }
+    const l=S.logs[a.date];
+    if(!l||qTot(l)===0)return fail('No questions are logged on that day.');
+    let removed=0;
+    if(a.scope==='day'){removed=qTot(l);Object.values(K).forEach(c=>l[c]=0)}
+    else if(a.scope==='source'){const c=K[a.source];removed=l[c]||0;l[c]=0;if(!removed)return fail('There are no '+({class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'}[a.source])+' questions on that day.')}
+    else{
+      let n=a.count;
+      if(a.source){const c=K[a.source],have=l[c]||0;if(have<n)return fail(`That day only has ${have} in that source, so I did not remove ${n}. Ask again with a smaller number.`);l[c]=have-n;removed=n}
+      else{if(qTot(l)<n)return fail(`That day only has ${qTot(l)} questions, so I did not remove ${n}.`);
+        Object.values(K).sort((x,y)=>(l[y]||0)-(l[x]||0)).forEach(c=>{const t=Math.min(n,l[c]||0);l[c]=(l[c]||0)-t;n-=t;removed+=t})}
+    }
+    if(qTot(l)===0&&l.quick)delete S.logs[a.date];
+    save();a.state='saved';
+    a.note=`Removed ${removed}. ${fmtS(a.date)} now has ${S.logs[a.date]?qTot(S.logs[a.date]):0} questions.`+(S.logs[a.date]&&S.logs[a.date].quick===undefined?' Your accuracy, energy and sleep for that day were kept.':'')+((S.weekQ||{})[mon(a.date)]!=null?` The week of ${fmtS(mon(a.date))} still shows its typed total (${S.weekQ[mon(a.date)]}) if that is higher.`:'');
+    return coachRender();
+  }
+  const k=K[a.source]||'textbook';
   const l=S.logs[a.date]||{date:a.date,phase:phaseFor(a.date).name,coaching:0,pager:0,textbook:0,pyq:0,accuracy:null,energy:null,focus:null,sleep:null,quick:true,topics:'',weak:'',notes:'Logged from the AI chat. Open Daily Log to add accuracy, energy and sleep.'};
   l[k]=a.mode==='set'?a.count:(l[k]||0)+a.count;
   S.logs[a.date]=l;save();
