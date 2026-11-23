@@ -1599,7 +1599,8 @@ function coachRender(pending){
       +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
       +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)
       +(a.state==='saved'&&a.undo?`<div style="margin-top:8px"><button class="btn s alt" onclick="coachUndo(${mi},${ai})">Undo</button></div>`:'')+'</div>'}).join('');
-  o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
+  const src=m=>(m.sources&&m.sources.length)?`<div class="sub" style="margin:2px 0 8px;max-width:92%">\u{1F310} Searched the web. Sources: ${m.sources.filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`).join(' · ')}</div>`:'';
+  o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+src(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
   chatsSave();coachHist();coachFileKick();
   if(pending||COACH_CHAT.length){const f=document.getElementById('coachForm');(f||o).scrollIntoView({block:'end',behavior:'smooth'})}
@@ -1665,8 +1666,8 @@ async function coachText(e){
     if(!q)q='Please read the attached file(s) and help me with them.';
     const inp=document.getElementById('coachQ');
     coachRender(true,COACH_CHAT.push({role:'user',content:q+(att.length?'\n📎 '+att.map(a=>a.name).join(', '):'')}));if(inp)inp.value='';
-    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[]});
-      if(autoOn()&&!att.length){const mi=COACH_CHAT.length-1;(a.actions||[]).forEach((x,ai)=>{if(['log_questions','delete_questions','edit_data'].includes(x.type))coachConfirm(mi,ai)})}
+    try{const a=await coachAI(q,att);COACH_CHAT.push({role:'assistant',content:a.answer,actions:a.actions||[],sources:(a.sources||[]).slice(0,6)});
+      if(autoOn()&&!att.length&&!a.webUsed){const mi=COACH_CHAT.length-1;(a.actions||[]).forEach((x,ai)=>{if(['log_questions','delete_questions','edit_data'].includes(x.type))coachConfirm(mi,ai)})}
       coachRender();return}
     catch(err){COACH_CHAT.push({role:'assistant',error:true,content:err.message+' Here is the rule-based answer instead:'});coachRender();out.insertAdjacentHTML('afterbegin','');out.insertAdjacentHTML('beforeend','<div style="margin-top:8px">'+coachRule(q)+'</div>');return}
   }
@@ -1674,7 +1675,7 @@ async function coachText(e){
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<h2>Coach</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, can search the internet for current information, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
@@ -1682,7 +1683,7 @@ function vCoach(){
   <div class="card"><h3>Ask the coach</h3><p>${COACH_Q.map(([k,l])=>`<button type="button" class="btn s alt" onclick="coachAsk('${k}')">${l}</button>`).join(' ')}</p>
    <div id="coachOut" style="margin-top:14px;margin-bottom:14px;line-height:1.7"></div>
    <form id="coachForm" onsubmit="coachText(event)" class="row"><div style="flex:1"><label for="coachQ">${COACH_API?'Ask the AI coach anything':'Or type a question'}</label><input id="coachQ" type="text" maxlength="2000" autocomplete="off" placeholder="${COACH_API?'Ask anything: a doubt, a plan, your marks...':'e.g. what should I study today?'}"></div>${COACH_API?`<button class="btn s alt" type="button" onclick="document.getElementById('coachFile').click()">📎 Attach</button><input id="coachFile" type="file" accept="image/*,application/pdf" multiple hidden onchange="coachPick(this)">`:''}<button class="btn" type="submit">Send</button></form>
-   <div id="coachAtt"></div>${COACH_API?`<label class="sub" style="display:block;margin-top:8px;cursor:pointer"><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"> Apply the AI's changes without asking. You can still Undo each one. Changes are never applied automatically when a file is attached.</label>`:''}
+   <div id="coachAtt"></div>${COACH_API?`<label class="sub" style="display:block;margin-top:8px;cursor:pointer"><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"> Apply the AI's changes without asking. You can still Undo each one. Changes are never applied automatically when a file is attached or the AI searched the web.</label>`:''}
    <div id="coachHist"></div></div>`;
   if(COACH_API){COACH_ATT=[];coachRender()}
 }
