@@ -209,7 +209,7 @@ const DEF=()=>({
       Math:[{name:'RD Sharma',note:''},{name:'Cengage Math (Mains)',note:''},{name:'Cengage Math (Advanced)',note:''},{name:'Math PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}]},
     milestones:[['2026-10-09',150],['2026-10-16',160],['2026-10-23',170],['2026-10-30',180],['2026-11-05',190],['2026-11-30',200],['2026-12-31',205],['2027-01-31',210],['2027-02-15',220],['2027-03-01',225],['2027-03-31',230],['2027-06-01',245],['2027-08-01',255],['2027-10-02',265]].map(([date,marks])=>({date,marks}))
   },
-  logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],days:{}
+  logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],days:{}
 });
 const FIRST_MOCK={id:'M20260926',date:'2026-09-26',num:5,type:'Arjuna Classes 11th JEE Mock (75 Q)',phase:'Phase 0',attempted:null,correct:41,incorrect:null,accuracy:null,marks:164,phy:48,chem:56,math:60,time:null,total:75,cp:12,cc:14,cm:15,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:269,lo:null,av:null,rank:4,students:15,percentile:(15-4)/15*100,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Roll 2129. Top: Gouransh 269; 3rd Yuvraj Singh 176 (-12); 5th Shaurya 158 (+6).',files:{}};
 const HI_TOPICS=['Straight lines','Circle','Parabola','Trigo 1','Trigo 2'];
@@ -223,7 +223,7 @@ const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna
 /* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
 const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
   phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
-  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],days:{}});
+  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],days:{}});
 const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
   type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
 const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
@@ -344,7 +344,7 @@ function load(){
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   return weakMig(seedAreas(clearQuestionData(d,KEY)));
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
+function save(){try{commitSync()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
 
 /* ---------- file storage (IndexedDB, for PDFs) ---------- */
 const FDB=new Promise((res,rej)=>{const r=indexedDB.open('jee_files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
@@ -431,11 +431,11 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],commit:['Commitments',vCommit],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
-  $('#nav').innerHTML=Object.entries(VIEWS).map(([k,[l]])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
+  $('#nav').innerHTML=Object.entries(VIEWS).map(([k,[l]])=>`<button class="${k===view?'on':''}" onclick="go('${k}')">${l}${k==='commit'?cmBadge():''}</button>`).join('');
   Object.values(CH).forEach(c=>c.destroy());CH={};
   $('#app').innerHTML='';VIEWS[view][1]();window.scrollTo(0,0);
 }
@@ -1353,6 +1353,7 @@ function coachSummary(){
     backlog:{open:f.open.length,overdue:f.od.length,top:f.bl.slice(0,6).map(b=>({topic:b.topic,subject:b.subject,priority:b.priority,ageDays:b.age}))},
     recentLoggedDays:logs().slice(-10).map(l=>({date:l.date,class:l.coaching||0,claude:l.pager||0,coreBook:l.textbook||0,pyqBook:l.pyq||0,total:qTot(l)})),
     handTypedWeeklyTotals:Object.fromEntries(Object.entries(S.weekQ||{}).slice(-8)),
+    commitments:(()=>{try{const M=cmMetrics();return {active:cmList().filter(c=>c.status==='Active').length,alerts:cmAlerts().slice(0,4).map(a=>a[1]),reliabilityPercent:M.n>=3?Math.round(M.crs):null}}catch(e){return null}})(),
     daysSinceLastLog:f.sinceLog,averageSleepHours:f.sleep==null?null:Math.round(f.sleep*10)/10};
 }
 /* Saved chats: kept in this browser, one list per profile. */
@@ -1520,7 +1521,7 @@ function opsApply(ops){
 }
 function viewErrs(){
   const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','prod','calc','analytics','compare','reports','settings']){
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','commit','prod','calc','analytics','compare','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
@@ -2037,6 +2038,230 @@ function saveBL(e){
 function revisit(id){const b=S.backlog.find(x=>x.id===id);b.attempts++;b.revisited=today();if(b.status==='Pending')b.status='In Progress';save();vBacklog()}
 function resolveBL(id){const b=S.backlog.find(x=>x.id===id);b.status='Resolved';b.resolved=today();save();vBacklog()}
 function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x.id!==id);save();vBacklog()}}
+/* ---------- COMMITMENT TRACKER: promises you make to yourself (S.commitments) ---------- */
+const CM_CAT=['Daily','Weekly','Monthly','Academic','Habit','Long-term'],CM_PR=['Low','Medium','High','Critical'],CM_PW={Low:1,Medium:2,High:3,Critical:5};
+const CM_EST={Daily:2,Weekly:6,Monthly:20,Academic:8,Habit:1,'Long-term':40};
+const CM_MISS=['Insufficient time','Unexpected interruption','Fatigue','Wrong workload estimate','Lost motivation','Other'];
+let cmF={q:'',st:'all',cat:'',sub:'',pr:'',mo:''},cmEdit=null,cmAct=null,cmDraft=null,cmShow={};
+const cmList=()=>Array.isArray(S.commitments)?S.commitments:(S.commitments=[]);
+const cmEst=c=>c.estHours>0?+c.estHours:(CM_EST[c.category]||2);
+const cmRem=c=>cmEst(c)*(1-Math.min(100,c.progress||0)/100);
+const cmW=c=>(CM_PW[c.priority]||2)*(0.5+Math.min(Math.max(cmEst(c),0.5),8)/4);
+const cmNewId=()=>'CM'+String(cmList().reduce((m,c)=>Math.max(m,+String(c.id).slice(2)||0),0)+1).padStart(3,'0');
+const cmGrace=c=>c.status==='Cancelled'&&(c.progress||0)===0&&c.closedOn&&c.created&&diff(c.created,c.closedOn)<=1;
+const cmClosed=()=>cmList().filter(c=>['Completed','Missed','Cancelled'].includes(c.status)&&!cmGrace(c));
+function commitSync(){
+  const L=S.commitments;if(!Array.isArray(L)||!L.length)return;const t=today(),now=new Date().toISOString();
+  L.forEach(c=>{
+    if(!c.created)c.created=t;if(!c.category)c.category='Daily';if(!c.priority)c.priority='Medium';if(typeof c.progress!=='number')c.progress=+c.progress||0;
+    if(!c.source)c.source='chat';if(!c.status)c.status='Active';if(!Array.isArray(c.versions))c.versions=[];if(!Array.isArray(c.updates))c.updates=[];if(!Array.isArray(c.dependsOn))c.dependsOn=c.dependsOn?[c.dependsOn]:[];
+    if(c.lastDeadline==null)c.lastDeadline=c.deadline;else if(c.lastDeadline!==c.deadline){
+      c.versions.push({ts:now,field:'deadline',from:c.lastDeadline,to:c.deadline});
+      if(c.deadline>c.lastDeadline)c.postponeCount=(c.postponeCount||0)+1;
+      if(c.status==='Missed'&&c.deadline>=t){c.status='Active';c.completedOn=null;c.closedOn=null}
+      c.lastDeadline=c.deadline}
+    if(c.lastTitle==null)c.lastTitle=c.title;else if(c.lastTitle!==c.title){c.versions.push({ts:now,field:'title',from:c.lastTitle,to:c.title});c.lastTitle=c.title}
+    if(c.status==='Missed'&&c.progress>=100){c.status='Completed';c.completedOn=c.completedOn||t}
+    if(c.status==='Active'){if(c.progress>=100){c.status='Completed';c.completedOn=c.completedOn||t}else if(c.deadline&&c.deadline<t){c.status='Missed';c.closedOn=c.deadline}}
+  });
+  L.forEach(p=>{const ch=L.filter(c=>c.parentId===p.id&&c.status!=='Cancelled');if(ch.length&&p.status==='Active')p.progress=Math.round(avg(ch.map(c=>c.progress||0)))});
+}
+function cmFeas(d,selfId){
+  const t=today(),L=cmList().filter(c=>c.status==='Active'&&c.id!==selfId),msgs=[];let level='ok';
+  const bump=l=>{if(l==='bad'||(l==='warn'&&level==='ok'))level=l};
+  if(!d.deadline||d.deadline<t)return {level:'bad',msgs:['That deadline is in the past.'],avail:0,need:0,free:0,fix:null};
+  const need=d.estHours>0?+d.estHours:(CM_EST[d.category]||2);
+  const availTo=dd=>{let a=0;for(let x=t;x<=dd;x=addD(x,1))a+=planMin(x)/60;return a},avail=availTo(d.deadline);
+  const other=sum(L.filter(c=>c.deadline<=d.deadline).map(cmRem)),free=avail-other;
+  if(need>free){bump(free<=0||need>free*1.5?'bad':'warn');msgs.push(`This needs about ${r1(need)} h, but only about ${r1(Math.max(0,free))} h of your planned study time is free by ${fmtS(d.deadline)} (${r1(avail)} h planned, ${r1(other)} h already promised to other commitments).`)}
+  const cl=cmClosed().filter(c=>c.category===d.category);
+  if(cl.length>=3){const ok=cl.filter(c=>c.status==='Completed').length/cl.length;if(ok<0.5){bump('warn');msgs.push(`You completed only ${r0(ok*100)}% of your last ${cl.length} ${d.category} commitments.`)}}
+  if(L.length>=8){bump('warn');msgs.push(`You already have ${L.length} active commitments.`)}
+  let fix=null;if(level!=='ok'){for(let k=1;k<=120;k++){const dd=addD(d.deadline,k);if(need<=availTo(dd)-sum(L.filter(c=>c.deadline<=dd).map(cmRem))){fix=dd;break}}}
+  return {level,msgs,avail,need,free,fix};
+}
+function cmConflicts(){
+  const t=today(),A=cmList().filter(c=>c.status==='Active'&&c.deadline>=t).sort((a,b)=>a.deadline<b.deadline?-1:1),out=[];
+  [...new Set(A.map(c=>c.deadline))].forEach(d=>{
+    let av=0;for(let x=t;x<=d;x=addD(x,1))av+=planMin(x)/60;
+    const due=A.filter(c=>c.deadline<=d),need=sum(due.map(cmRem));
+    if(need>av+0.01&&!out.some(o=>o.date!==d&&o.ids.every(i=>due.some(c=>c.id===i))&&o.need>=need-0.01))out.push({date:d,need,av,ids:due.map(c=>c.id),names:due.filter(c=>cmRem(c)>0).map(c=>c.title)});
+  });
+  return out.slice(0,3);
+}
+function cmAlerts(){
+  const t=today(),L=cmList(),out=[];
+  L.filter(c=>c.status==='Active').forEach(c=>{
+    const left=diff(t,c.deadline),p=c.progress||0;
+    if(left<=2&&p<100)out.push([left<=0?3:2,`${c.title} is due ${left<=0?'today':left===1?'tomorrow':'in 2 days'}`,`${p}% done. About ${r1(cmRem(c))} h of work remains.`]);
+    const tot=diff(c.created,c.deadline),el=diff(c.created,t);
+    if(tot>=2&&el>=1){const exp=Math.min(100,el/tot*100);if(p<exp-25)out.push([2,`Falling behind: ${c.title}`,`About ${r0(exp)}% of the time has passed but you are at ${p}%.`])}
+    (c.dependsOn||[]).forEach(id=>{const dp=L.find(x=>x.id===id);if(dp&&dp.status!=='Completed'&&dp.status!=='Cancelled'&&(left<=3||dp.deadline>=c.deadline))out.push([2,`Dependency not finished for ${c.title}`,`It depends on "${dp.title}" (${dp.progress||0}% done, due ${fmtS(dp.deadline)}).`])});
+    if((c.postponeCount||0)>=2)out.push([2,`You have postponed ${c.title} ${c.postponeCount} times`,'Consider making it smaller or splitting it into steps.']);
+  });
+  L.filter(c=>c.status==='Missed'&&!c.missReason).forEach(c=>out.push([1,`Review needed: ${c.title}`,'The deadline passed. Tell me what got in the way so the tracker can learn from it.']));
+  cmConflicts().forEach(x=>out.push([2,`Too much promised by ${fmtS(x.date)}`,`${r1(x.need)} h of work is due but only about ${r1(x.av)} h is planned. Competing: ${x.names.join(', ')}.`]));
+  return out.sort((a,b)=>b[0]-a[0]);
+}
+const cmBadge=()=>{try{const n=cmAlerts().filter(a=>a[0]>=2).length;return n?` <span class="chip bg-bad" style="margin-left:4px">${n}</span>`:''}catch(e){return ''}};
+function cmForecast(c){
+  const t=today(),cl=cmClosed().filter(x=>x.category===c.category),base=cl.length>=3?cl.filter(x=>x.status==='Completed').length/cl.length:0.7;
+  const left=Math.max(0,diff(t,c.deadline)),tot=Math.max(1,diff(c.created,c.deadline)),el=Math.max(0,diff(c.created,t)),exp=Math.min(100,el/tot*100);
+  let av=0;for(let x=t;x<=c.deadline;x=addD(x,1))av+=planMin(x)/60;
+  const ratio=cmRem(c)<=0?3:av/cmRem(c);let p=base*0.5+Math.min(1,ratio/1.5)*0.5;
+  if((c.progress||0)>=exp)p+=0.05;else if((c.progress||0)<exp-25)p-=0.1;p-=0.05*(c.postponeCount||0);
+  return Math.round(Math.max(0.05,Math.min(0.95,p))*100);
+}
+function cmMetrics(){
+  const all=cmList().filter(c=>!cmGrace(c)),C=cmClosed(),t=today();
+  const credit=c=>c.status==='Completed'?((c.completedOn||t)<=c.deadline?1:0.75):c.status==='Missed'?Math.min(0.5,(c.progress||0)/100*0.5):0;
+  const w=sum(C.map(cmW)),crs=w?sum(C.map(c=>cmW(c)*credit(c)))/w*100:null;
+  const resc=all.filter(c=>(c.postponeCount||0)>0||(c.versions||[]).some(v=>v.field==='deadline')).length;
+  const over=all.filter(c=>(c.overridden&&c.status!=='Completed')||['Wrong workload estimate','Insufficient time'].includes(c.missReason)).length;
+  const recent=all.filter(c=>c.created>=addD(t,-27));
+  return {n:C.length,total:all.length,crs,onTime:C.length?C.filter(c=>c.status==='Completed'&&(c.completedOn||t)<=c.deadline).length/C.length*100:null,
+    partial:C.length?avg(C.map(c=>c.status==='Completed'?100:(c.progress||0))):null,resc:all.length?resc/all.length*100:null,over:all.length?over/all.length*100:null,
+    aband:all.length?all.filter(c=>c.status==='Cancelled').length/all.length*100:null,perWeek:recent.length/4,size:all.length?avg(all.map(cmEst)):null};
+}
+function cmPatterns(){
+  const C=cmClosed(),out=[];if(C.length<3)return out;const fail=c=>c.status!=='Completed',rate=a=>a.length?a.filter(c=>!fail(c)).length/a.length:null;
+  const we=C.filter(c=>[0,6].includes(pd(c.deadline).getDay())),wd=C.filter(c=>![0,6].includes(pd(c.deadline).getDay()));
+  if(we.length>=3&&wd.length>=3&&rate(wd)-rate(we)>=0.25)out.push(`You miss weekend commitments more often (${r0(rate(we)*100)}% completed on weekends vs ${r0(rate(wd)*100)}% on weekdays).`);
+  const ps={};cmList().forEach(c=>{if(c.postponeCount&&c.subject)ps[c.subject]=(ps[c.subject]||0)+c.postponeCount});
+  const top=Object.entries(ps).sort((a,b)=>b[1]-a[1])[0];if(top&&top[1]>=2)out.push(`You repeatedly postpone ${top[0]} commitments (${top[1]} postponements).`);
+  const sm=C.filter(c=>cmEst(c)<=2),lg=C.filter(c=>cmEst(c)>2);if(sm.length>=3&&lg.length>=3&&rate(sm)-rate(lg)>=0.25)out.push(`You complete smaller commitments more consistently (${r0(rate(sm)*100)}% for 2 h or less vs ${r0(rate(lg)*100)}% for bigger ones).`);
+  const dd=C.filter(c=>c.category==='Daily'),ww=C.filter(c=>c.category==='Weekly');if(dd.length>=3&&ww.length>=3&&Math.abs(rate(ww)-rate(dd))>=0.2)out.push(rate(ww)>rate(dd)?`Your completion rate is higher when you plan weekly (${r0(rate(ww)*100)}%) than daily (${r0(rate(dd)*100)}%).`:`Your completion rate is higher when you plan daily (${r0(rate(dd)*100)}%) than weekly (${r0(rate(ww)*100)}%).`);
+  const rs={};cmList().forEach(c=>{if(c.missReason)rs[c.missReason]=(rs[c.missReason]||0)+1});const tr=Object.entries(rs).sort((a,b)=>b[1]-a[1])[0];
+  if(tr&&tr[1]>=2)out.push(`Your most common reason for missing: ${tr[0].toLowerCase()} (${tr[1]} times).`+(tr[0]==='Wrong workload estimate'?' You tend to underestimate how long work takes.':''));
+  const cats=CM_CAT.map(k=>[k,C.filter(c=>c.category===k)]).filter(a=>a[1].length>=3).map(a=>[a[0],rate(a[1])]).sort((a,b)=>b[1]-a[1]);
+  if(cats.length>=2&&cats[0][1]-cats[cats.length-1][1]>=0.25)out.push(`Strongest category: ${cats[0][0]} (${r0(cats[0][1]*100)}%). Weakest: ${cats[cats.length-1][0]} (${r0(cats[cats.length-1][1]*100)}%).`);
+  return out;
+}
+function cmWeekly(){
+  const t=today(),a=addD(t,-6),made=cmList().filter(c=>c.created>=a),cl=cmList().filter(c=>c.deadline>=a&&c.deadline<=t&&['Completed','Missed'].includes(c.status));
+  const done=cl.filter(c=>c.status==='Completed').length,part=cl.filter(c=>c.status==='Missed'&&(c.progress||0)>0).length,miss=cl.filter(c=>c.status==='Missed'&&!(c.progress||0)).length;
+  if(!made.length&&!cl.length)return 'Nothing was made or due in the last 7 days.';
+  const rs={};cl.forEach(c=>{if(c.missReason)rs[c.missReason]=(rs[c.missReason]||0)+1});const tr=Object.entries(rs).sort((a,b)=>b[1]-a[1])[0];
+  return `You made ${made.length} commitment${made.length===1?'':'s'} in the last 7 days. Of ${cl.length} that came due, ${done} ${done===1?'was':'were'} completed, ${part} partly completed and ${miss} missed.`+(tr?` The main reason given: ${tr[0].toLowerCase()}.`:miss+part?' Add a reason to each missed one so the tracker can spot the pattern.':'');
+}
+function cmCheckins(){
+  const t=today(),y=addD(t,-1),L=cmList(),out=[];
+  L.filter(c=>c.deadline===y&&c.status!=='Cancelled').forEach(c=>out.push(c.status==='Completed'?`Yesterday you committed to "${c.title}" and completed it.`:`Yesterday you committed to "${c.title}". ${c.progress||0}% is done. Would you like to reschedule the rest?`));
+  L.filter(c=>c.status==='Active'&&diff(t,c.deadline)>=0&&diff(t,c.deadline)<=1).forEach(c=>{let av=0;for(let x=t;x<=c.deadline;x=addD(x,1))av+=planMin(x)/60;out.push(`"${c.title}" is due ${diff(t,c.deadline)===0?'today':'tomorrow'}. You have completed about ${c.progress||0}% and have roughly ${r1(av)} h of planned time left before then. ${av<cmRem(c)?'That looks tight.':'That should be enough.'}`)});
+  L.filter(c=>c.status==='Missed'&&!c.missReason).forEach(c=>out.push(`"${c.title}" was missed (${c.progress||0}% done). Was it insufficient time, an interruption, fatigue or a wrong workload estimate? Pick one below.`));
+  return out.slice(0,5);
+}
+function cmFilterList(){
+  const q=(cmF.q||'').trim().toLowerCase();
+  return cmList().filter(c=>(cmF.st==='all'||c.status===cmF.st)&&(!cmF.cat||c.category===cmF.cat)&&(!cmF.sub||c.subject===cmF.sub)&&(!cmF.pr||c.priority===cmF.pr)&&(!cmF.mo||(c.created||'').slice(0,7)===cmF.mo||(c.deadline||'').slice(0,7)===cmF.mo)
+    &&(!q||[c.title,c.why,c.subject,c.category,c.evidence,c.assessment].some(x=>String(x||'').toLowerCase().includes(q)))).sort((a,b)=>(b.deadline||'')<(a.deadline||'')?-1:1);
+}
+function cmHistHtml(){
+  const L=cmFilterList(),stc={Active:'',Completed:'bg-ok',Missed:'bg-bad',Cancelled:'bg-warn'};
+  return L.length?`<div class="tw"><table><tr><th>Commitment</th><th>Category</th><th>Deadline</th><th>Priority</th><th>Status</th><th>Done</th></tr>${L.map(c=>`<tr><td><b>${esc(c.title)}</b>${c.subject?`<div class="sub">${esc(c.subject)}${c.why?' · '+esc(c.why):''}</div>`:''}</td><td>${esc(c.category)}</td><td>${fmtS(c.deadline)}</td><td>${esc(c.priority)}</td><td><span class="chip ${stc[c.status]||''}">${esc(c.status)}</span></td><td>${c.progress||0}%</td></tr>`).join('')}</table></div>`:'<div class="sub">Nothing matches.</div>';
+}
+function cmCard(c){
+  const t=today(),left=diff(t,c.deadline),act=cmAct&&cmAct.id===c.id,L=cmList(),par=L.find(x=>x.id===c.parentId),kids=L.filter(x=>x.parentId===c.id),
+    deps=(c.dependsOn||[]).map(id=>L.find(x=>x.id===id)).filter(Boolean),p=c.progress||0,open=c.status==='Active';
+  const stc={Active:'',Completed:'bg-ok',Missed:'bg-bad',Cancelled:'bg-warn'}[c.status],prc={Critical:'bg-bad',High:'bg-warn',Medium:'',Low:''}[c.priority];
+  let panel='';
+  if(act){const ty=cmAct.type;
+    panel=`<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px">`+(ty==='done'?`<b>Mark as fulfilled</b><div class="row"><div style="grid-column:span 2"><label>Evidence (optional), e.g. lecture log, test score</label><input id="cme"></div><div style="grid-column:span 2"><label>How did it go? (optional)</label><input id="cma"></div></div><button class="btn s ok" onclick="cmDo('done')">Save as completed</button>`
+      :ty==='resched'?`<b>Reschedule</b><div class="row"><div><label>New deadline</label><input id="cmd" type="date" min="${t}" value="${addD(c.deadline>t?c.deadline:t,2)}"></div><div style="grid-column:span 3"><label>Reason</label><input id="cmr" placeholder="e.g. lectures took longer than planned"></div></div><button class="btn s ok" onclick="cmDo('resched')">Reschedule</button>`
+      :ty==='cancel'?`<b>Withdraw this commitment</b><div class="row"><div style="grid-column:span 4"><label>Reason (required)</label><input id="cmr"></div></div><button class="btn s bad" onclick="cmDo('cancel')">Withdraw</button>`
+      :`<b>Close as missed</b><div class="sub">Your ${p}% progress is kept.</div><button class="btn s bad" onclick="cmDo('miss')">Close as missed</button>`)
+      +` <button class="btn s alt" onclick="cmAct=null;vCommit()">Close</button></div>`}
+  const fc=open?cmForecast(c):null;
+  return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b>${esc(c.title)}</b>
+    <div class="sub"><span class="chip">${esc(c.category)}</span> <span class="chip ${prc}">${esc(c.priority)}</span> <span class="chip ${stc}">${esc(c.status)}</span>${c.subject&&c.subject!=='General'?' · '+esc(c.subject):''} · due ${fmtS(c.deadline)}${open?(left<0?'':left===0?' (today)':' ('+left+' day'+(left===1?'':'s')+')'):''} · ~${r1(cmEst(c))} h${c.source?' · via '+esc(c.source):''}</div>
+    ${c.why?`<div class="sub">Why: ${esc(c.why)}</div>`:''}${par?`<div class="sub">Part of: ${esc(par.title)}</div>`:''}${kids.length?`<div class="sub">Steps: ${kids.map(k=>esc(k.title)+' ('+(k.progress||0)+'%)').join(', ')}</div>`:''}${deps.length?`<div class="sub">Depends on: ${deps.map(d=>esc(d.title)+' ('+d.status+')').join(', ')}</div>`:''}
+    ${c.status==='Missed'||c.status==='Cancelled'?`<div class="sub">${c.missReason?'Reason: '+esc(c.missReason):c.cancelReason?'Reason: '+esc(c.cancelReason):''}</div>`:''}${c.evidence?`<div class="sub">Evidence: ${esc(c.evidence)}</div>`:''}${c.assessment?`<div class="sub">Review: ${esc(c.assessment)}</div>`:''}</div>
+    <div class="sub" style="text-align:right">${open&&fc!=null?`Likelihood of finishing<br><b style="font-size:18px">${fc}%</b>`:''}</div></div>
+    <div class="bar" style="margin:8px 0"><i style="width:${p}%"></i></div>
+    ${open?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="range" min="0" max="100" step="5" value="${p}" onchange="cmProgress('${c.id}',+this.value)" style="width:160px"> <span class="sub">${p}%</span>
+      <button class="btn s ok" onclick="cmOpen('${c.id}','done')">Done</button> <button class="btn s alt" onclick="cmOpen('${c.id}','resched')">Reschedule</button> <button class="btn s alt" onclick="cmOpen('${c.id}','miss')">Missed</button> <button class="btn s alt" onclick="cmOpen('${c.id}','cancel')">Withdraw</button> <button class="btn s alt" onclick="cmEdit='${c.id}';vCommit();scrollTo(0,0)">Edit</button></div>`
+      :c.status==='Missed'?`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${c.missReason?'':CM_MISS.map(r=>`<button class="btn s alt" onclick="cmReason('${c.id}','${r}')">${r}</button>`).join('')} <button class="btn s alt" onclick="cmOpen('${c.id}','resched')">Reschedule</button> <button class="btn s alt" onclick="cmOpen('${c.id}','done')">Actually done</button></div>`:''}
+    <div style="margin-top:6px"><a href="#" class="sub" onclick="cmShow['${c.id}']=!cmShow['${c.id}'];vCommit();return false">${cmShow[c.id]?'Hide':'Show'} history</a> <a href="#" class="sub" style="margin-left:12px;color:var(--bad)" onclick="cmDel('${c.id}');return false">Delete</a></div>
+    ${cmShow[c.id]?`<div class="sub" style="margin-top:6px">Created ${fmtS(c.created)} (ID ${esc(c.id)}${c.validated?', checked for feasibility':''})${c.overridden?' · saved against the feasibility warning':''}${c.completedOn?' · completed '+fmtS(c.completedOn):''}${(c.versions||[]).map(v=>`<div>• ${fmtS(v.ts.slice(0,10))}: ${v.field==='deadline'?'deadline '+fmtS(v.from)+' → '+fmtS(v.to):'title "'+esc(v.from)+'" → "'+esc(v.to)+'"'}</div>`).join('')}${(c.updates||[]).slice(-6).map(u=>`<div>• ${fmtS(String(u.ts).slice(0,10))}: ${esc(u.note||'')}${u.progress!=null?' ('+u.progress+'%)':''}</div>`).join('')}</div>`:''}${panel}</div>`;
+}
+function vCommit(){
+  commitSync();const L=cmList(),t=today(),M=cmMetrics(),al=cmAlerts(),ci=cmCheckins(),pat=cmPatterns(),act=L.filter(c=>c.status==='Active').sort((a,b)=>a.deadline<b.deadline?-1:1);
+  const e0=cmEdit?L.find(c=>c.id===cmEdit)||{}:(cmDraft||{}),SJ=['General',...(PROFILE==='malik'?['Physics','Chemistry','Math']:['Physics'])];
+  const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  const pc=x=>x==null?'—':r0(x)+'%',months=[...new Set(L.flatMap(c=>[(c.created||'').slice(0,7),(c.deadline||'').slice(0,7)]).filter(Boolean))].sort().reverse();
+  const optsC=(skip,cur)=>`<option value="">(none)</option>`+L.filter(c=>c.id!==skip&&c.status!=='Cancelled').map(c=>`<option value="${c.id}" ${cur===c.id?'selected':''}>${esc(c.title.slice(0,50))}</option>`).join('');
+  const f=cmDraft&&cmDraft.feas;
+  const mo=(m)=>{const a=L.filter(c=>(c.created||'').slice(0,7)===m);return {n:a.length,d:a.filter(c=>c.status==='Completed').length,m:a.filter(c=>c.status==='Missed').length,c:a.filter(c=>c.status==='Cancelled').length,a:a.filter(c=>c.status==='Active').length}};
+  const curM=cmF.mo||t.slice(0,7),ms=mo(curM);
+  $('#app').innerHTML=`<h2>Commitments</h2>
+  <div class="sub" style="margin-bottom:12px">Your accountability system. Every promise you make to yourself is recorded, checked for feasibility, tracked and reviewed. Tell DXA AI "I'll finish the remaining 12 lectures by Friday" and it will propose a commitment for you to confirm. A promise is tracked, an intention ("I should study more") is not.</div>
+  <div class="grid"><div class="card"><div class="sub">Commitment Reliability (CRS)</div><div class="big">${M.n>=3?pc(M.crs):'—'}</div><div class="sub">${M.n>=3?`over ${M.n} closed commitments, weighted by priority and size`:'needs 3 closed commitments'}</div></div>
+   <div class="card"><div class="sub">Active</div><div class="big">${act.length}</div><div class="sub">${al.filter(a=>a[0]>=2).length} need attention</div></div>
+   <div class="card"><div class="sub">On-time completion</div><div class="big">${pc(M.onTime)}</div><div class="sub">partial work done ${pc(M.partial)}</div></div>
+   <div class="card"><div class="sub">Commitments a week</div><div class="big">${r1(M.perWeek)}</div><div class="sub">avg size ${M.size==null?'—':r1(M.size)+' h'}</div></div></div>
+  ${ci.length?`<div class="card"><h3>Check-in</h3>${ci.map(x=>`<div style="padding:6px 0">${esc(x)}</div>`).join('')}</div>`:''}
+  ${al.length?`<div class="card"><h3>Alerts</h3>${al.slice(0,8).map(([lv,h,d])=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><span style="color:${lv>=3?'var(--bad)':lv==2?'var(--warn)':'var(--blue)'};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${lv>=3?'Urgent':lv==2?'Watch':'Review'}</span> <b style="margin-left:8px">${esc(h)}</b><div class="sub">${esc(d)}</div></div>`).join('')}</div>`:''}
+  <div class="card"><h3>${cmEdit?'Edit commitment':'Create a commitment'}</h3><form onsubmit="cmSave(event)">
+   <div class="row"><div style="grid-column:span 2"><label>Commitment</label><input id="cmti" required maxlength="160" value="${esc(e0.title||'')}" placeholder="e.g. Finish the remaining 12 lectures"></div><div><label>Category</label>${sel('cmca',CM_CAT,e0.category)}</div><div><label>Priority</label>${sel('cmpr',CM_PR,e0.priority||'Medium')}</div></div>
+   <div class="row"><div><label>Deadline</label><input id="cmdl" type="date" required min="${cmEdit?'':t}" value="${e0.deadline||addD(t,1)}"></div><div><label>Subject</label>${sel('cmsu',SJ,e0.subject||'General')}</div><div><label>Estimated hours</label><input id="cmes" type="number" min="0" step="0.5" max="200" value="${e0.estHours||''}" placeholder="auto"></div><div><label>Depends on</label><select id="cmde">${optsC(cmEdit,(e0.dependsOn||[])[0])}</select></div></div>
+   <div class="row"><div style="grid-column:span 3"><label>Why is this commitment important?</label><input id="cmwh" value="${esc(e0.why||'')}" placeholder="e.g. Clear the pending lecture backlog"></div><div><label>Part of a bigger goal</label><select id="cmpa">${optsC(cmEdit,e0.parentId)}</select></div></div>
+   <button class="btn ok">${cmEdit?'Update':'Check and create'}</button> ${cmEdit?'<button type="button" class="btn alt" onclick="cmEdit=null;vCommit()">Cancel</button>':''}</form>
+   ${f?`<div style="margin-top:12px;padding:12px 14px;border:1px solid ${f.level==='bad'?'var(--bad)':'var(--warn)'};border-radius:10px"><b>${f.level==='bad'?'This looks unrealistic':'This may be tight'}</b>${f.msgs.map(m=>`<div class="sub" style="margin-top:4px">${esc(m)}</div>`).join('')}${f.fix?`<div style="margin-top:6px">Suggested: move the deadline to <b>${fmtS(f.fix)}</b>, or split it across more days.</div>`:''}
+     <div style="margin-top:8px">${f.fix?`<button class="btn s ok" onclick="cmUseFix()">Use ${fmtS(f.fix)}</button> `:''}<button class="btn s alt" onclick="cmForce()">Save anyway</button> <button class="btn s alt" onclick="cmDraft=null;vCommit()">Change it</button></div></div>`:''}</div>
+  <div class="card"><h3>Active commitments (${act.length})</h3>${act.length?act.map(cmCard).join(''):'<div class="sub">Nothing active. Create one above or tell DXA AI.</div>'}</div>
+  ${(()=>{const ms=L.filter(c=>c.status==='Missed'&&(!c.missReason||(c.closedOn||c.deadline)>=addD(t,-7)||(cmAct&&cmAct.id===c.id)));return ms.length?`<div class="card"><h3>Missed: needs your review (${ms.length})</h3><div class="sub">Missing a deadline is not the same as failing. Your progress is kept. Say what got in the way, reschedule the rest, or mark it done if it actually was.</div>${ms.map(cmCard).join('')}</div>`:''})()}
+  <div class="card"><h3>Weekly review</h3><div>${esc(cmWeekly())}</div></div>
+  <div class="card"><h3>Reliability</h3><div class="tw"><table><tr><th>Metric</th><th>Value</th><th>What it measures</th></tr>
+   <tr><td>Commitment Reliability</td><td><b>${M.n>=3?pc(M.crs):'—'}</b></td><td>Fulfilment, weighted by priority and size. Late = 75%, missed = up to 50% of the work done, withdrawn = 0%</td></tr>
+   <tr><td>On-time Completion</td><td>${pc(M.onTime)}</td><td>Finished before the deadline</td></tr><tr><td>Partial Completion</td><td>${pc(M.partial)}</td><td>Average share of the work done</td></tr>
+   <tr><td>Rescheduling Rate</td><td>${pc(M.resc)}</td><td>How often deadlines moved</td></tr><tr><td>Overcommitment Rate</td><td>${pc(M.over)}</td><td>Promises that were unrealistic</td></tr><tr><td>Abandonment Rate</td><td>${pc(M.aband)}</td><td>Withdrawn after the first day</td></tr></table></div>
+   <div class="sub" style="margin-top:8px">The score is weighted by size, so making many tiny easy promises does not raise it, and withdrawing a commitment counts against it. It measures how reliably you follow through, not your intelligence or worth.</div>
+   <h3 style="margin-top:14px">Patterns</h3>${pat.length?pat.map(x=>`<div style="padding:4px 0">• ${esc(x)}</div>`).join(''):'<div class="sub">Needs at least 3 closed commitments before patterns appear.</div>'}
+   ${months.length?`<h3 style="margin-top:14px">By month</h3>${cv('cm1',200)}`:''}</div>
+  <div class="card"><h3>History</h3>
+   <div class="row"><div><label>Month</label><select onchange="cmF.mo=this.value;vCommit()"><option value="">All</option>${months.map(m=>`<option value="${m}" ${cmF.mo===m?'selected':''}>${m}</option>`).join('')}</select></div>
+    <div><label>Status</label><select onchange="cmF.st=this.value;vCommit()">${['all','Active','Completed','Missed','Cancelled'].map(x=>`<option ${cmF.st===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div><label>Category</label><select onchange="cmF.cat=this.value;vCommit()"><option value="">All</option>${CM_CAT.map(x=>`<option ${cmF.cat===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div><label>Priority</label><select onchange="cmF.pr=this.value;vCommit()"><option value="">All</option>${CM_PR.map(x=>`<option ${cmF.pr===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
+   <div class="row"><div><label>Subject</label><select onchange="cmF.sub=this.value;vCommit()"><option value="">All</option>${SJ.map(x=>`<option ${cmF.sub===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div style="grid-column:span 3"><label>Search</label><input type="search" value="${esc(cmF.q)}" placeholder="Search commitments..." oninput="cmF.q=this.value;document.getElementById('cmHist').innerHTML=cmHistHtml()"></div></div>
+   <div class="sub" style="margin:8px 0">${new Date(curM+'-15').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}: <b>${ms.n}</b> made · <b>${ms.d}</b> completed · <b>${ms.m}</b> missed · <b>${ms.c}</b> withdrawn · <b>${ms.a}</b> active</div>
+   <div id="cmHist">${cmHistHtml()}</div></div>`;
+  if(document.getElementById('cm1')){const mm=[...months].sort(),data=mm.map(mo);
+    mk('cm1',{type:'bar',data:{labels:mm,datasets:[{label:'Completed',data:data.map(x=>x.d),backgroundColor:'#3ddc97'},{label:'Missed',data:data.map(x=>x.m),backgroundColor:'#ff5a52'},{label:'Withdrawn',data:data.map(x=>x.c),backgroundColor:'#ffb020'},{label:'Active',data:data.map(x=>x.a),backgroundColor:'#5aa9ff'}]},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
+}
+function cmRead(){
+  const de=v('cmde'),pa=v('cmpa');
+  return {title:v('cmti').trim(),category:v('cmca'),priority:v('cmpr'),subject:v('cmsu'),deadline:v('cmdl'),why:v('cmwh').trim(),estHours:n('cmes')||0,dependsOn:de?[de]:[],parentId:pa||''};
+}
+function cmCreate(d,f,over){
+  const t=today(),id=cmNewId(),now=new Date().toISOString();
+  cmList().push({id,...d,created:t,source:'manual',status:'Active',validated:true,feas:{level:f.level,msgs:f.msgs},overridden:!!over,progress:0,postponeCount:0,
+    lastDeadline:d.deadline,lastTitle:d.title,versions:[],updates:[{ts:now,progress:0,note:'Created'}],evidence:'',assessment:'',missReason:'',cancelReason:'',completedOn:null,closedOn:null});
+  cmDraft=null;save();vCommit();
+}
+function cmSave(e){
+  e.preventDefault();const d=cmRead();if(!d.title)return;
+  if(cmEdit){const c=cmList().find(x=>x.id===cmEdit);if(c){Object.assign(c,d);c.updates.push({ts:new Date().toISOString(),note:'Edited'})}cmEdit=null;save();return vCommit()}
+  if(d.deadline<today())return alert('The deadline cannot be in the past.');
+  const f=cmFeas(d);if(f.level!=='ok'){cmDraft={...d,feas:f};return vCommit()}
+  cmCreate(d,f,false);
+}
+function cmForce(){if(cmDraft)cmCreate(cmDraft,cmDraft.feas,true)}
+function cmUseFix(){if(!cmDraft)return;const d={...cmDraft};delete d.feas;d.deadline=cmDraft.feas.fix;const f=cmFeas(d);if(f.level!=='ok'){cmDraft={...d,feas:f};return vCommit()}cmCreate(d,f,false)}
+function cmProgress(id,p){const c=cmList().find(x=>x.id===id);if(!c)return;c.progress=p;c.updates.push({ts:new Date().toISOString(),progress:p,note:'Progress updated'});save();vCommit()}
+function cmOpen(id,ty){cmAct={id,type:ty};vCommit()}
+function cmReason(id,r){const c=cmList().find(x=>x.id===id);if(c){c.missReason=r;c.updates.push({ts:new Date().toISOString(),note:'Reason: '+r});save();vCommit()}}
+function cmDo(ty){
+  const c=cmList().find(x=>x.id===(cmAct||{}).id);if(!c)return;const t=today(),now=new Date().toISOString(),g=id=>{const el=document.getElementById(id);return el?el.value.trim():''};
+  if(ty==='done'){c.status='Completed';c.progress=100;c.completedOn=t;c.evidence=g('cme');c.assessment=g('cma');c.updates.push({ts:now,progress:100,note:'Completed'})}
+  else if(ty==='resched'){const d=g('cmd');if(!d||d<t)return alert('Pick a new deadline from today onwards.');c.deadline=d;c.updates.push({ts:now,note:'Rescheduled to '+fmtS(d)+(g('cmr')?': '+g('cmr'):'')});if(g('cmr'))c.rescheduleReason=g('cmr')}
+  else if(ty==='cancel'){const r=g('cmr');if(!r)return alert('Please give a reason.');c.status='Cancelled';c.cancelReason=r;c.closedOn=t;c.updates.push({ts:now,note:'Withdrawn: '+r})}
+  else if(ty==='miss'){c.status='Missed';c.closedOn=t;c.updates.push({ts:now,progress:c.progress||0,note:'Closed as missed'})}
+  cmAct=null;save();vCommit();
+}
+function cmDel(id){const c=cmList().find(x=>x.id===id);if(c&&confirm('Delete "'+c.title+'" and its history? This cannot be undone.')){S.commitments=cmList().filter(x=>x.id!==id);save();vCommit()}}
+
 /* ---------- PRODUCTIVITY INTELLIGENCE: study sessions (S.sessions) against the plan and your question targets ---------- */
 let prodRange=30,prodEdit=null;
 const PROD_SUBJ=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Mock test','Other']:['Physics','Other'];
