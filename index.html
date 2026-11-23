@@ -1385,7 +1385,7 @@ function chBub(m){
   const src=(m.sources&&m.sources.length)?`<div class="sub" style="margin:2px 0">\u{1F310} Sources: ${m.sources.filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`).join(' · ')}</div>`:'';
   return m.role==='user'
     ?`<div style="display:flex;justify-content:flex-end;margin:8px 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
-    :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div>${src}${acts}</div>`;
+    :`<div style="margin:8px 0;display:flex;gap:9px;align-items:flex-start"><img src="dxa-ai.png" alt="DXA AI" width="36" height="36" style="width:36px;height:36px;border-radius:50%;flex:none;margin-top:2px;background:#000"><div style="min-width:0;max-width:calc(100% - 46px)"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div>${src}${acts}</div></div>`;
 }
 function vChatOne(c){
   $('#app').innerHTML=`<h2>Chat History</h2><p><button class="btn s alt" onclick="chView=null;vChats()">‹ All chats</button></p>
@@ -1622,7 +1622,7 @@ function coachRender(pending){
   const o=document.getElementById('coachOut');if(!o)return;
   const bub=(m)=>m.role==='user'
     ?`<div style="display:flex;justify-content:flex-end;margin:8px 0"><div style="background:var(--blue);color:#fff;padding:9px 13px;border-radius:14px 14px 3px 14px;max-width:85%;line-height:1.5">${esc(m.content).replace(/\n/g,'<br>')}</div></div>`
-    :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
+    :`<div style="margin:8px 0;display:flex;gap:9px;align-items:flex-start"><img src="dxa-ai.png" alt="DXA AI" width="36" height="36" style="width:36px;height:36px;border-radius:50%;flex:none;margin-top:2px;background:#000"><div style="min-width:0;max-width:calc(100% - 46px)"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div></div>`;
   const SRC={class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'};
   const acts=(m,mi)=>(m.actions||[]).map((a,ai)=>{
     if(a.type==='create_file'){
@@ -1656,7 +1656,7 @@ function coachRender(pending){
       +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)
       +(a.state==='saved'&&a.undo?`<div style="margin-top:8px"><button class="btn s alt" onclick="coachUndo(${mi},${ai})">Undo</button></div>`:'')+'</div>'}).join('');
   const src=m=>(m.sources&&m.sources.length)?`<div class="sub" style="margin:2px 0 8px;max-width:92%">\u{1F310} Searched the web. Sources: ${m.sources.filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title||s.url)}</a>`).join(' · ')}</div>`:'';
-  o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+src(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
+  o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+(m.role==='user'?'':'<div style="margin-left:45px">'+src(m)+acts(m,mi)+'</div>')).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
   chatsSave();coachHist();coachFileKick();
   if(pending||COACH_CHAT.length){const f=document.getElementById('coachForm');(f||o).scrollIntoView({block:'end',behavior:'smooth'})}
@@ -1731,7 +1731,7 @@ async function coachText(e){
 }
 function vCoach(){
   const f=coachFacts(),adv=coachAdvice(f),tag=n=>n>=3?['Urgent','var(--bad)']:n==2?['Important','var(--warn)']:n==1?['Note','var(--blue)']:['Good','var(--ok)'];
-  $('#app').innerHTML=`<h2>DXA AI</h2><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, can search the internet for current information, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
+  $('#app').innerHTML=`<div style="display:flex;align-items:center;gap:14px;margin-bottom:6px"><img src="dxa-ai-lg.png" alt="DXA AI" width="84" height="84" style="width:84px;height:84px;border-radius:50%;background:#000"><h2 style="margin:0">DXA AI</h2></div><div class="sub" style="margin-bottom:12px">${COACH_API?'Advice worked out from your own marks, logs and backlog. The buttons answer instantly from fixed rules. Or chat with the AI below like the Claude app: ask any doubt, get a plan, or ask about your marks. It remembers the conversation, can search the internet for current information, sees your logged data, and can read photos and PDFs you attach (up to 3 per message, PDFs up to 15 MB and 100 pages). It can change any of your tracker data when you ask (marks, logs, backlog, settings and more): it shows exactly what it will change, you tap Apply, and you can Undo afterwards. For example: "I did 40 questions today".':'Advice worked out from your own marks, logs and backlog using fixed rules. It is not an AI model, so it only knows what you have logged.'}</div>
   <div class="grid"><div class="card"><div class="sub">Days to the exam</div><div class="big">${diff(f.t,f.st.exam)}</div></div>
    <div class="card"><div class="sub">Latest mock</div><div class="big">${f.latest?f.latest.marks:'—'}</div><div class="sub">${f.latest?fmtS(f.latest.date)+' · target '+f.target:''}</div></div>
    <div class="card"><div class="sub">Questions a day</div><div class="big">${qn(f.pace)}</div><div class="sub">need ${qn(f.need)}</div></div></div>
