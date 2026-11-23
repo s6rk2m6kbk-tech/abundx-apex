@@ -1333,7 +1333,7 @@ function chatsSave(){
   c.msgs=COACH_CHAT;c.ts=Date.now();
   const first=COACH_CHAT.find(m=>m.role==='user');c.title=first?first.content.replace(/\n.*/s,'').slice(0,60):'';
   CHATS=CHATS.filter(x=>x.msgs.length||x.id===CHAT_ID).slice(0,30);
-  const trim=CHATS.map(x=>({...x,msgs:x.msgs.slice(-60)}));
+  const trim=CHATS.map(x=>({...x,msgs:x.msgs.slice(-60).map(m=>m.actions&&m.actions.some(a=>a.content&&a.content.length>20000)?{...m,actions:m.actions.map(a=>a.content&&a.content.length>20000?{...a,content:''}:a)}:m)}));
   try{localStorage.setItem(CHAT_KEY,JSON.stringify({cur:CHAT_ID,chats:trim}))}catch(e){}
 }
 function coachNew(){
@@ -1383,6 +1383,70 @@ function coachChips(){
   d.innerHTML=COACH_ATT.map((a,i)=>`<span class="sub" style="display:inline-block;margin:4px 6px 0 0;padding:3px 9px;border:1px solid var(--line);border-radius:12px">📎 ${esc(a.name)} <a href="#" onclick="COACH_ATT.splice(${i},1);coachChips();return false" aria-label="Remove">✕</a></span>`).join('');
 }
 const mdLite=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+/* ---- Files the AI makes (built on this device, nothing is uploaded) ---- */
+const FILE_INFO={pdf:['PDF document','pdf','application/pdf'],doc:['Word document','doc','application/msword'],png:['Image (PNG)','png','image/png'],svg:['Image (SVG)','svg','image/svg+xml'],csv:['Spreadsheet (CSV)','csv','text/csv'],txt:['Text file','txt','text/plain'],md:['Markdown file','md','text/markdown']};
+const FILES={};
+const mdInline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>').replace(/`([^`]+)`/g,'<code>$1</code>');
+function mdHtml(md){
+  const L=String(md).replace(/\r/g,'').split('\n'),o=[];let i=0,list=null;const close=()=>{if(list){o.push('</'+list+'>');list=null}};
+  while(i<L.length){
+    const t=L[i].trim();let m;
+    if(!t){close();i++;continue}
+    if(m=t.match(/^(#{1,4})\s+(.*)$/)){close();o.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`);i++;continue}
+    if(/^(-{3,}|\*{3,})$/.test(t)){close();o.push('<hr>');i++;continue}
+    if(t.startsWith('|')){close();const rows=[];while(i<L.length&&L[i].trim().startsWith('|')){rows.push(L[i].trim());i++}
+      const cells=r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim()),sep=rows.length>1&&/^[\s|:-]+$/.test(rows[1]);
+      const head=sep?cells(rows[0]):null,body=rows.slice(sep?2:0).map(cells);
+      o.push('<table>'+(head?'<tr>'+head.map(c=>`<th>${mdInline(c)}</th>`).join('')+'</tr>':'')+body.map(r=>'<tr>'+r.map(c=>`<td>${mdInline(c)}</td>`).join('')+'</tr>').join('')+'</table>');continue}
+    if(m=t.match(/^[-*•]\s+(.*)$/)){if(list!=='ul'){close();o.push('<ul>');list='ul'}o.push(`<li>${mdInline(m[1])}</li>`);i++;continue}
+    if(m=t.match(/^\d+[.)]\s+(.*)$/)){if(list!=='ol'){close();o.push('<ol>');list='ol'}o.push(`<li>${mdInline(m[1])}</li>`);i++;continue}
+    close();o.push(`<p>${mdInline(t)}</p>`);i++;
+  }
+  close();return o.join('');
+}
+const DOC_CSS='body,.d{font:13px/1.55 Helvetica,Arial,sans-serif;color:#111}h1{font-size:22px;margin:0 0 10px}h2{font-size:17px;margin:16px 0 6px}h3{font-size:14px;margin:12px 0 4px}h4{font-size:13px;margin:10px 0 4px}p{margin:6px 0}ul,ol{margin:6px 0 6px 20px;padding:0}li{margin:2px 0}table{border-collapse:collapse;margin:8px 0;width:100%}th,td{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top}th{background:#e8e8e8}code{background:#eee;padding:0 3px}hr{border:0;border-top:1px solid #999;margin:10px 0}';
+async function loadH2C(){if(window.html2canvas)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=()=>rej(new Error('Could not load the PDF tool. Check your internet connection and try again.'));document.head.appendChild(s)})}
+function cleanSvg(s){
+  const m=String(s).match(/<svg[\s\S]*<\/svg>/i);if(!m)throw new Error('The image was not valid SVG.');let t=m[0];
+  if(/<script|<foreignObject|<iframe|\son\w+\s*=|javascript:|(?:href|src)\s*=\s*["']\s*(?:https?:|data:)/i.test(t))throw new Error('The image contained something unsafe, so it was blocked.');
+  if(!/xmlns\s*=/.test(t.slice(0,400)))t=t.replace(/<svg/i,'<svg xmlns="http://www.w3.org/2000/svg"');return t;
+}
+async function buildFile(a){
+  const info=FILE_INFO[a.format];
+  if(a.format==='pdf'||a.format==='doc'){
+    const body=(a.title?'<h1>'+mdInline(a.title)+'</h1>':'')+mdHtml(a.content);
+    if(a.format==='doc')return new Blob(['<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>'+esc(a.title||a.filename)+'</title><style>'+DOC_CSS+'</style></head><body>'+body+'</body></html>'],{type:info[2]});
+    await loadH2C();
+    const host=document.createElement('div');host.style.cssText='position:fixed;left:-10000px;top:0;width:680px;background:#fff';
+    host.innerHTML='<style>'+DOC_CSS+'.d{padding:0;background:#fff}</style><div class="d">'+body+'</div>';document.body.appendChild(host);
+    try{const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4'});
+      await new Promise((res,rej)=>{try{doc.html(host.querySelector('.d'),{x:30,y:30,width:535,windowWidth:680,autoPaging:'text',margin:[30,0,30,0],html2canvas:{scale:1.6,backgroundColor:'#ffffff'},callback:res})}catch(e){rej(e)}});
+      return doc.output('blob');
+    }finally{host.remove()}
+  }
+  if(a.format==='svg')return new Blob([cleanSvg(a.content)],{type:info[2]});
+  if(a.format==='png'){
+    const svg=cleanSvg(a.content),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
+    try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('The image could not be drawn.'));i.src=url});
+      let w=img.naturalWidth||1000,h=img.naturalHeight||700;const k=w<1400?2:1;
+      const c=document.createElement('canvas');c.width=w*k;c.height=h*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+      return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('The image could not be saved.')),'image/png'));
+    }finally{URL.revokeObjectURL(url)}
+  }
+  return new Blob([(a.format==='csv'?'﻿':'')+a.content],{type:info[2]+';charset=utf-8'});
+}
+function coachFileKick(){
+  CHATS.length&&COACH_CHAT.forEach((m,mi)=>(m.actions||[]).forEach((a,ai)=>{
+    if(a.type!=='create_file'||!a.content)return;
+    const key=CHAT_ID+'_'+mi+'_'+ai;if(FILES[key])return;FILES[key]={building:true};
+    buildFile(a).then(b=>{FILES[key]={blob:b,url:URL.createObjectURL(b)}}).catch(e=>{FILES[key]={error:e.message||'Could not create the file.'}}).finally(()=>coachRender());
+  }));
+}
+function coachDownload(key){
+  const f=FILES[key];if(!f||!f.blob)return;
+  const [mi,ai]=key.split('_').slice(1).map(Number),a=COACH_CHAT[mi].actions[ai];
+  const el=document.createElement('a');el.href=f.url;el.download=a.filename+'.'+FILE_INFO[a.format][1];document.body.appendChild(el);el.click();el.remove();
+}
 function coachRender(pending){
   const o=document.getElementById('coachOut');if(!o)return;
   const bub=(m)=>m.role==='user'
@@ -1390,6 +1454,12 @@ function coachRender(pending){
     :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
   const SRC={class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'};
   const acts=(m,mi)=>(m.actions||[]).map((a,ai)=>{
+    if(a.type==='create_file'){
+      const key=CHAT_ID+'_'+mi+'_'+ai,f=FILES[key]||{},inf=FILE_INFO[a.format]||['File','bin'],nm=esc(a.filename)+'.'+inf[1];
+      const prev=f.blob&&(a.format==='png'||a.format==='svg')?`<div style="margin-top:8px"><img src="${f.url}" alt="${nm}" style="max-width:100%;border:1px solid var(--line);border-radius:8px;background:#fff"></div>`:'';
+      return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">\u{1F4C4} <b>${nm}</b> <span class="sub">${inf[0]}</span>`
+        +(f.error?`<div class="sub bad" style="margin-top:4px">${esc(f.error)}</div>`:!a.content?'<div class="sub" style="margin-top:4px">This file was too large to keep. Ask for it again.</div>':f.blob?`<div style="margin-top:8px"><button class="btn s ok" onclick="coachDownload('${key}')">Download</button></div>`+prev:'<div class="sub" style="margin-top:4px">Preparing the file...</div>')+'</div>';
+    }
     const del=a.type==='delete_questions',day=`<b>${fmtS(a.date)} ${dow(a.date)}</b>`,l0=S.logs[a.date],cur=a.state?'?':(l0?qTot(l0):0);
     const has=(t)=>a.state?'':t;
     const lbl=!del?`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for ${day}`
@@ -1403,7 +1473,7 @@ function coachRender(pending){
       +(a.state?'':`<div style="margin-top:8px"><button class="btn s ${del?'bad':'ok'}" onclick="coachConfirm(${mi},${ai})">${del?'Delete':'Save'}</button> <button class="btn s alt" onclick="coachCancel(${mi},${ai})">Cancel</button></div>`)+'</div>'}).join('');
   o.innerHTML=COACH_CHAT.map((m,mi)=>bub(m)+acts(m,mi)).join('')+(pending?'<div class="sub" style="margin:8px 0">Thinking...</div>':'')
     +(COACH_CHAT.length?'<div style="margin-top:8px"><a href="#" class="sub" onclick="coachNew();return false">New chat</a> <span class="sub">· saved on this device</span></div>':'');
-  chatsSave();coachHist();
+  chatsSave();coachHist();coachFileKick();
   if(pending||COACH_CHAT.length)o.scrollIntoView({block:'end',behavior:'smooth'});
 }
 function coachCancel(mi,ai){const a=COACH_CHAT[mi]?.actions?.[ai];if(!a||a.state)return;a.state='cancelled';coachRender()}
