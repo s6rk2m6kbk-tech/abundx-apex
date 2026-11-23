@@ -1379,12 +1379,13 @@ function coachRender(pending){
     :`<div style="margin:8px 0"><div style="background:var(--card2,rgba(127,127,127,.12));padding:10px 14px;border-radius:14px 14px 14px 3px;max-width:92%;line-height:1.65">${m.error?'<span class="sub">'+esc(m.content)+'</span>':mdLite(m.content)}</div></div>`;
   const SRC={class:'Class',claude:'Claude',core_book:'Core books',pyq_book:'PYQ book'};
   const acts=(m,mi)=>(m.actions||[]).map((a,ai)=>{
-    const del=a.type==='delete_questions',day=`<b>${fmtS(a.date)} ${dow(a.date)}</b>`,l0=S.logs[a.date],cur=l0?qTot(l0):0;
+    const del=a.type==='delete_questions',day=`<b>${fmtS(a.date)} ${dow(a.date)}</b>`,l0=S.logs[a.date],cur=a.state?'?':(l0?qTot(l0):0);
+    const has=(t)=>a.state?'':t;
     const lbl=!del?`${a.mode==='set'?'Set':'Add'} <b>${a.count}</b> question${a.count===1?'':'s'} (${SRC[a.source]||'Core books'}) for ${day}`
-      :a.scope==='count'?`Remove <b>${a.count}</b> question${a.count===1?'':'s'}${a.source?' ('+SRC[a.source]+')':''} on ${day} (it has ${cur})`
+      :a.scope==='count'?`Remove <b>${a.count}</b> question${a.count===1?'':'s'}${a.source?' ('+SRC[a.source]+')':''} on ${day}${has(` (it has ${cur})`)}`
       :a.scope==='source'?`Remove all <b>${SRC[a.source]}</b> questions on ${day}`
-      :a.scope==='day'?`Clear all questions on ${day} (it has ${cur})`
-      :`Clear the weekly total typed in for the week of <b>${fmtS(mon(a.date))}</b> (it is ${(S.weekQ||{})[mon(a.date)]??'not set'})`;
+      :a.scope==='day'?`Clear all questions on ${day}${has(` (it has ${cur})`)}`
+      :`Clear the weekly total typed in for the week of <b>${fmtS(mon(a.date))}</b>${has(` (it is ${(S.weekQ||{})[mon(a.date)]??'not set'})`)}`;
     const head=a.state==='saved'?(del?'✅ Deleted: ':'✅ Saved to your tracker: '):a.state==='cancelled'?'Cancelled: ':(del?'Delete from your tracker? ':'Save to your tracker? ');
     return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">${head}${lbl}`
       +(a.note?`<div class="sub" style="margin-top:4px">${esc(a.note)}</div>`:'')
