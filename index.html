@@ -209,7 +209,7 @@ const DEF=()=>({
       Math:[{name:'RD Sharma',note:''},{name:'Cengage Math (Mains)',note:''},{name:'Cengage Math (Advanced)',note:''},{name:'Math PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}]},
     milestones:[['2026-10-09',150],['2026-10-16',160],['2026-10-23',170],['2026-10-30',180],['2026-11-05',190],['2026-11-30',200],['2026-12-31',205],['2027-01-31',210],['2027-02-15',220],['2027-03-01',225],['2027-03-31',230],['2027-06-01',245],['2027-08-01',255],['2027-10-02',265]].map(([date,marks])=>({date,marks}))
   },
-  logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],days:{}
+  logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],timeline:[],memory:[],goals:[],recovery:[],days:{}
 });
 const FIRST_MOCK={id:'M20260926',date:'2026-09-26',num:5,type:'Arjuna Classes 11th JEE Mock (75 Q)',phase:'Phase 0',attempted:null,correct:41,incorrect:null,accuracy:null,marks:164,phy:48,chem:56,math:60,time:null,total:75,cp:12,cc:14,cm:15,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:269,lo:null,av:null,rank:4,students:15,percentile:(15-4)/15*100,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Roll 2129. Top: Gouransh 269; 3rd Yuvraj Singh 176 (-12); 5th Shaurya 158 (+6).',files:{}};
 const HI_TOPICS=['Straight lines','Circle','Parabola','Trigo 1','Trigo 2'];
@@ -223,7 +223,7 @@ const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna
 /* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
 const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
   phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
-  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],days:{}});
+  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weakTopics:[],sessions:[],commitments:[],timeline:[],memory:[],goals:[],recovery:[],days:{}});
 const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
   type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
 const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
@@ -344,7 +344,7 @@ function load(){
   if(!d.seeded){d.seeded=true;if(!d.mocks.some(m=>m.id===FIRST_MOCK.id))d.mocks.push(FIRST_MOCK);try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
   return weakMig(seedAreas(clearQuestionData(d,KEY)));
 }
-function save(){try{commitSync()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
+function save(){try{commitSync();goalSync()}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){alert('Could not save to browser storage: '+e.message)}}
 
 /* ---------- file storage (IndexedDB, for PDFs) ---------- */
 const FDB=new Promise((res,rej)=>{const r=indexedDB.open('jee_files',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
@@ -431,7 +431,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],commit:['Commitments',vCommit],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1520,12 +1520,12 @@ function opsApply(ops){
   }
 }
 function viewErrs(){
-  const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','commit','prod','calc','analytics','compare','reports','settings']){
+  window.__VE=true;const keep=view,errs={};
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weak','commit','goals','workload','reality','recovery','timeline','memory','prod','calc','analytics','compare','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
-  view=keep;mockView=null;return errs;
+  window.__VE=false;view=keep;mockView=null;return errs;
 }
 function editApply(a){
   const pre=JSON.stringify(S),base=viewErrs();
@@ -2262,6 +2262,462 @@ function cmDo(ty){
 }
 function cmDel(id){const c=cmList().find(x=>x.id===id);if(c&&confirm('Delete "'+c.title+'" and its history? This cannot be undone.')){S.commitments=cmList().filter(x=>x.id!==id);save();vCommit()}}
 
+/* ---------- SHARED HELPERS for the planning modules ---------- */
+const PCM=()=>PROFILE==='malik'?['Physics','Chemistry','Math']:['Physics'];
+const sesAll=()=>(Array.isArray(S.sessions)?S.sessions:[]).filter(x=>x&&x.date).map(x=>({...x,m:sesMins(x)}));
+function hoursBy(f,t){const o={};PCM().forEach(s=>o[s]=0);o.Other=0;sesAll().forEach(x=>{if(x.date>=f&&x.date<=t){const k=o[x.subject]!=null?x.subject:'Other';o[k]+=x.m/60}});return o}
+const totalH=(f,t)=>sum(Object.values(hoursBy(f,t)));
+const qBetween=(f,t)=>sum(Object.values(S.logs||{}).filter(l=>l.date>=f&&l.date<=t).map(qTot));
+const firstAct=()=>[...sesAll().map(x=>x.date),...Object.values(S.logs||{}).filter(l=>qTot(l)>0).map(l=>l.date),...(S.commitments||[]).map(c=>c.created)].filter(Boolean).sort()[0]||today();
+function compRatio(days=14){const t=today(),f0=addD(t,-days),first=firstAct(),f=f0>first?f0:first;let pl=0,ac=0;for(let d=f;d<=addD(t,-1);d=addD(d,1)){pl+=planMin(d)/60;ac+=totalH(d,d)}return pl>0&&sesAll().length?Math.max(.2,Math.min(1.2,ac/pl)):0.7}
+const BL_H={High:3,Medium:2,Low:1.5};
+const blHours=sj=>sum((S.backlog||[]).filter(b=>b.status!=='Resolved').map(b=>{const ps=subjParts(b.subject);return ps.includes(sj)?(BL_H[b.priority]||2)/ps.length:0}));
+const openBacklogOn=(d,sj)=>(S.backlog||[]).filter(b=>b.date<=d&&(!b.resolved||b.resolved>d)&&(!sj||subjParts(b.subject).includes(sj))).length;
+const studiedDay=d=>totalH(d,d)>0||qBetween(d,d)>0;
+const monthsFrom=(a,b)=>{const o=[];let m=a.slice(0,7);while(m<=b.slice(0,7)){o.push(m);m=addD(m+'-01',32).slice(0,7)}return o};
+const monthName=m=>new Date(m+'-15').toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+function periodMetrics(f,t){
+  const days=diff(f,t)+1,h=totalH(f,t),q=qBetween(f,t),lg=Object.values(S.logs||{}).filter(l=>l.date>=f&&l.date<=t&&l.accuracy!=null),ms=S.mocks.filter(m=>m.date>=f&&m.date<=t&&m.marks!=null);
+  const cm=(S.commitments||[]).filter(c=>c.deadline>=f&&c.deadline<=t&&['Completed','Missed'].includes(c.status));let st=0;for(let d=f;d<=t;d=addD(d,1))if(studiedDay(d))st++;
+  return {days,hpd:h/days,qpd:q/days,acc:lg.length?avg(lg.map(l=>l.accuracy)):null,mock:ms.length?avg(ms.map(m=>m.marks)):null,backlog:openBacklogOn(t),cm:cm.length?cm.filter(c=>c.status==='Completed').length/cm.length*100:null,cons:st/days*100,mastered:(S.weakTopics||[]).filter(x=>x.masteredOn&&x.masteredOn>=f&&x.masteredOn<=t).length};
+}
+const downloadText=(name,txt)=>{const u=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)};
+
+/* ---------- PROGRESS TIMELINE ---------- */
+const TL_CAT=['Academic Milestones','Productivity Milestones','Examination History','Strategy Changes','Backlog History','Commitment History','Revision History','Personal Records','Behaviour Changes','Important Events'];
+const TL_COL={'Academic Milestones':'#3ddc97','Productivity Milestones':'#5aa9ff','Examination History':'#b388ff','Strategy Changes':'#ffb020','Backlog History':'#ff8a65','Commitment History':'#4dd0e1','Revision History':'#aed581','Personal Records':'#ffd54f','Behaviour Changes':'#f06292','Important Events':'#90a4ae'};
+let tlView='master',tlCat='',tlImp='',tlQ='',tlEditId=null,tlCmp=null,tlMonth=null;
+function tlDerive(){
+  const E=[],t=today(),add=(key,date,category,title,detail,subject,source,importance,ach)=>{if(date&&date<=t)E.push({key,date,category,title,detail:detail||'',subject:subject||'',source,kind:'Recorded',importance:importance||'Normal',ach:!!ach})};
+  let best=-1;[...S.mocks].filter(m=>m.marks!=null).sort((a,b)=>a.date<b.date?-1:1).forEach(m=>{
+    const nb=m.marks>best&&best>=0;
+    add('mock:'+m.id,m.date,'Examination History',`${m.type||'Mock test'}: ${m.marks} marks`,`Physics ${m.phy??'-'}, Chemistry ${m.chem??'-'}, Math ${m.math??'-'}`+(m.rank?`, rank ${m.rank}${m.students?' of '+m.students:''}`:''),'','Mock test '+m.id,nb?'Major':'Normal');
+    if(nb)add('pr:mock:'+m.marks,m.date,'Personal Records','New best mock score: '+m.marks,'Previous best '+best,'','Mock test '+m.id,'Major',true);
+    [150,200,250].forEach(th=>{if(m.marks>=th&&best<th)add('first:mock:'+th,m.date,'Personal Records',`First ${th}+ mark mock`,m.marks+' marks','','Mock test '+m.id,'Major',true)});
+    best=Math.max(best,m.marks)});
+  (S.commitments||[]).forEach(c=>{const big=['High','Critical'].includes(c.priority),sj=c.subject&&c.subject!=='General'?c.subject:'';
+    if(c.status==='Completed')add('cmdone:'+c.id,c.completedOn||c.deadline,'Commitment History','Fulfilled: '+c.title,c.evidence||'',sj,'Commitment '+c.id,big?'Major':'Normal',big);
+    if(c.status==='Missed')add('cmmiss:'+c.id,c.closedOn||c.deadline,'Commitment History',`Missed: ${c.title} (${c.progress||0}% done)`,c.missReason||'',sj,'Commitment '+c.id,big?'Major':'Normal')});
+  const B=S.backlog||[];B.filter(b=>b.resolved).forEach(b=>add('blres:'+b.id,b.resolved,'Backlog History',`Resolved: ${b.topic}`,b.subject,subjParts(b.subject)[0]||'','Backlog '+b.id,b.priority==='High'?'Major':'Normal'));
+  if(B.length){[...new Set(B.filter(b=>b.resolved).map(b=>b.resolved))].sort().forEach(d=>{if(openBacklogOn(d)===0)add('blclear:'+d,d,'Backlog History','Backlog completely cleared','Every backlog item was resolved','','Backlog','Major',true)});
+    monthsFrom(B.map(b=>b.date).sort()[0],addD(t,-31)).forEach(m=>{const e=addD(addD(m+'-01',32).slice(0,7)+'-01',-1),s=addD(m+'-01',-1);if(e>=t)return;const a=openBacklogOn(s),z=openBacklogOn(e);
+      if(Math.abs(z-a)>=3)add('blm:'+m,e,'Backlog History',`Backlog ${z>a?'grew':'shrank'} from ${a} to ${z} in ${monthName(m)}`,'','','Backlog records',Math.abs(z-a)>=5?'Major':'Normal')})}
+  (S.weakTopics||[]).filter(x=>x.masteredOn).forEach(x=>add('weakm:'+x.id,x.masteredOn,'Academic Milestones','Mastered weak topic: '+x.topic,[x.cls,x.area].filter(Boolean).join(' · '),x.subject,'Weak Topics '+x.id,'Normal'));
+  const ses=sesAll(),byD={};ses.forEach(x=>byD[x.date]=(byD[x.date]||0)+x.m/60);let bh=0;Object.keys(byD).sort().forEach(d=>{if(byD[d]>bh&&byD[d]>=3){if(bh>0)add('pr:dayh:'+Math.round(byD[d]*10),d,'Personal Records','Longest study day: '+r1(byD[d])+' h','Previous best '+r1(bh)+' h','','Study sessions','Major',true);bh=byD[d]}else if(byD[d]>bh)bh=byD[d]});
+  const lg=Object.values(S.logs||{}).sort((a,b)=>a.date<b.date?-1:1);[100,200].forEach(th=>{const l=lg.find(x=>qTot(x)>=th);if(l)add('first:q'+th,l.date,'Personal Records',`First ${th}-question day`,qTot(l)+' questions','','Daily log','Major',true)});
+  const f=firstAct();let run=0;const seen={};for(let d=f;d<=t;d=addD(d,1)){if(studiedDay(d)){run++;[7,14,30,60,100].forEach(th=>{if(run===th&&!seen[th]){seen[th]=1;add('streak:'+th,d,'Productivity Milestones',th+'-day study streak','','','Sessions and logs','Major',true)}})}else run=0}
+  const wk={};lg.forEach(l=>{const w=mon(l.date);wk[w]=(wk[w]||0)+qTot(l)});Object.keys(wk).sort().forEach(w=>{const p=wk[addD(w,-7)];if(addD(w,6)<t&&p>=200&&wk[w]<p*0.6)add('dip:'+w,addD(w,6),'Behaviour Changes',`Question output fell ${r0((1-wk[w]/p)*100)}% in the week of ${fmtS(w)}`,`${wk[w]} vs ${p} the week before`,'','Daily logs','Major')});
+  return E;
+}
+function tlSync(){
+  if(!Array.isArray(S.timeline))S.timeline=[];const have=new Set(S.timeline.map(e=>e.key).filter(Boolean));let n=S.timeline.reduce((m,e)=>Math.max(m,+String(e.id).slice(2)||0),0),add=0;
+  tlDerive().forEach(e=>{if(have.has(e.key))return;n++;add++;S.timeline.push({id:'TL'+String(n).padStart(4,'0'),...e,verified:true,evidence:'',corrections:[],created:new Date().toISOString()})});
+  if(add&&!window.__VE)save();return add;
+}
+const tlAll=()=>(Array.isArray(S.timeline)?S.timeline:[]).filter(e=>!e.retracted);
+function tlRow(e){
+  const kc={Recorded:'bg-ok','User-reported':'',"AI interpretation":'bg-warn'}[e.kind]||'';
+  return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)"><div style="width:64px;flex:none" class="sub">${fmtS(e.date)}<br>${new Date(e.date+'T12:00').getFullYear()}</div><div style="flex:1;min-width:0">
+    <div><span style="color:${TL_COL[e.category]||INK()};font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700">${esc(e.category)}</span>${e.importance==='Major'?' <span class="chip bg-warn">Major</span>':''}${e.ach?' <span class="chip bg-ok">Achievement</span>':''} <span class="chip ${kc}">${esc(e.kind)}</span>${e.verified?'':' <span class="chip bg-bad">Unverified</span>'}</div>
+    <div><b>${esc(e.title)}</b></div>${e.detail?`<div class="sub">${esc(e.detail)}</div>`:''}<div class="sub">${e.subject?esc(e.subject)+' · ':''}Source: ${esc(e.source||'')}${e.evidence?' · Evidence: '+esc(e.evidence):''}${(e.corrections||[]).length?' · corrected '+e.corrections.length+'× (original kept)':''}</div>
+    <div style="margin-top:3px"><a href="#" class="sub" onclick="tlVerify('${e.id}');return false">${e.verified?'Mark unverified':'Verify'}</a> <a href="#" class="sub" style="margin-left:10px" onclick="tlEditId='${e.id}';vTimeline();scrollTo(0,0);return false">Correct</a> <a href="#" class="sub" style="margin-left:10px;color:var(--bad)" onclick="tlRetract('${e.id}');return false">Retract</a></div></div></div>`;
+}
+function tlFiltered(extra){
+  const q=tlQ.trim().toLowerCase();
+  return tlAll().filter(e=>(!tlCat||e.category===tlCat)&&(!tlImp||e.importance===tlImp)&&(!extra||extra(e))&&(!q||[e.title,e.detail,e.subject,e.source,e.category,e.evidence].some(x=>String(x||'').toLowerCase().includes(q)))).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:(a.id<b.id?1:-1));
+}
+function tlCorrel(){
+  const t=today();return tlAll().filter(e=>e.category==='Strategy Changes'&&e.date<=addD(t,-14)).map(e=>{
+    const a=periodMetrics(addD(e.date,-30),addD(e.date,-1)),b=periodMetrics(e.date,addD(e.date,29)>t?t:addD(e.date,29));
+    if(b.days<7||(!a.hpd&&!a.qpd))return null;return {e,a,b}}).filter(Boolean);
+}
+function tlChronicle(m){
+  const f=m+'-01',t=today(),e0=addD(addD(f,32).slice(0,7)+'-01',-1),e=e0>t?t:e0,ev=tlAll().filter(x=>x.date>=f&&x.date<=e),pm=periodMetrics(f,e);
+  const L=(a)=>a.length?a.map(x=>'• '+x).join('\n'):'• Nothing recorded.';
+  const ach=ev.filter(x=>x.ach||(x.importance==='Major'&&!/Missed|grew|fell/.test(x.title))).map(x=>x.title),ch=ev.filter(x=>/Missed|grew|fell/.test(x.title)||x.category==='Behaviour Changes').map(x=>x.title),dec=ev.filter(x=>['Strategy Changes','Important Events'].includes(x.category)).map(x=>x.title);
+  const next=(S.commitments||[]).filter(c=>c.status==='Active'&&c.deadline>t&&c.deadline<=addD(t,14)).map(c=>c.title+' (due '+fmtS(c.deadline)+')'),weak=(S.weakTopics||[]).filter(x=>x.status!=='Mastered'&&x.priority==='High').map(x=>x.topic);
+  return `MY ACADEMIC CHRONICLE — ${monthName(m)}\nGenerated from recorded events (${ev.length} entries)\n\nBy the numbers\n• Study time: ${r1(pm.hpd*pm.days)} h (${r1(pm.hpd)} h/day) · Questions: ${r0(pm.qpd*pm.days)} · Days studied: ${r0(pm.cons*pm.days/100)} of ${pm.days}${pm.mock!=null?' · Mock average: '+r0(pm.mock):''}\n\nMajor achievements\n${L(ach)}\n\nChallenges\n${L(ch)}\n\nImportant decisions and events\n${L(dec)}\n\nLooking ahead\n${L([...next.map(x=>'Due soon: '+x),...weak.slice(0,4).map(x=>'High-priority weak topic: '+x)])}`;
+}
+function vTimeline(){
+  tlSync();const t=today(),E=tlFiltered(),all=tlAll(),SJ=PCM(),e0=tlEditId?(S.timeline||[]).find(x=>x.id===tlEditId):null;
+  const tab=(k,l)=>`<button class="btn s ${tlView===k?'ok':'alt'}" onclick="tlView='${k}';vTimeline()">${l}</button>`;
+  const filt=`<div class="row"><div><label>Category</label><select onchange="tlCat=this.value;vTimeline()"><option value="">All</option>${TL_CAT.map(c=>`<option ${tlCat===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Importance</label><select onchange="tlImp=this.value;vTimeline()"><option value="">All</option><option ${tlImp==='Major'?'selected':''}>Major</option><option ${tlImp==='Normal'?'selected':''}>Normal</option></select></div><div style="grid-column:span 2"><label>Search your history</label><input type="search" value="${esc(tlQ)}" placeholder="Search events..." oninput="tlQ=this.value;document.getElementById('tlList').innerHTML=tlListHtml()"></div></div>`;
+  let body='';
+  if(tlView==='master'){
+    const ph=[['Class 11 — Foundation','2026–2027',S.settings.start,'2027-03-31',['Establish a study routine','Complete the foundational chapters','Build consistent practice habits']],['Class 12 — Development','2027–2028','2027-04-01','2027-12-31',['Complete the remaining syllabus','Strengthen weak areas','Increase revision and testing']],['JEE 2028 — Examination phase','2028','2028-01-01',S.settings.exam,['JEE Main','JEE Advanced','Counselling and college decisions']]];
+    body=`<div class="card"><h3>My JEE journey, ${S.settings.start.slice(0,4)}–2028</h3>${ph.map(([n,y,a,b,g])=>{const inn=all.filter(e=>e.date>=a&&e.date<=b),here=t>=a&&t<=b;return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${n}</b> <span class="sub">${y} · ${fmtS(a)} – ${fmtS(b)}</span>${here?' <span class="chip bg-ok">You are here</span>':''}<div class="sub" style="margin-top:3px">Planned: ${g.join(' · ')}</div><div class="sub">Recorded so far: ${inn.length} events, ${inn.filter(e=>e.importance==='Major').length} major</div></div>`}).join('')}<div class="sub" style="margin-top:6px">The goals under each phase are the plan. The counts come from your real records.</div></div>
+      <div class="card"><h3>Everything that happened</h3>${filt}<div id="tlList">${tlListHtml()}</div></div>`;
+    const co=tlCorrel();if(co.length)body+=`<div class="card"><h3>Did a strategy change coincide with a change in results?</h3><div class="sub" style="margin-bottom:8px">30 days before vs 30 days after. These are possible relationships, not proof that the change caused them: other things changed too.</div>${co.map(({e,a,b})=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(e.title)}</b> <span class="sub">${fmtS(e.date)}</span><div class="sub">Study ${r1(a.hpd)}→${r1(b.hpd)} h/day · Questions ${r0(a.qpd)}→${r0(b.qpd)}/day · Consistency ${r0(a.cons)}%→${r0(b.cons)}%${a.cm!=null&&b.cm!=null?' · Commitments fulfilled '+r0(a.cm)+'%→'+r0(b.cm)+'%':''}</div></div>`).join('')}</div>`;
+  }else if(tlView==='subjects'){
+    body=SJ.map(s=>{const ev=all.filter(e=>e.subject===s||(e.category==='Examination History'&&0)).sort((a,b)=>a.date<b.date?1:-1),ms=mocks().filter(m=>m[{Physics:'phy',Chemistry:'chem',Math:'math'}[s]]!=null);
+      return `<div class="card"><h3 style="color:${SUBJ_COL[s]}">${s}</h3>${ms.length?`<div class="sub">Test marks over time: ${ms.map(m=>fmtS(m.date)+': '+m[{Physics:'phy',Chemistry:'chem',Math:'math'}[s]]).join(' → ')}</div>`:''}<div class="sub">Backlog items open now: ${openBacklogOn(t,s)} · Study time logged: ${r1(totalH('2000-01-01',t)&&hoursBy('2000-01-01',t)[s])} h</div><div style="margin-top:8px">${ev.length?ev.slice(0,25).map(tlRow).join(''):'<div class="sub">No events recorded for this subject yet.</div>'}</div></div>`}).join('');
+  }else if(tlView==='prod'){
+    const f=firstAct(),ms=monthsFrom(f,t),rows=ms.map(m=>{const a=m+'-01'<f?f:m+'-01',z0=addD(addD(m+'-01',32).slice(0,7)+'-01',-1),z=z0>t?t:z0;return {m,...periodMetrics(a,z)}});
+    body=`<div class="card"><h3>How your study habits changed</h3>${rows.length?cv('tl1',220)+`<div class="tw"><table><tr><th>Month</th><th>Hours/day</th><th>Questions/day</th><th>Consistency</th><th>Accuracy</th></tr>${rows.map(x=>`<tr><td>${monthName(x.m)}</td><td>${r1(x.hpd)}</td><td>${r0(x.qpd)}</td><td>${r0(x.cons)}%</td><td>${x.acc==null?'—':r0(x.acc)+'%'}</td></tr>`).join('')}</table></div>`:'<div class="sub">Nothing recorded yet.</div>'}<div class="sub" style="margin-top:6px">For planned versus actual hours day by day, open the Productivity page.</div></div>`;
+    window._tlRows=rows;
+  }else if(tlView==='ach'){
+    const A=tlFiltered(e=>e.ach||e.category==='Personal Records');
+    body=`<div class="card"><h3>Achievements</h3><div class="sub" style="margin-bottom:8px">Only things that actually happened in your records: new bests, firsts, streaks, fulfilled high-priority commitments, a cleared backlog. Nothing here is a made-up motivational milestone.</div>${A.length?A.map(tlRow).join(''):'<div class="sub">No achievements recorded yet. They appear automatically when your records show one.</div>'}</div>`;
+  }else if(tlView==='compare'){
+    const c=tlCmp||{a1:addD(t,-59),a2:addD(t,-30),b1:addD(t,-29),b2:t},A=periodMetrics(c.a1,c.a2),B=periodMetrics(c.b1,c.b2);
+    const row=(l,x,y,u,good)=>{const d=x!=null&&y!=null?y-x:null;return `<tr><td>${l}</td><td>${x==null?'—':r1(x)+u}</td><td>${y==null?'—':r1(y)+u}</td><td class="${d==null||d===0?'':((d>0)===good?'ok':'bad')}">${d==null?'—':(d>0?'+':'')+r1(d)+u}</td></tr>`};
+    const notes=[];const imp=(l,x,y,good,u)=>{if(x==null||y==null||x===0)return;const p=(y-x)/Math.abs(x)*100;if(Math.abs(p)>=10)notes.push(`${l} ${((p>0)===good)?'improved':'got worse'} ${r0(Math.abs(p))}%.`)};
+    imp('Study time per day',A.hpd,B.hpd,true);imp('Questions per day',A.qpd,B.qpd,true);imp('Accuracy',A.acc,B.acc,true);imp('Mock average',A.mock,B.mock,true);imp('Open backlog',A.backlog,B.backlog,false);imp('Consistency',A.cons,B.cons,true);
+    if(B.hpd>A.hpd*1.15&&B.qpd<=A.qpd*1.05)notes.push('Study time rose but question output did not rise with it.');
+    const unrev=(S.weakTopics||[]).filter(x=>x.status==='Mastered'&&!(x.accuracy>=70)).length;
+    body=`<div class="card"><h3>Then vs Now</h3><div class="row"><div><label>Then: from</label><input id="ca1" type="date" value="${c.a1}"></div><div><label>to</label><input id="ca2" type="date" value="${c.a2}"></div><div><label>Now: from</label><input id="cb1" type="date" value="${c.b1}"></div><div><label>to</label><input id="cb2" type="date" value="${c.b2}"></div></div>
+      <p><button class="btn s ok" onclick="tlCompare()">Compare</button> <button class="btn s alt" onclick="tlCmp=null;vTimeline()">Last 30 vs the 30 before</button></p>
+      <div class="tw"><table><tr><th>Measure</th><th>${fmtS(c.a1)} – ${fmtS(c.a2)}</th><th>${fmtS(c.b1)} – ${fmtS(c.b2)}</th><th>Change</th></tr>${row('Study hours / day',A.hpd,B.hpd,' h',true)}${row('Questions / day',A.qpd,B.qpd,'',true)}${row('Accuracy',A.acc,B.acc,'%',true)}${row('Mock average',A.mock,B.mock,'',true)}${row('Open backlog at end',A.backlog,B.backlog,'',false)}${row('Commitments fulfilled',A.cm,B.cm,'%',true)}${row('Days studied',A.cons,B.cons,'%',true)}${row('Weak topics mastered',A.mastered,B.mastered,'',true)}</table></div>
+      <h3 style="margin-top:12px">Assessment</h3>${notes.length?notes.map(x=>`<div>• ${esc(x)}</div>`).join(''):'<div class="sub">No change of 10% or more in the measures above.</div>'}<div class="sub" style="margin-top:8px">Syllabus coverage is not tracked as a number yet, so it is not compared. Checking revision is separate: ${unrev} topics are marked Mastered without a recorded accuracy of 70% or more, so confirm they have really been revised.</div></div>`;
+  }else if(tlView==='chron'){
+    const ms=monthsFrom(S.settings.start,t).reverse(),m=tlMonth||t.slice(0,7);
+    body=`<div class="card"><h3>Academic Chronicle</h3><div class="row"><div><label>Month</label><select onchange="tlMonth=this.value;vTimeline()">${ms.map(x=>`<option value="${x}" ${x===m?'selected':''}>${monthName(x)}</option>`).join('')}</select></div></div>
+      <pre style="white-space:pre-wrap;font:inherit;line-height:1.6;margin:10px 0">${esc(tlChronicle(m))}</pre><button class="btn s ok" onclick="downloadText('chronicle-${m}.txt',tlChronicle('${m}'))">Download this month</button> <button class="btn s alt" onclick="tlJourney()">Download My JEE Journey (everything)</button></div>`;
+  }
+  const form=`<div class="card"><h3>${e0?'Correct an entry':'Add to your timeline'}</h3>${e0?'<div class="sub">The original is kept in the entry\'s correction history.</div>':''}<form onsubmit="tlSave(event)"><div class="row"><div><label>Date</label><input id="tld" type="date" required max="${t}" value="${e0?e0.date:t}"></div><div><label>Category</label><select id="tlc">${TL_CAT.map(c=>`<option ${(e0?e0.category:'Strategy Changes')===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Subject</label><select id="tls"><option value="">(any)</option>${SJ.map(s=>`<option ${e0&&e0.subject===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Importance</label><select id="tli"><option ${e0&&e0.importance==='Normal'?'selected':''}>Normal</option><option ${!e0||e0.importance==='Major'?'selected':''}>Major</option></select></div></div>
+    <div class="row"><div style="grid-column:span 2"><label>What happened</label><input id="tlt" required maxlength="160" value="${esc(e0?e0.title:'')}" placeholder="e.g. Changed to a weekly planning method"></div><div style="grid-column:span 2"><label>Details / why (optional)</label><input id="tln" value="${esc(e0?e0.detail:'')}"></div></div><div class="row"><div style="grid-column:span 4"><label>Evidence or link (optional)</label><input id="tle" value="${esc(e0?e0.evidence:'')}"></div></div>
+    <button class="btn ok">${e0?'Save correction':'Add event'}</button> ${e0?'<button type="button" class="btn alt" onclick="tlEditId=null;vTimeline()">Cancel</button>':''}</form></div>`;
+  $('#app').innerHTML=`<h2>Progress Timeline</h2><div class="sub" style="margin-bottom:12px">The record of your JEE journey: ${all.length} entries. Mock tests, commitments, backlog, personal records and streaks are added automatically from your data and kept permanently. Add your own decisions and events, or tell DXA AI. Each entry shows its source and whether it was recorded, reported by you, or an AI interpretation. Nothing is overwritten: corrections keep the original.</div>
+    <div class="card"><div class="tools noprint">${tab('master','Journey')} ${tab('subjects','Subjects')} ${tab('prod','Productivity')} ${tab('ach','Achievements')} ${tab('compare','Then vs Now')} ${tab('chron','Chronicle')}</div></div>${body}${form}`;
+  if(tlView==='prod'&&document.getElementById('tl1')){const r=window._tlRows||[];mk('tl1',{type:'bar',data:{labels:r.map(x=>x.m),datasets:[{label:'Hours/day',data:r.map(x=>+x.hpd.toFixed(2)),backgroundColor:'#5aa9ff',yAxisID:'y'},{type:'line',label:'Consistency %',data:r.map(x=>+x.cons.toFixed(0)),borderColor:'#ffb020',backgroundColor:'#ffb020',yAxisID:'y1'}]},options:{scales:{y:{beginAtZero:true,title:{display:true,text:'hours/day'}},y1:{position:'right',min:0,max:100,grid:{display:false}}},plugins:{legend:{position:'bottom'}}}})}
+}
+const tlListHtml=()=>{const E=tlFiltered();return E.length?E.slice(0,80).map(tlRow).join('')+(E.length>80?`<div class="sub" style="padding:8px 0">Showing the latest 80 of ${E.length}. Use the filters or search to narrow it.</div>`:''):'<div class="sub" style="padding:8px 0">Nothing matches.</div>'};
+function tlCompare(){const g=id=>document.getElementById(id).value;tlCmp={a1:g('ca1'),a2:g('ca2'),b1:g('cb1'),b2:g('cb2')};if(Object.values(tlCmp).some(x=>!x)||tlCmp.a1>tlCmp.a2||tlCmp.b1>tlCmp.b2)return alert('Pick valid start and end dates for both periods.');vTimeline()}
+function tlSave(e){
+  e.preventDefault();if(!Array.isArray(S.timeline))S.timeline=[];const g=id=>document.getElementById(id).value.trim(),d=g('tld');if(d>today())return alert('Timeline entries record things that already happened. Use Commitments or Goals for the future.');
+  const f={date:d,category:g('tlc'),subject:g('tls'),importance:g('tli'),title:g('tlt'),detail:g('tln'),evidence:g('tle')};
+  if(tlEditId){const x=S.timeline.find(y=>y.id===tlEditId);if(x){x.corrections=x.corrections||[];x.corrections.push({ts:new Date().toISOString(),from:{date:x.date,category:x.category,subject:x.subject,importance:x.importance,title:x.title,detail:x.detail,evidence:x.evidence}});Object.assign(x,f)}tlEditId=null}
+  else S.timeline.push({id:'TL'+String(S.timeline.reduce((m,x)=>Math.max(m,+String(x.id).slice(2)||0),0)+1).padStart(4,'0'),key:'',...f,source:'You (manual entry)',kind:'User-reported',verified:true,corrections:[],created:new Date().toISOString()});
+  save();vTimeline();
+}
+function tlVerify(id){const x=S.timeline.find(y=>y.id===id);if(x){x.verified=!x.verified;save();vTimeline()}}
+function tlRetract(id){const x=S.timeline.find(y=>y.id===id);if(x&&confirm('Retract this entry? It is hidden but kept in the record (never deleted).')){x.retracted=new Date().toISOString();save();vTimeline()}}
+function tlJourney(){downloadText('my-jee-journey.txt','MY JEE JOURNEY\nGenerated from '+tlAll().length+' recorded entries on '+today()+'\n\n'+tlAll().sort((a,b)=>a.date<b.date?-1:1).map(e=>`${e.date}  [${e.category}]  ${e.title}${e.detail?' — '+e.detail:''}  (${e.kind}; source: ${e.source})`).join('\n'))}
+
+/* ---------- ACADEMIC MEMORY ---------- */
+const MEM_TYPES=[['Profile','Stable facts and preferences'],['Academic','Current academic state'],['Episodic','Events and conversations'],['Decision','Why you decided things'],['Behavioural','Learned personal patterns']];
+const MEM_CONF=['Confirmed','User-reported','Inferred','Unknown'];
+const MEM_SYN=[['math','maths','mathematics','coordinate','algebra','calculus','trigonometry','trigo','vectors','conic','parabola','circle'],['physics','mechanics','optics','electrostatics','gravitation','waves','modern'],['chemistry','organic','physical','inorganic'],['backlog','pending','overdue','postponed','incomplete','behind','unfinished'],['problem','struggle','struggling','difficult','weak','issue','trouble','mistake','hard'],['timetable','schedule','routine','plan','planning'],['test','mock','exam','marks','score'],['revision','revise','revisit']];
+let memQ='',memType='',memEditId=null,memShow={};
+const memList=()=>Array.isArray(S.memory)?S.memory:(S.memory=[]);
+function memTerms(q){const toks=q.toLowerCase().split(/[^a-z0-9]+/).filter(x=>x.length>1),out=new Set(toks);toks.forEach(t=>MEM_SYN.forEach(g=>{if(g.some(w=>w===t||(t.length>3&&(w.startsWith(t)||t.startsWith(w)))))g.forEach(w=>out.add(w))}));return [...out]}
+function memDerived(){
+  const t=today(),D=[],add=(type,key,value,conf,source)=>D.push({type,key,value,conf,source,derived:true});
+  const ms=mocks().filter(m=>m.marks!=null),l=ms[ms.length-1];
+  add('Profile','Target',`${S.settings.milestones[S.settings.milestones.length-1].marks}+ marks by ${S.settings.milestones[S.settings.milestones.length-1].date}; exam ${S.settings.exam}`,'Confirmed','Settings');
+  add('Profile','Study resources',Object.entries(S.settings.resources||{}).map(([s,a])=>s+': '+a.map(b=>b.name).join(', ')).join(' | ')||'none recorded','Confirmed','Resources');
+  if(l)add('Academic','Latest mock',`${l.marks} marks on ${l.date} (Physics ${l.phy??'-'}, Chemistry ${l.chem??'-'}, Math ${l.math??'-'})`,'Confirmed','Mock test '+l.id);
+  PCM().forEach(s=>{const h=[];monthsFrom(addD(t,-150),t).forEach(m=>{const e=addD(addD(m+'-01',32).slice(0,7)+'-01',-1),z=e>t?t:e;if(z>=(S.backlog.map(b=>b.date).sort()[0]||t))h.push(monthName(m).split(' ')[0].slice(0,3)+' '+openBacklogOn(z,s))});
+    add('Academic',s+' backlog',`${openBacklogOn(t,s)} open now. History (end of month): ${h.join(' → ')||'no history'}`,'Confirmed','Backlog records')});
+  const wk=(S.weakTopics||[]).filter(x=>x.status!=='Mastered');if(wk.length)add('Academic','Weak topics',wk.slice(0,10).map(x=>x.subject+': '+x.topic).join('; '),'User-reported','Weak Topics page');
+  const cl=cmClosed();if(cl.length>=3)add('Behavioural','Commitment follow-through',`${r0(cl.filter(c=>c.status==='Completed').length/cl.length*100)}% of ${cl.length} closed commitments were completed`,'Inferred','Commitments');
+  if(sesAll().length>=3)add('Behavioural','Actual vs planned study time',`You logged about ${r0(compRatio()*100)}% of planned hours over the last 14 days`,'Inferred','Study sessions');
+  try{const H=prodHours(prodData());if(H.top.length)add('Behavioural','Best working hours',H.top.map(([h])=>hlab(h)).join(', '),'Inferred','Study sessions');}catch(e){}
+  cmPatterns().slice(0,3).forEach((p,i)=>add('Behavioural','Pattern '+(i+1),p,'Inferred','Commitments'));
+  return D;
+}
+function memSearch(q){
+  const T=memTerms(q);if(!T.length)return [];const hit=(txt)=>{const s=String(txt||'').toLowerCase();return T.reduce((n,w)=>n+(s.includes(w)?1:0),0)},t=today(),out=[];
+  const push=(kind,title,body,date,src,conf)=>{const sc=hit(title)*2+hit(body);if(sc>0)out.push({kind,title,body,date,src,conf,score:sc+(date&&diff(date,t)<30?0.5:0)})};
+  memList().forEach(m=>push('Memory: '+m.type,m.key,m.value,m.updated||m.created,m.source,m.confidence));memDerived().forEach(m=>push('Computed: '+m.type,m.key,m.value,t,m.source,m.conf));
+  tlAll().forEach(e=>push('Timeline',e.title,e.detail+' '+e.subject,e.date,e.source,e.kind));(S.commitments||[]).forEach(c=>push('Commitment',c.title,(c.why||'')+' '+(c.missReason||'')+' '+c.status,c.created,'Commitments',c.status));
+  (S.weakTopics||[]).forEach(w=>push('Weak topic',w.topic,(w.area||'')+' '+(w.notes||'')+' '+(w.subject||''),w.added,'Weak Topics',w.status));(S.backlog||[]).forEach(b=>push('Backlog',b.topic,b.subject+' '+b.description+' '+b.plan,b.date,'Backlog',b.status));
+  CHATS.forEach(c=>c.msgs.filter(m=>m.role==='user').forEach(m=>push('Conversation',String(m.content).slice(0,80),String(m.content),new Date(c.ts).toISOString().slice(0,10),'DXA AI chat','You said')));
+  return out.sort((a,b)=>b.score-a.score).slice(0,25);
+}
+function memResultsHtml(q){const r=memSearch(q);return r.length?r.map(x=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><span class="chip">${esc(x.kind)}</span> <b>${esc(x.title)}</b><div class="sub">${esc(String(x.body||'').slice(0,220))}</div><div class="sub">${x.date?fmtS(x.date)+' · ':''}Source: ${esc(x.src||'')} · ${esc(x.conf||'')}</div></div>`).join(''):'<div class="sub">Nothing found. Try other words: search understands related terms (for example "maths problem" also finds backlog and postponed Maths items).</div>'}
+function memCard(m){
+  const old=(m.updated||m.created)&&diff((m.updated||m.created).slice(0,10),today())>60&&['Profile','Academic'].includes(m.type)&&m.status==='Active',cc={Confirmed:'bg-ok','User-reported':'',Inferred:'bg-warn',Unknown:'bg-bad'}[m.confidence]||'';
+  return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div><b>${esc(m.key)}</b> <span class="chip ${cc}">${esc(m.confidence)}</span>${m.status!=='Active'?` <span class="chip bg-bad">${esc(m.status)}</span>`:''}${old?' <span class="chip bg-warn">May be outdated</span>':''}</div>
+    <div>${esc(m.value)}</div><div class="sub">Source: ${esc(m.source||'')} · created ${fmtS((m.created||'').slice(0,10))}${m.updated&&m.updated!==m.created?' · updated '+fmtS(m.updated.slice(0,10)):''}${m.reviewBy?' · review by '+fmtS(m.reviewBy):''}</div>
+    <div style="margin-top:3px"><a href="#" class="sub" onclick="memEditId='${m.id}';vMemory();scrollTo(0,0);return false">Update</a> <a href="#" class="sub" style="margin-left:10px" onclick="memStatus('${m.id}','Outdated');return false">Mark outdated</a> <a href="#" class="sub" style="margin-left:10px" onclick="memShow['${m.id}']=!memShow['${m.id}'];vMemory();return false">${memShow[m.id]?'Hide':'Show'} history (${(m.history||[]).length})</a> <a href="#" class="sub" style="margin-left:10px;color:var(--bad)" onclick="memDel('${m.id}');return false">Delete</a></div>
+    ${memShow[m.id]?`<div class="sub" style="margin-top:4px">${(m.history||[]).map(h=>`<div>• ${fmtS(h.ts.slice(0,10))}: ${esc(h.value)} (${esc(h.confidence||'')}, ${esc(h.source||'')})</div>`).join('')||'No earlier versions.'}</div>`:''}</div>`;
+}
+function vMemory(){
+  const L=memList(),D=memDerived(),e0=memEditId?L.find(m=>m.id===memEditId):null;
+  const cnt=t=>L.filter(m=>m.type===t&&m.status==='Active').length+D.filter(m=>m.type===t).length;
+  const show=t=>!memType||memType===t;
+  $('#app').innerHTML=`<h2>Academic Memory</h2><div class="sub" style="margin-bottom:12px">What DXA AI knows about your preparation, in five kinds of memory, so you never have to explain your situation twice. Each memory shows where it came from and how sure it is: <b>Confirmed</b> (a record you entered), <b>User-reported</b> (you said it), <b>Inferred</b> (worked out from your activity) or <b>Unknown</b>. Updates keep the earlier value. You can inspect, correct and delete anything. Tell DXA AI a fact, preference or decision and it proposes a memory for you to confirm.</div>
+  <div class="grid">${MEM_TYPES.map(([t,d])=>`<div class="card" style="cursor:pointer;${memType===t?'border-color:var(--blue)':''}" onclick="memType=memType==='${t}'?'':'${t}';vMemory()"><div class="sub">${t}</div><div class="big">${cnt(t)}</div><div class="sub">${d}</div></div>`).join('')}</div>
+  <div class="card"><h3>Search your academic memory</h3><input type="search" value="${esc(memQ)}" placeholder="e.g. maths problem, why I changed my timetable, backlog..." oninput="memQ=this.value;document.getElementById('memRes').innerHTML=memQ.trim()?memResultsHtml(memQ):''"><div id="memRes" style="margin-top:8px">${memQ.trim()?memResultsHtml(memQ):''}</div></div>
+  <div class="card"><h3>${e0?'Update a memory':'Add a memory'}</h3>${e0?'<div class="sub">The previous value is kept in its history.</div>':''}<form onsubmit="memSave(event)"><div class="row"><div><label>Type</label><select id="mmt">${MEM_TYPES.map(([t])=>`<option ${(e0?e0.type:'Profile')===t?'selected':''}>${t}</option>`).join('')}</select></div><div><label>What (short title)</label><input id="mmk" required maxlength="80" value="${esc(e0?e0.key:'')}" placeholder="e.g. Preferred study time"></div><div><label>How sure</label><select id="mmc">${MEM_CONF.map(c=>`<option ${(e0?e0.confidence:'User-reported')===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Review by (optional)</label><input id="mmr" type="date" value="${e0?e0.reviewBy||'':''}"></div></div>
+   <div class="row"><div style="grid-column:span 4"><label>Detail</label><input id="mmv" required maxlength="500" value="${esc(e0?e0.value:'')}" placeholder="e.g. I focus best between 6 and 9 pm"></div></div><button class="btn ok">${e0?'Save update':'Add memory'}</button> ${e0?'<button type="button" class="btn alt" onclick="memEditId=null;vMemory()">Cancel</button>':''}</form></div>
+  ${MEM_TYPES.filter(([t])=>show(t)).map(([t,d])=>{const s=L.filter(m=>m.type===t&&m.status==='Active'),old=L.filter(m=>m.type===t&&m.status!=='Active'),dv=D.filter(m=>m.type===t);
+    return `<div class="card"><h3>${t} memory <span class="sub">${d}</span></h3>${s.length?s.map(memCard).join(''):'<div class="sub" style="padding:6px 0">Nothing stored yet.</div>'}
+     ${dv.length?`<div class="sub" style="margin-top:10px;font-weight:700">Computed live from your data (not stored)</div>${dv.map(m=>`<div style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${esc(m.key)}</b> <span class="chip ${m.conf==='Confirmed'?'bg-ok':m.conf==='Inferred'?'bg-warn':''}">${esc(m.conf)}</span><div>${esc(m.value)}</div><div class="sub">Source: ${esc(m.source)}</div></div>`).join('')}`:''}
+     ${old.length?`<details style="margin-top:8px"><summary class="sub">Outdated or corrected (${old.length})</summary>${old.map(memCard).join('')}</details>`:''}</div>`}).join('')}
+  <div class="card"><h3>Your memory, your control</h3><div class="sub" style="margin-bottom:8px">Only things you confirm are stored. Passing remarks are not kept unless they become relevant.</div><button class="btn s alt" onclick="memExport()">Export everything (text)</button> <button class="btn s bad" onclick="memClear()">Delete all stored memories</button></div>`;
+}
+function memSave(e){
+  e.preventDefault();const g=id=>document.getElementById(id).value.trim(),L=memList(),t=g('mmt'),k=g('mmk'),now=new Date().toISOString(),f={type:t,key:k,value:g('mmv'),confidence:g('mmc'),reviewBy:g('mmr')};
+  let m=memEditId?L.find(x=>x.id===memEditId):L.find(x=>x.type===t&&x.key.toLowerCase()===k.toLowerCase()&&x.status==='Active');
+  if(m){if(m.value!==f.value||m.confidence!==f.confidence){(m.history=m.history||[]).push({ts:now,value:m.value,confidence:m.confidence,source:m.source})}Object.assign(m,f,{updated:now,status:'Active',source:'You'})}
+  else L.push({id:'MM'+String(L.reduce((a,x)=>Math.max(a,+String(x.id).slice(2)||0),0)+1).padStart(3,'0'),...f,source:'You',created:now,updated:now,status:'Active',history:[]});
+  memEditId=null;save();vMemory();
+}
+function memStatus(id,s){const m=memList().find(x=>x.id===id);if(m){m.status=s;m.updated=new Date().toISOString();save();vMemory()}}
+function memDel(id){const m=memList().find(x=>x.id===id);if(m&&confirm('Delete this memory and its history?')){S.memory=memList().filter(x=>x.id!==id);save();vMemory()}}
+function memClear(){if(memList().length&&confirm('Delete ALL '+memList().length+' stored memories? This cannot be undone.')){S.memory=[];save();vMemory()}}
+function memExport(){downloadText('academic-memory.txt','ACADEMIC MEMORY — '+today()+'\n\n'+memList().map(m=>`[${m.type}] ${m.key}: ${m.value}\n  ${m.confidence} · source ${m.source} · ${m.status} · created ${m.created}${(m.history||[]).map(h=>'\n  earlier ('+h.ts.slice(0,10)+'): '+h.value).join('')}`).join('\n\n')+'\n\nCOMPUTED FROM DATA\n'+memDerived().map(m=>`[${m.type}] ${m.key}: ${m.value} (${m.conf})`).join('\n'))}
+
+/* ---------- GOAL DECOMPOSITION ---------- */
+const GL_CAT=['Long-term','Academic','Performance','Productivity','Syllabus','Revision','Consistency','Personal development'];
+const GL_LV=['Ultimate goal','Yearly goal','Quarterly goal','Monthly goal','Weekly goal','Daily goal','Action'];
+const MATH_ORDER=['sets','relations','functions','basic algebra','quadratic equations','complex numbers','linear inequalities','sequences','permutations','binomial','trigonometry','straight lines','circle','parabola','ellipse','hyperbola','limits','differentiation','integration','vectors','3d','probability'];
+let glDraft=null,glShow={},glEdit=null;
+const glList=()=>Array.isArray(S.goals)?S.goals:(S.goals=[]);
+const glKids=id=>glList().filter(g=>g.parentId===id);
+const glDepth=g=>{let d=0,x=g;while(x&&x.parentId&&d<8){x=glList().find(y=>y.id===x.parentId);d++}return d};
+function glProgress(g){
+  const k=glKids(g.id).filter(x=>x.status!=='Cancelled');if(k.length)return Math.round(avg(k.map(glProgress)));
+  if(g.metric==='marks'){const ms=mocks().filter(m=>m.marks!=null),l=ms[ms.length-1];if(!l)return 0;const b=g.baseline??S.settings.baseline;return Math.max(0,Math.min(100,Math.round((l.marks-b)/Math.max(1,g.target-b)*100)))}
+  const cs=(S.commitments||[]).filter(c=>c.goalId===g.id&&c.status!=='Cancelled');if(cs.length)return Math.round(avg(cs.map(c=>c.progress||0)));
+  return g.progress||0;
+}
+function glHealth(g){
+  const t=today();if(g.status==='Completed'||glProgress(g)>=100)return 'Completed';if(g.status==='Cancelled')return 'Cancelled';
+  if(g.start&&g.start>t)return 'Not Started';
+  if((g.dependsOn||[]).some(id=>{const d=glList().find(x=>x.id===id);return d&&glHealth(d)!=='Completed'})&&g.start&&g.start<=t)return 'Blocked';
+  if(g.status==='Blocked')return 'Blocked';
+  if(g.deadline<t)return 'Delayed';
+  const tot=Math.max(1,diff(g.start||g.created||t,g.deadline)),el=Math.max(0,diff(g.start||g.created||t,t)),exp=el/tot*100,p=glProgress(g);
+  return p<exp-30?'At Risk':'On Track';
+}
+function goalSync(){
+  const L=S.goals;if(!Array.isArray(L))return;const now=new Date().toISOString();
+  L.forEach(g=>{if(!Array.isArray(g.versions))g.versions=[];if(!g.created)g.created=today();if(!g.status)g.status='Active';if(!g.priority)g.priority='Medium';if(!g.origDeadline)g.origDeadline=g.deadline;
+    if(g.lastDeadline==null)g.lastDeadline=g.deadline;else if(g.lastDeadline!==g.deadline){g.versions.push({ts:now,field:'deadline',from:g.lastDeadline,to:g.deadline});g.lastDeadline=g.deadline}
+    if(g.lastName==null)g.lastName=g.name;else if(g.lastName!==g.name){g.versions.push({ts:now,field:'name',from:g.lastName,to:g.name});g.lastName=g.name}
+    if(g.status==='Active'&&glKids(g.id).length===0&&(g.progress||0)>=100)g.status='Completed'})
+}
+function glSeed(){
+  if(glList().length||S.settings.goalsSeeded)return;S.settings.goalsSeeded=true;const t=today();
+  S.goals.push({id:'GL001',name:'Crack JEE Advanced 2028',category:'Long-term',parentId:'',start:S.settings.start,deadline:S.settings.exam,priority:'Critical',status:'Active',progress:0,success:'Qualify and secure a seat at the target college',subject:'',source:'system'});
+  S.settings.phases.forEach((p,i)=>S.goals.push({id:'GL'+String(i+2).padStart(3,'0'),name:`${p.name}: reach ${p.target} marks (${p.focus})`,category:'Performance',parentId:'GL001',start:p.start,deadline:p.end,priority:'High',status:'Active',progress:0,metric:'marks',target:p.target,baseline:S.settings.baseline,success:`A mock score of ${p.target} or more by ${p.end}`,subject:'',source:'system'}));
+  if(!window.__VE)save();
+}
+function glCapacity(sharePct){let w=0;const t=today();for(let d=addD(t,1);d<=addD(t,7);d=addD(d,1))w+=planMin(d)/60;return w*compRatio()*(sharePct/100)}
+function glDecompose(f){
+  const ch=f.chapters.map(s=>s.trim()).filter(Boolean).map((n,i)=>({n,i,o:(()=>{const k=MATH_ORDER.findIndex(w=>n.toLowerCase().includes(w));return k<0?100+i:k})()}));
+  if(f.subject==='Math')ch.sort((a,b)=>a.o-b.o);
+  const cap=Math.max(0.5,glCapacity(f.share)),weeks=[];let cur={h:0,items:[]};
+  ch.forEach(c=>{if(cur.h+f.hpc>cap*1.05&&cur.items.length){weeks.push(cur);cur={h:0,items:[]}}cur.items.push(c.n);cur.h+=f.hpc});if(cur.items.length)weeks.push(cur);
+  const t=today(),start=addD(t,1),W=weeks.map((w,i)=>({...w,end:addD(mon(addD(start,i*7)),6)>addD(start,i*7)?addD(mon(addD(start,i*7)),6):addD(start,i*7+6)}));
+  W.forEach((w,i)=>{w.end=addD(start,i*7+6)});
+  const last=W.length?W[W.length-1].end:start,over=last>f.deadline,total=f.hpc*ch.length;
+  let fit=0,acc=0;for(const w of W){if(w.end<=f.deadline){fit+=w.items.length}else break}
+  return {...f,chapters:ch.map(c=>c.n),W,cap,total,last,over,fit,fitNames:ch.slice(0,fit).map(c=>c.n),needShare:(diff(t,f.deadline)>0)?Math.min(100,Math.ceil(total/(diff(t,f.deadline)/7)/Math.max(0.5,glCapacity(100))*100)):null,verdict:!over?'ok':last>addD(f.deadline,14)?'bad':'warn'};
+}
+function glCreate(d,mode){
+  const L=glList(),t=today();let n=L.reduce((m,g)=>Math.max(m,+String(g.id).slice(2)||0),0);const id=()=>'GL'+String(++n).padStart(3,'0');
+  const W=mode==='scope'?d.W.filter(w=>w.end<=d.deadline):d.W,deadline=mode==='extend'?d.last:d.deadline,pid=id();
+  const names=mode==='scope'?W.flatMap(w=>w.items):d.chapters;
+  L.push({id:pid,name:d.name,category:d.category,parentId:d.parentId||'',start:addD(t,1),deadline,priority:d.priority||'High',status:'Active',progress:0,estHours:names.length*d.hpc,subject:d.subject,success:`Finish: ${names.join(', ')}`,source:'decomposed',chapters:names});
+  W.forEach((w,i)=>{L.push({id:id(),name:`Week ${i+1}: ${w.items.join(', ')}`,category:d.category==='Long-term'?'Academic':d.category,parentId:pid,start:addD(t,1+i*7),deadline:w.end>deadline?deadline:w.end,priority:'Medium',status:'Active',progress:0,estHours:w.items.length*d.hpc,subject:d.subject,success:'Complete: '+w.items.join(', '),source:'decomposed',chapters:w.items,dependsOn:i?[L[L.length-1].id]:[]})});
+  glDraft=null;save();vGoals();
+}
+function glToCommit(id){const g=glList().find(x=>x.id===id);if(!g)return;if(cmList().some(c=>c.goalId===id&&c.status==='Active'))return alert('A commitment for this goal already exists.');
+  const d={title:g.name.slice(0,150),category:'Weekly',priority:g.priority==='Critical'?'Critical':g.priority==='High'?'High':'Medium',subject:g.subject||'General',deadline:g.deadline<today()?addD(today(),3):g.deadline,why:'Milestone of goal: '+(glList().find(x=>x.id===g.parentId)||g).name,estHours:g.estHours||0,dependsOn:[],parentId:''};
+  const f=cmFeas(d);cmCreate(d,f,f.level!=='ok');const c=cmList()[cmList().length-1];c.goalId=id;c.source='goal';save();view='goals';vGoals()}
+function glCard(g,depth){
+  const h=glHealth(g),p=glProgress(g),k=glKids(g.id),cc={Completed:'bg-ok','On Track':'bg-ok','Not Started':'','At Risk':'bg-warn',Delayed:'bg-bad',Blocked:'bg-bad',Cancelled:''}[h];
+  const dep=(g.dependsOn||[]).map(id=>glList().find(x=>x.id===id)).filter(Boolean),late=h==='Delayed'&&p<100,remH=(g.estHours||0)*(1-p/100),newD=late&&remH>0?(()=>{const t=today();let d=t;for(let i=1;i<=365;i++){d=addD(t,i);let a=0;for(let x=t;x<=d;x=addD(x,1))a+=planMin(x)/60*0.7;if(a>=remH)break}return d})():null;
+  return `<div style="margin-left:${depth*18}px;padding:10px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(g.name)}</b> <span class="chip ${cc}">${h}</span> <span class="sub">${GL_LV[Math.min(glDepth(g),6)]} · ${esc(g.category)}${g.subject?' · '+esc(g.subject):''} · due ${fmtS(g.deadline)}${g.origDeadline&&g.origDeadline!==g.deadline?' (originally '+fmtS(g.origDeadline)+')':''}</span></div>
+    ${g.success?`<div class="sub">Success: ${esc(g.success)}</div>`:''}${dep.length?`<div class="sub">Depends on: ${dep.map(d=>esc(d.name)+' ('+glHealth(d)+')').join(', ')}</div>`:''}<div class="bar" style="margin:6px 0"><i style="width:${p}%"></i></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="sub">${p}%</span>${!k.length&&!g.metric&&h!=='Completed'?`<input type="range" min="0" max="100" step="5" value="${g.progress||0}" onchange="glProg('${g.id}',+this.value)" style="width:140px">`:''}
+     ${g.estHours&&!k.length&&h!=='Completed'&&h!=='Cancelled'?`<button class="btn s alt" onclick="glToCommit('${g.id}')">Make it a commitment</button>`:''}<button class="btn s alt" onclick="glEdit='${g.id}';vGoals();scrollTo(0,0)">Edit</button><button class="btn s alt" onclick="glStatus('${g.id}','${g.status==='Cancelled'?'Active':'Cancelled'}')">${g.status==='Cancelled'?'Reopen':'Cancel'}</button><button class="btn s alt" onclick="glDel('${g.id}')">×</button></div>
+    ${late&&newD?`<div class="sub" style="margin-top:4px">Past its deadline with ~${r1(remH)} h of work left. At your recent pace it could finish about ${fmtS(newD)}. The original deadline stays on record. <a href="#" onclick="glMove('${g.id}','${newD}');return false">Move deadline to ${fmtS(newD)}</a></div>`:''}
+    ${(g.versions||[]).length?`<div class="sub">History: ${g.versions.map(v=>v.field+' '+(v.field==='deadline'?fmtS(v.from)+' → '+fmtS(v.to):'"'+esc(v.from)+'" → "'+esc(v.to)+'"')).join('; ')}</div>`:''}</div>`+k.sort((a,b)=>a.deadline<b.deadline?-1:1).map(x=>glCard(x,depth+1)).join('');
+}
+function vGoals(){
+  glSeed();goalSync();const L=glList(),t=today(),roots=L.filter(g=>!g.parentId||!L.some(x=>x.id===g.parentId)),H=L.map(g=>[g,glHealth(g)]),cnt=h=>H.filter(x=>x[1]===h).length;
+  const e0=glEdit?L.find(g=>g.id===glEdit):null,SJ=['',...PCM()],d=glDraft;
+  const sub=PCM().map(s=>({s,h:hoursBy(addD(t,-13),t)[s]})),tot=sum(sub.map(x=>x.h)),drift=[];
+  if(tot>=3){const act=L.filter(g=>!glKids(g.id).length&&['Active'].includes(g.status)&&g.subject&&!['Completed'].includes(glHealth(g)));
+    sub.forEach(x=>{const share=x.h/tot*100;if(act.some(g=>g.subject===x.s)&&share<15)drift.push(`${x.s} has active goals but only ${r0(share)}% of your last 14 days of study time.`);if(sub.length>1&&share>55)drift.push(`${r0(share)}% of your last 14 days went to ${x.s}. Check that this is deliberate.`)})}
+  const fea=d?d:null;
+  $('#app').innerHTML=`<h2>Goals</h2><div class="sub" style="margin-bottom:12px">Your strategic plan: JEE Advanced 2028 broken down into yearly, quarterly, monthly and weekly goals. Every goal connects to the one above it. Goals are checked for feasibility, tracked against your real progress and never silently changed: the original deadline and every revision stay on record.</div>
+  <div class="grid"><div class="card"><div class="sub">Active goals</div><div class="big">${L.filter(g=>!['Completed','Cancelled'].includes(glHealth(g))).length}</div></div><div class="card"><div class="sub">At risk or delayed</div><div class="big ${cnt('At Risk')+cnt('Delayed')?'bad':''}">${cnt('At Risk')+cnt('Delayed')}</div></div><div class="card"><div class="sub">Completed</div><div class="big">${cnt('Completed')}</div></div><div class="card"><div class="sub">Blocked</div><div class="big">${cnt('Blocked')}</div></div></div>
+  ${drift.length?`<div class="card"><h3>Goal drift</h3>${drift.map(x=>`<div style="padding:4px 0">• ${esc(x)}</div>`).join('')}<div class="sub" style="margin-top:6px">If this is a deliberate priority (for example a test is near), it is fine. Otherwise rebalance on the Workload page.</div></div>`:''}
+  <div class="card"><h3>Goal hierarchy</h3>${roots.length?roots.map(g=>glCard(g,0)).join(''):'<div class="sub">No goals yet.</div>'}</div>
+  <div class="card"><h3>Break a big goal into milestones</h3><div class="sub" style="margin-bottom:8px">List the chapters or topics. DXA works out how many weeks they need from your real capacity (planned hours × how much of that you actually complete × the share you give this goal), orders Maths chapters by prerequisites, and checks the deadline.</div>
+   <form onsubmit="glPlan(event)"><div class="row"><div style="grid-column:span 2"><label>Goal</label><input id="gn" required value="${esc(d?d.name:'')}" placeholder="e.g. Complete remaining Class 11 Maths"></div><div><label>Category</label><select id="gc">${GL_CAT.map(c=>`<option ${d&&d.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Subject</label><select id="gs">${SJ.map(s=>`<option ${d&&d.subject===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
+   <div class="row"><div style="grid-column:span 2"><label>Chapters / topics (comma separated)</label><input id="gch" required value="${esc(d?d.chapters.join(', '):'')}" placeholder="Quadratic equations, Complex numbers, Sequences, Circle"></div><div><label>Hours per chapter</label><input id="ghp" type="number" min="0.5" step="0.5" value="${d?d.hpc:8}"></div><div><label>Deadline</label><input id="gdl" type="date" required min="${addD(t,1)}" value="${d?d.deadline:addD(t,30)}"></div></div>
+   <div class="row"><div><label>Share of your study time (%)</label><input id="gsh" type="number" min="5" max="100" value="${d?d.share:33}"></div><div style="grid-column:span 2"><label>Part of (parent goal)</label><select id="gp"><option value="">(none)</option>${L.map(g=>`<option value="${g.id}" ${d&&d.parentId===g.id?'selected':''}>${esc(g.name.slice(0,60))}</option>`).join('')}</select></div></div><button class="btn ok">Check feasibility and plan</button></form>
+   ${fea?`<div style="margin-top:12px;padding:12px 14px;border:1px solid ${fea.verdict==='ok'?'var(--ok)':fea.verdict==='warn'?'var(--warn)':'var(--bad)'};border-radius:10px"><b>${fea.verdict==='ok'?'This looks achievable':fea.verdict==='warn'?'This is possible but tight':'This is unlikely at your current capacity'}</b>
+     <div class="sub" style="margin-top:4px">${fea.chapters.length} chapters × ${fea.hpc} h = ${r1(fea.total)} h. Your realistic capacity for this goal is about ${r1(fea.cap)} h a week. It needs ${fea.W.length} week${fea.W.length===1?'':'s'}, finishing around ${fmtS(fea.last)}; the deadline is ${fmtS(fea.deadline)}.</div>
+     ${fea.W.map((w,i)=>`<div style="padding:3px 0">Week ${i+1} (to ${fmtS(w.end)}): ${esc(w.items.join(', '))} <span class="sub">${r1(w.h)} h</span></div>`).join('')}
+     <div style="margin-top:8px"><button class="btn s ok" onclick="glCreate(glDraft,'keep')">Create as planned</button> ${fea.over?`<button class="btn s alt" onclick="glCreate(glDraft,'scope')">Keep the deadline, cut scope to ${fea.fit} chapter${fea.fit===1?'':'s'}</button> <button class="btn s alt" onclick="glCreate(glDraft,'extend')">Keep all chapters, extend to ${fmtS(fea.last)}</button>`:''} <button class="btn s alt" onclick="glDraft=null;vGoals()">Discard</button></div>${fea.over&&fea.needShare?`<div class="sub" style="margin-top:6px">Or give this goal about ${fea.needShare}% of your study time instead of ${fea.share}%.</div>`:''}</div>`:''}</div>
+  <div class="card"><h3>${e0?'Edit goal':'Add a single goal'}</h3><form onsubmit="glSave(event)"><div class="row"><div style="grid-column:span 2"><label>Goal</label><input id="gan" required value="${esc(e0?e0.name:'')}"></div><div><label>Category</label><select id="gac">${GL_CAT.map(c=>`<option ${e0&&e0.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Priority</label><select id="gap">${CM_PR.map(c=>`<option ${(e0?e0.priority:'Medium')===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
+   <div class="row"><div><label>Start</label><input id="gas" type="date" required value="${e0?e0.start:t}"></div><div><label>Deadline</label><input id="gad" type="date" required value="${e0?e0.deadline:addD(t,14)}"></div><div><label>Parent goal</label><select id="gaq"><option value="">(none)</option>${L.filter(g=>!e0||g.id!==e0.id).map(g=>`<option value="${g.id}" ${e0&&e0.parentId===g.id?'selected':''}>${esc(g.name.slice(0,50))}</option>`).join('')}</select></div><div><label>Depends on</label><select id="gax"><option value="">(none)</option>${L.filter(g=>!e0||g.id!==e0.id).map(g=>`<option value="${g.id}" ${e0&&(e0.dependsOn||[])[0]===g.id?'selected':''}>${esc(g.name.slice(0,50))}</option>`).join('')}</select></div></div>
+   <div class="row"><div><label>Subject</label><select id="gau">${SJ.map(s=>`<option ${e0&&e0.subject===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Estimated hours</label><input id="gae" type="number" min="0" step="0.5" value="${e0?e0.estHours||'':''}"></div><div style="grid-column:span 2"><label>Success criteria</label><input id="gaz" value="${esc(e0?e0.success||'':'')}" placeholder="How will you know it is achieved?"></div></div>
+   <button class="btn ok">${e0?'Update':'Add goal'}</button> ${e0?'<button type="button" class="btn alt" onclick="glEdit=null;vGoals()">Cancel</button>':''}</form></div>`;
+}
+function glPlan(e){e.preventDefault();const g=id=>document.getElementById(id).value;glDraft=glDecompose({name:g('gn').trim(),category:g('gc'),subject:g('gs'),chapters:g('gch').split(','),hpc:+g('ghp')||8,deadline:g('gdl'),share:Math.max(5,+g('gsh')||33),parentId:g('gp')});vGoals()}
+function glSave(e){
+  e.preventDefault();const g=id=>document.getElementById(id).value.trim(),L=glList();if(g('gad')<g('gas'))return alert('The deadline is before the start.');
+  const f={name:g('gan'),category:g('gac'),priority:g('gap'),start:g('gas'),deadline:g('gad'),parentId:g('gaq'),dependsOn:g('gax')?[g('gax')]:[],subject:g('gau'),estHours:+g('gae')||0,success:g('gaz')};
+  if(glEdit){const x=L.find(y=>y.id===glEdit);if(x)Object.assign(x,f);glEdit=null}
+  else L.push({id:'GL'+String(L.reduce((m,x)=>Math.max(m,+String(x.id).slice(2)||0),0)+1).padStart(3,'0'),...f,status:'Active',progress:0,source:'manual'});
+  save();vGoals();
+}
+function glProg(id,p){const g=glList().find(x=>x.id===id);if(g){g.progress=p;save();vGoals()}}
+function glStatus(id,s){const g=glList().find(x=>x.id===id);if(g){g.status=s;save();vGoals()}}
+function glMove(id,d){const g=glList().find(x=>x.id===id);if(g){g.deadline=d;save();vGoals()}}
+function glDel(id){const g=glList().find(x=>x.id===id);if(g&&confirm('Delete "'+g.name+'"'+(glKids(id).length?' and its '+glKids(id).length+' sub-goals':'')+'?')){const ids=new Set([id]);let ch=true;while(ch){ch=false;glList().forEach(x=>{if(x.parentId&&ids.has(x.parentId)&&!ids.has(x.id)){ids.add(x.id);ch=true}})}S.goals=glList().filter(x=>!ids.has(x.id));save();vGoals()}}
+
+/* ---------- WORKLOAD BALANCER ---------- */
+let wlHours=null,wlWhat={from:'',to:'',h:1};
+const WL_W={B:0.25,U:0.20,T:0.20,D:0.20,G:0.15},PRIO_MUL={High:1.3,Normal:1,Low:0.7},WK_H={High:2,Medium:1.5,Low:1};
+function wlCompute(H){
+  const t=today(),SJ=PCM(),prio=S.settings.subjPrio||{},hrs=hoursBy(addD(t,-13),t),tot=sum(SJ.map(s=>hrs[s]));
+  const weekAvail=sum([1,2,3,4,5,6,7].map(i=>planMin(addD(t,i))/60));
+  const rows=SJ.map(s=>{
+    const Bh=blHours(s),Dh=sum((S.weakTopics||[]).filter(x=>x.subject===s&&x.status!=='Mastered').map(x=>WK_H[x.priority]||1.5));
+    const cs=(S.commitments||[]).filter(c=>(c.subject===s||c.subject==='General'&&SJ.length===1)&&(c.status==='Active'&&c.deadline<=addD(t,3)||c.status==='Missed'&&(c.progress||0)<100));
+    const Uh=sum(cs.map(cmRem)),ts=(S.commitments||[]).filter(c=>c.status==='Active'&&c.category==='Academic'&&c.subject===s&&c.deadline>=t&&c.deadline<=addD(t,14)).map(c=>diff(t,c.deadline));
+    const T=ts.length?(Math.min(...ts)<=3?100:Math.min(...ts)<=7?70:40):0,target=100/SJ.length*(PRIO_MUL[prio[s]||'Normal']||1);
+    const share=tot>0?hrs[s]/tot*100:100/SJ.length,Bn=Math.min(100,Bh/20*100),Un=Math.min(100,Uh/Math.max(2,weekAvail/3)*100),Dn=Math.min(100,Dh/12*100),Gn=Math.max(0,Math.min(100,(target-share)/target*100));
+    const score=(WL_W.B*Bn+WL_W.U*Un+WL_W.T*T+WL_W.D*Dn+WL_W.G*Gn)*(PRIO_MUL[prio[s]||'Normal']||1);
+    const debt=sum((S.commitments||[]).filter(c=>c.subject===s&&c.status==='Missed'&&(c.progress||0)<100).map(cmRem))+sum((S.backlog||[]).filter(b=>b.status!=='Resolved'&&diff(b.date,t)>SLA[b.priority]&&subjParts(b.subject).includes(s)).map(b=>(BL_H[b.priority]||2)/subjParts(b.subject).length));
+    return {s,Bh,Dh,Uh,T,share,B:Bn,U:Un,D:Dn,G:Gn,score,debt,hours:hrs[s]};
+  });
+  const n=rows.length,floor=0.15*H,rest=Math.max(0,H-floor*n),sc=sum(rows.map(r=>r.score+1));
+  rows.forEach(r=>{r.alloc=Math.round((floor+rest*(r.score+1)/sc)*2)/2});
+  const diffH=H-sum(rows.map(r=>r.alloc));if(rows.length)rows.sort((a,b)=>b.score-a.score)[0].alloc+=diffH;rows.sort((a,b)=>PCM().indexOf(a.s)-PCM().indexOf(b.s));
+  const testSoon=rows.some(r=>r.T>=70),dem=avg(rows.map(r=>r.D)),mix={lectures:45,practice:30,revision:20,review:5};
+  if(testSoon){mix.practice+=10;mix.lectures-=10}if(dem>=60){mix.revision+=5;mix.lectures-=5}
+  return {rows,mix,weekAvail,hrs,tot};
+}
+function vWorkload(){
+  const t=today(),H=wlHours??Math.round(planMin(t)/60*2)/2,W=wlCompute(H),SJ=PCM(),prio=S.settings.subjPrio||{},ratio=compRatio(),hist=Array.isArray(S.allocHist)?S.allocHist:[];
+  const debtT=sum(W.rows.map(r=>r.debt)),planned=sum(W.rows.map(r=>r.alloc)),exp=W.weekAvail*ratio;
+  const heat=[0,1,2,3,4,5,6].map(i=>{const d=addD(t,i),a=planMin(d)/60,c=sum((S.commitments||[]).filter(x=>x.status==='Active'&&x.deadline===d).map(cmRem));return {d,a,c}});
+  const neglect=[];SJ.length>1&&[0,1,2].forEach(()=>0);
+  const wkShare=[0,1,2].map(i=>{const e=addD(t,-7*i),f=addD(e,-6),h=hoursBy(f,e),T=sum(SJ.map(s=>h[s]));return {T,h}});
+  SJ.length>1&&SJ.forEach(s=>{if(wkShare.every(w=>w.T>=3&&w.h[s]/w.T<0.15)){const r=W.rows.find(x=>x.s===s);neglect.push(`${s} received under 15% of your study time for 3 weeks in a row.${r&&r.score>40?' Its workload score is high, so this looks accidental.':' Its workload is low, so this may be deliberate.'}`)}});
+  const todayH=hoursBy(t,t),what=wlWhat,wf=what.from||SJ[0],wt=what.to||SJ[SJ.length-1],A=W.rows.find(r=>r.s===wf),B=W.rows.find(r=>r.s===wt);
+  const clear=(r,add)=>{const wk=(r.alloc+add)*7;return wk>0?r.Bh/(wk*0.5):null};
+  $('#app').innerHTML=`<h2>Workload Balancer</h2><div class="sub" style="margin-bottom:12px">Decides where your study hours should go. Each subject gets a priority score from its backlog, deadlines, upcoming tests, weak-topic and revision demand, and the gap between what you plan and what you actually do. Every subject keeps a minimum 15% so nothing is dropped. Equal hours are not equal attention.</div>
+  <div class="grid"><div class="card"><div class="sub">Available hours</div><div class="big">${r1(H)}</div><div class="sub">edit below</div></div><div class="card"><div class="sub">Planned workload</div><div class="big">${r1(planned)}</div></div><div class="card"><div class="sub">Workload debt</div><div class="big ${debtT>20?'bad':''}">${r1(debtT)} h</div><div class="sub">missed + overdue work</div></div><div class="card"><div class="sub">Subjects covered</div><div class="big">${SJ.length}/${SJ.length}</div><div class="sub">15% minimum each</div></div></div>
+  <div class="card"><h3>Suggested allocation</h3><div class="row"><div><label>Hours available today</label><input type="number" min="1" max="16" step="0.5" value="${H}" onchange="wlHours=+this.value;vWorkload()"></div></div>
+   <div class="tw"><table><tr><th>Subject</th><th>Hours</th><th>Share</th><th>Priority score</th><th>Backlog</th><th>Debt</th><th>Your priority</th></tr>${W.rows.map(r=>`<tr><td><b style="color:${SUBJ_COL[r.s]}">${r.s}</b></td><td><b>${r1(r.alloc)} h</b></td><td>${r0(r.alloc/Math.max(1,H)*100)}%</td><td>${r0(r.score)}</td><td>${r1(r.Bh)} h</td><td>${r1(r.debt)} h</td><td><select onchange="wlPrio('${r.s}',this.value)">${['Normal','High','Low'].map(o=>`<option ${(prio[r.s]||'Normal')===o?'selected':''}>${o}</option>`).join('')}</select></td></tr>`).join('')}</table></div>
+   <h3 style="margin-top:12px">Why</h3>${W.rows.map(r=>`<div style="padding:4px 0"><b>${r.s}</b> ${r1(r.alloc)} h: backlog ${r0(r.B)}, deadlines ${r0(r.U)}, tests ${r0(r.T)}, revision demand ${r0(r.D)}, gap from your usual time ${r0(r.G)} (you gave it ${r0(r.share)}% of the last 14 days).</div>`).join('')}
+   <div class="sub" style="margin-top:6px">Score = 25% backlog + 20% deadlines + 20% tests + 20% revision demand + 15% gap. Tests are taken from Academic commitments due in the next 14 days.</div>
+   <h3 style="margin-top:12px">How to use the time (illustrative, adjusted from your data)</h3><div>New lectures ${W.mix.lectures}% · Practice ${W.mix.practice}% · Revision ${W.mix.revision}% · Test analysis and planning ${W.mix.review}%</div>
+   <p style="margin-top:10px"><button class="btn s ok" onclick="wlSave(${H})">Save this allocation to history</button></p></div>
+  <div class="card"><h3>Today so far</h3><div class="tw"><table><tr><th>Subject</th><th>Planned</th><th>Logged</th><th>Left</th></tr>${W.rows.map(r=>`<tr><td>${r.s}</td><td>${r1(r.alloc)} h</td><td>${r1(todayH[r.s])} h</td><td class="${todayH[r.s]<r.alloc?'':'ok'}">${r1(Math.max(0,r.alloc-todayH[r.s]))} h</td></tr>`).join('')}</table></div><div class="sub" style="margin-top:6px">If a block is unfinished, check whether the estimate was wrong, whether it can move to tomorrow, or whether a lower-priority item should go. Unfinished work is not pushed forward automatically.</div></div>
+  ${neglect.length?`<div class="card"><h3>Subject neglect</h3>${neglect.map(x=>`<div>• ${esc(x)}</div>`).join('')}</div>`:''}
+  <div class="card"><h3>Capacity forecast, next 7 days</h3><div>Planned ${r1(W.weekAvail)} h. At your recent completion rate (${r0(ratio*100)}% of plan) expect about <b>${r1(exp*0.85)}–${r1(Math.min(W.weekAvail*1.1,exp*1.15))} h</b>. Treat this as a range, not a promise.</div>
+   <div class="tw" style="margin-top:10px"><table><tr><th>Day</th><th>Planned hours</th><th>Due that day</th><th></th></tr>${heat.map(x=>`<tr><td>${fmtS(x.d)} ${dow(x.d)}</td><td>${r1(x.a)}</td><td>${r1(x.c)} h</td><td><div class="bar" style="width:140px;margin:0"><i style="width:${Math.min(100,x.a?x.c/x.a*100:0)}%;background:${x.c>x.a?'var(--bad)':x.c>x.a*0.8?'var(--warn)':'var(--ok)'}"></i></div></td></tr>`).join('')}</table></div></div>
+  <div class="card"><h3>What if I move hours?</h3><div class="row"><div><label>From</label><select onchange="wlWhat.from=this.value;vWorkload()">${SJ.map(s=>`<option ${wf===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>To</label><select onchange="wlWhat.to=this.value;vWorkload()">${SJ.map(s=>`<option ${wt===s?'selected':''}>${s}</option>`).join('')}</select></div><div><label>Hours per day</label><input type="number" min="0" max="6" step="0.5" value="${what.h}" onchange="wlWhat.h=+this.value;vWorkload()"></div></div>
+   ${A&&B&&wf!==wt?`<div style="margin-top:8px">${wf}: ${r1(A.alloc)} h → ${r1(Math.max(0,A.alloc-what.h))} h a day. ${wt}: ${r1(B.alloc)} h → ${r1(B.alloc+what.h)} h a day.</div><div class="sub">Assuming half of a subject's time goes to its backlog, ${wt} backlog (${r1(B.Bh)} h) would clear in ${clear(B,what.h)==null?'—':r1(clear(B,what.h))} weeks instead of ${clear(B,0)==null?'—':r1(clear(B,0))}. ${wf} backlog (${r1(A.Bh)} h) would take ${clear(A,-what.h)==null||A.alloc-what.h<=0?'much longer':r1(clear(A,-what.h))+' weeks instead of '+(clear(A,0)==null?'—':r1(clear(A,0)))}.</div>`:'<div class="sub" style="margin-top:8px">Pick two different subjects.</div>'}</div>
+  <div class="card"><h3>Allocation history</h3>${hist.length?`<div class="tw"><table><tr><th>Saved</th><th>Hours</th><th>Allocation</th></tr>${[...hist].reverse().slice(0,12).map(h=>`<tr><td>${fmtS(h.date)}</td><td>${r1(h.hours)}</td><td>${Object.entries(h.alloc).map(([k,v])=>k+' '+r1(v)+' h').join(' · ')}</td></tr>`).join('')}</table></div>`:'<div class="sub">Nothing saved yet. Save an allocation to compare later.</div>'}</div>`;
+}
+function wlPrio(s,v){S.settings.subjPrio={...(S.settings.subjPrio||{}),[s]:v};save();vWorkload()}
+function wlSave(h){const W=wlCompute(h);if(!Array.isArray(S.allocHist))S.allocHist=[];S.allocHist.push({date:today(),hours:h,alloc:Object.fromEntries(W.rows.map(r=>[r.s,r.alloc])),reason:'Saved from the Workload page'});save();vWorkload()}
+
+/* ---------- REALITY CHECK ---------- */
+let rcRange=7;
+function rcData(){
+  const t=today(),f0=addD(t,-(rcRange-1)),first=firstAct(),f=f0>first?f0:first,days=diff(f,t)+1;let ph=0;for(let d=f;d<=t;d=addD(d,1))ph+=planMin(d)/60;
+  const ah=totalH(f,t),qt=(S.settings.weeklyMin||0)/7*days,qa=qBetween(f,t),cm=(S.commitments||[]).filter(c=>c.deadline>=f&&c.deadline<=t&&['Completed','Missed'].includes(c.status)),done=cm.filter(c=>c.status==='Completed'),ontime=done.filter(c=>(c.completedOn||t)<=c.deadline);
+  const ratios=[];if(sesAll().length)ratios.push(Math.min(1,ah/Math.max(0.1,ph)));if(qt>0&&qa>0||Object.keys(S.logs||{}).length)ratios.push(Math.min(1,qa/Math.max(1,qt)));
+  const P=ratios.length?avg(ratios):null,C=cm.length?done.length/cm.length:(cmMetrics().crs!=null?cmMetrics().crs/100:null),T=done.length?ontime.length/done.length:null;
+  let R=null;try{const cf=coachFacts();if(cf.latest&&cf.exp)R=Math.min(1,cf.latest.marks/cf.exp)}catch(e){}
+  const wts=S.settings.easW||{P:0.30,C:0.25,T:0.25,R:0.20},parts=[['P',P],['C',C],['T',T],['R',R]].filter(x=>x[1]!=null),ws=sum(parts.map(x=>wts[x[0]]));
+  const eas=parts.length?sum(parts.map(x=>wts[x[0]]*x[1]))/ws*100:null;
+  const dev=[];for(let d=f;d<=t;d=addD(d,1)){const p=planMin(d)/60,a=totalH(d,d);if(p>0&&a>0)dev.push(Math.abs(a-p)/p)}
+  return {t,f,days,ph,ah,qt,qa,cm,done,ontime,P,C,T,R,eas,pa:dev.length?Math.max(0,100-avg(dev)*100):null};
+}
+function rcFindings(D){
+  const t=D.t,F=[],M=cmMetrics(),add=(lv,title,ev,act)=>F.push({lv,title,ev,act});
+  if(D.ph>0&&sesAll().length&&D.ah<D.ph*0.7)add(2,'Study time is well below plan',`${r1(D.ah)} h logged against ${r1(D.ph)} h planned (${r0(D.ah/D.ph*100)}%).`,'Recalculate the daily plan from your last 4 weeks of actual hours.');
+  if(D.qt>0&&D.qa<D.qt*0.7)add(2,'Question target not being met',`${D.qa} questions against a target of ${r0(D.qt)} for this period.`,'Lower the daily question target to what you reach on a normal day, then build up.');
+  cmConflicts().forEach(x=>add(2,'Overcommitment: more promised than available time',`${r1(x.need)} h due by ${fmtS(x.date)} but about ${r1(x.av)} h planned. Competing: ${x.names.join(', ')}.`,'Move or split the lowest-priority commitment.'));
+  const mm=(S.commitments||[]).filter(c=>c.status==='Missed'&&c.missReason==='Insufficient time'&&c.deadline>=addD(t,-30));
+  mm.forEach(c=>{const h=totalH(c.created,c.deadline),p=sum(Array.from({length:Math.max(1,diff(c.created,c.deadline)+1)},(_,i)=>planMin(addD(c.created,i))/60)),sj=c.subject&&c.subject!=='General'?hoursBy(c.created,c.deadline)[c.subject]:null;
+    if(sesAll().length&&h>=p*0.7)add(2,`"${c.title}": time may not have been the main issue`,`You said it was insufficient time. Your records show ${r1(h)} h studied of ${r1(p)} h planned in that window${sj!=null?', of which '+r1(sj)+' h was on '+c.subject:''}. Priorities and scheduling may have played a part. If something else happened that is not in the records, tell DXA AI.`,'Review how that window\'s hours were split across subjects.')});
+  if((M.over||0)>=25)add(2,'Frequent overcommitment',`${r0(M.over)}% of your commitments were unrealistic (missed for time or estimate reasons, or saved against a warning).`,'Estimate with a 30% buffer for the next week.');
+  cmPatterns().slice(0,3).forEach(p=>add(1,'Repeated pattern',p,'Plan around this pattern: keep commitments for that day or subject smaller.'));
+  const a=periodMetrics(addD(t,-13),t),b=periodMetrics(addD(t,-27),addD(t,-14));
+  if(b.hpd>0&&a.hpd>b.hpd*1.2&&a.qpd<=b.qpd*1.05)add(2,'More hours, same output',`Study time rose from ${r1(b.hpd)} to ${r1(a.hpd)} h/day but questions stayed at about ${r0(a.qpd)}/day.`,'Check how the hours are being spent: lectures vs practice, interruptions, and task durations.');
+  const mk=(f,e)=>S.mocks.filter(m=>m.date>=f&&m.date<=e).length;if(mk(addD(t,-60),addD(t,-31))>=1&&mk(addD(t,-30),t)===0)add(2,'Target drift: no mock in 30 days',`${mk(addD(t,-60),addD(t,-31))} mock(s) in the 30 days before, none in the last 30.`,'Schedule a mock test this week.');
+  const bl0=openBacklogOn(addD(t,-30)),bl1=openBacklogOn(t);if(bl1>bl0+2)add(2,'Backlog is growing',`${bl0} open 30 days ago, ${bl1} now.`,'Run the Recovery Protocol for the backlog.');
+  const un=(S.weakTopics||[]).filter(x=>x.status==='Mastered'&&!(x.accuracy>=70));if(un.length)add(1,'Self-assessment check',`${un.length} weak topic(s) are marked Mastered without a recorded accuracy of 70% or more: ${un.slice(0,4).map(x=>x.topic).join(', ')}.`,'Confirm each with a timed practice set and record the accuracy.');
+  const lec=(S.commitments||[]).filter(c=>c.status==='Missed'&&c.missReason==='Wrong workload estimate').length;if(lec>=2)add(1,'Optimism bias',`${lec} commitments were missed because the work took longer than estimated.`,'Add a buffer to estimates and compare with actual hours afterwards.');
+  return F.sort((x,y)=>y.lv-x.lv);
+}
+function vReality(){
+  const D=rcData(),F=rcFindings(D),M=cmMetrics(),pc=x=>x==null?'—':r0(x)+'%',t=today(),over=sum((S.commitments||[]).filter(c=>c.status==='Missed'&&(c.progress||0)<100).map(c=>1))+(S.backlog||[]).filter(b=>b.status!=='Resolved'&&diff(b.date,t)>SLA[b.priority]).length;
+  const chip=(k,l)=>`<button class="btn s ${rcRange===k?'ok':'alt'}" onclick="rcRange=${k};vReality()">${l}</button>`,av=planMin(t)/60;
+  $('#app').innerHTML=`<h2>Reality Check</h2><div class="sub" style="margin-bottom:12px">Compares what you wanted, what you promised, what you planned and what actually happened, then explains the gaps with evidence. No flattering, no unnecessary criticism, no guesses presented as facts. The score is not a measure of intelligence or your rank.</div>
+  <div class="card"><div class="tools noprint"><span class="sub">Check:</span> ${chip(1,'Today')} ${chip(7,'This week')} ${chip(30,'This month')}</div></div>
+  <div class="grid"><div class="card"><div class="sub">Execution Alignment (EAS)</div><div class="big">${pc(D.eas)}</div><div class="sub">plan ${pc(D.P==null?null:D.P*100)} · commitments ${pc(D.C==null?null:D.C*100)} · timeliness ${pc(D.T==null?null:D.T*100)} · results ${pc(D.R==null?null:D.R*100)}</div></div>
+   <div class="card"><div class="sub">Plan completion</div><div class="big">${pc(D.P==null?null:D.P*100)}</div></div><div class="card"><div class="sub">Planning accuracy</div><div class="big">${pc(D.pa)}</div><div class="sub">planned vs actual hours</div></div><div class="card"><div class="sub">Overdue items</div><div class="big ${over?'bad':''}">${over}</div><div class="sub">missed commitments + overdue backlog</div></div></div>
+  <div class="card"><h3>Plan vs actual</h3><div class="tw"><table><tr><th></th><th>Target</th><th>Actual</th><th>Achieved</th></tr><tr><td>Study hours</td><td>${r1(D.ph)} h</td><td>${r1(D.ah)} h</td><td>${pc(D.ph?D.ah/D.ph*100:null)}</td></tr><tr><td>Questions</td><td>${r0(D.qt)}</td><td>${D.qa}</td><td>${pc(D.qt?D.qa/D.qt*100:null)}</td></tr><tr><td>Commitments that came due</td><td>${D.cm.length}</td><td>${D.done.length} completed</td><td>${pc(D.cm.length?D.done.length/D.cm.length*100:null)}</td></tr><tr><td>Revision sessions</td><td colspan="3" class="sub">not tracked yet</td></tr></table></div><div class="sub" style="margin-top:6px">EAS = 30% plan completion + 25% commitments fulfilled + 25% on-time + 20% results (latest mock vs the plan's expected marks). A part with no data is left out and the others are scaled up. Weights are in settings.easW.</div></div>
+  <div class="card"><h3>What the evidence says</h3>${F.length?F.map(f=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)"><span style="color:${f.lv>=3?'var(--bad)':f.lv==2?'var(--warn)':'var(--blue)'};font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase">${f.lv>=2?'Finding':'Note'}</span> <b style="margin-left:8px">${esc(f.title)}</b><div class="sub" style="margin-top:3px">Evidence: ${esc(f.ev)}</div><div style="margin-top:3px">Suggested action: ${esc(f.act)}</div><div style="margin-top:4px"><button class="btn s alt" onclick="rcCommit(${F.indexOf(f)})">Make it a commitment</button></div></div>`).join(''):'<div class="sub">No gaps found in the records for this period. More logging gives it more to check.</div>'}</div>
+  <div class="card"><h3>Can I really fit this day?</h3><div class="sub" style="margin-bottom:8px">Enter what you plan to do and the hours each needs. Today you have about ${r1(av)} h planned and you usually complete ${r0(compRatio()*100)}% of that.</div><div class="row"><div><label>Lectures (h)</label><input id="rl" type="number" min="0" step="0.5" value="8"></div><div><label>Practice (h)</label><input id="rp" type="number" min="0" step="0.5" value="4"></div><div><label>Revision (h)</label><input id="rr" type="number" min="0" step="0.5" value="3"></div><div><label>Mock test (h)</label><input id="rm" type="number" min="0" step="0.5" value="2"></div></div><button class="btn s ok" onclick="rcFit()">Check</button><div id="rcFit" style="margin-top:8px"></div></div>
+  <div class="card"><h3>Reliability measures</h3><div class="sub">Commitment reliability ${M.n>=3?pc(M.crs):'—'} · On-time ${pc(M.onTime)} · Rescheduling ${pc(M.resc)} · Overcommitment ${pc(M.over)} · Abandonment ${pc(M.aband)}. Details are on the Commitments page.</div></div>`;
+}
+function rcFit(){const g=id=>+document.getElementById(id).value||0,tot=g('rl')+g('rp')+g('rr')+g('rm'),av=planMin(today())/60,cap=av*compRatio();
+  const v=tot>av?'bad':tot>cap?'warn':'ok',msg=tot>av?`${r1(tot)} h is more than the ${r1(av)} h you have planned. This does not fit.`:tot>cap?`${r1(tot)} h fits in the plan but is above the ${r1(cap)} h you usually complete. Expect to finish roughly ${r0(cap/tot*100)}% of it.`:`${r1(tot)} h looks realistic against your usual ${r1(cap)} h.`;
+  document.getElementById('rcFit').innerHTML=`<b style="color:var(--${v==='ok'?'ok':v==='warn'?'warn':'bad'})">${msg}</b>`}
+function rcCommit(i){const f=rcFindings(rcData())[i];if(!f)return;const d={title:f.act.slice(0,150),category:'Weekly',priority:'Medium',subject:'General',deadline:addD(today(),7),why:'From Reality Check: '+f.title,estHours:1,dependsOn:[],parentId:''};cmCreate(d,cmFeas(d),false);const c=cmList()[cmList().length-1];c.source='reality check';save();go('commit')}
+
+/* ---------- RECOVERY PROTOCOL ---------- */
+const RC_CAUSE=['Time Recovery','Backlog Recovery','Consistency Recovery','Academic Recovery','Workload Recovery','Revision Recovery','Test Recovery','Personal Recovery'];
+const RC_MODE=['Light Recovery','Backlog Recovery','Routine Recovery','Major Academic Recovery','Test Recovery'];
+let rvShare=30,rvDays=7,rvDraft=null;
+const rvList=()=>Array.isArray(S.recovery)?S.recovery:(S.recovery=[]);
+function rvSignals(){
+  const t=today(),sg=[],miss=(S.commitments||[]).filter(c=>c.status==='Missed'&&c.deadline>=addD(t,-7)).length,od=(S.backlog||[]).filter(b=>b.status!=='Resolved'&&diff(b.date,t)>SLA[b.priority]).length;
+  if(miss>=2)sg.push(['Backlog Recovery',`${miss} commitments were missed in the last 7 days.`]);if(od>=5)sg.push(['Backlog Recovery',`${od} backlog items are past their deadline.`]);
+  const a=totalH(addD(t,-6),t),b=totalH(addD(t,-13),addD(t,-7));if(b>=5&&a<b*0.7)sg.push(['Routine Recovery',`Study time fell ${r0((1-a/b)*100)}% (${r1(a)} h vs ${r1(b)} h the week before).`]);
+  const last=[...sesAll().map(x=>x.date),...Object.values(S.logs||{}).filter(l=>qTot(l)>0).map(l=>l.date)].sort().pop();if(last&&diff(last,t)>=3)sg.push(['Routine Recovery',`Nothing logged for ${diff(last,t)} days.`]);
+  const ms=mocks().filter(m=>m.marks!=null);if(ms.length>=2&&ms[ms.length-2].marks-ms[ms.length-1].marks>=15)sg.push(['Test Recovery',`Your latest mock is ${ms[ms.length-2].marks-ms[ms.length-1].marks} marks lower than the one before.`]);
+  const cf=cmConflicts();if(cf.length)sg.push(['Workload Recovery','More work is due than your planned time allows.']);
+  return sg;
+}
+function rvItems(){
+  const t=today(),it=[];
+  (S.backlog||[]).filter(b=>b.status!=='Resolved').forEach(b=>{const age=diff(b.date,t),tier=b.priority==='High'&&age>SLA[b.priority]?'Critical':b.priority==='High'?'High':b.priority==='Medium'?'Normal':'Deferrable';it.push({id:'bl:'+b.id,text:`Backlog: ${b.topic}`,subject:subjParts(b.subject)[0]||'Other',hours:BL_H[b.priority]||2,tier,done:false})});
+  (S.commitments||[]).filter(c=>c.status==='Missed'&&(c.progress||0)<100).forEach(c=>it.push({id:'cm:'+c.id,text:`Missed: ${c.title}`,subject:c.subject&&c.subject!=='General'?c.subject:'Other',hours:Math.max(0.5,cmRem(c)),tier:['High','Critical'].includes(c.priority)?'Critical':'High',done:false}));
+  return it;
+}
+function rvPlan(share,days){
+  const t=today(),items=rvItems(),order={Critical:0,High:1,Normal:2,Deferrable:3},use=items.filter(i=>i.tier!=='Deferrable').sort((a,b)=>order[a.tier]-order[b.tier]),def=items.filter(i=>i.tier==='Deferrable'),plan=[];let k=0;
+  for(let i=0;i<days;i++){const d=addD(t,i),cap=Math.max(0.5,planMin(d)/60*compRatio()*share/100),day={date:d,items:[],hours:0};
+    while(k<use.length&&(day.hours+use[k].hours<=cap+0.01||!day.items.length)){day.items.push({...use[k]});day.hours+=use[k].hours;k++}plan.push(day)}
+  const left=use.slice(k);return {plan,left,def,total:sum(use.map(x=>x.hours)),items:use};
+}
+const rvWeeks=(P,share)=>{if(!P.total)return 0;const cap=sum([1,2,3,4,5,6,7].map(i=>planMin(addD(today(),i))/60))*compRatio()*share/100;return cap>0?P.total/cap:null};
+function vRecovery(){
+  const t=today(),R=rvList(),act=R.find(r=>r.status==='Active'),sg=rvSignals(),P=rvPlan(rvShare,rvDays),D=rvDraft,sd=(s,a,c)=>`<select id="${s}">${a.map(x=>`<option ${c===x?'selected':''}>${x}</option>`).join('')}</select>`;
+  const dsub={};PCM().forEach(s=>dsub[s]=0);P.items.forEach(i=>{if(dsub[i.subject]!=null)dsub[i.subject]+=i.hours});
+  const wkNow=rvWeeks(P,rvShare),wkMore=rvWeeks(P,Math.min(80,rvShare+15));
+  const prog=a=>{const all=a.plan.flatMap(d=>d.items),h=sum(all.map(i=>i.hours));return h?sum(all.filter(i=>i.done).map(i=>i.hours))/h*100:0};
+  const stable=a=>{const past=a.plan.filter(d=>d.date<=t).slice(-5);if(past.length<3)return false;const h=sum(past.flatMap(d=>d.items).map(i=>i.hours));return h>0&&sum(past.flatMap(d=>d.items).filter(i=>i.done).map(i=>i.hours))/h>=0.7&&!(S.commitments||[]).some(c=>c.status==='Missed'&&c.closedOn&&c.closedOn>=addD(t,-4))};
+  $('#app').innerHTML=`<h2>Recovery Protocol</h2><div class="sub" style="margin-bottom:12px">Brings your preparation back on track after a bad stretch. It finds what slipped, measures the impact, sorts pending work into Critical, High, Normal and Deferrable, and builds a recovery plan that fits your real capacity and never overloads a day. A bad day should not become a bad week.</div>
+  <div class="card"><h3>Warning signs</h3>${sg.length?sg.map(([m,x])=>`<div style="padding:5px 0">• ${esc(x)} <span class="chip">${m}</span></div>`).join('')+`<div class="sub" style="margin-top:6px">Recovery mode is suggested. You do not need to prove you deserve it: you can also start it yourself below.</div>`:'<div class="sub">No automatic warning signs right now.</div>'}</div>
+  ${act?`<div class="card"><h3>Active recovery: ${esc(act.mode)}</h3><div class="sub">Started ${fmtS(act.start)} · cause: ${esc(act.cause)}${act.notes?' · '+esc(act.notes):''}</div><div class="bar" style="margin:8px 0"><i style="width:${prog(act)}%"></i></div><div class="sub">${r0(prog(act))}% of ${r1(sum(act.plan.flatMap(d=>d.items).map(i=>i.hours)))} h of recovery work done${stable(act)?' · <b class="ok">Looks stable: you have kept up for several days. You can stabilize and return to normal planning.</b>':''}</div>
+    ${act.plan.map((d,di)=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${fmtS(d.date)} ${dow(d.date)}</b> <span class="sub">${r1(d.hours)} h${d.date===t?' · today':''}</span>${d.items.map((i,ii)=>`<div><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" ${i.done?'checked':''} onchange="rvTick('${act.id}',${di},${ii},this.checked)"> <span ${i.done?'style="text-decoration:line-through;color:var(--mut)"':''}>${esc(i.text)}</span> <span class="sub">${esc(i.subject)} · ${r1(i.hours)} h · ${i.tier}</span></label></div>`).join('')||'<div class="sub">Rest and review.</div>'}</div>`).join('')}
+    <p style="margin-top:10px"><button class="btn s alt" onclick="rvToGoals('${act.id}')">Send today's tasks to Daily Goals</button> <button class="btn s ok" onclick="rvClose('${act.id}','Stabilized')">Stabilize: back to normal planning</button> <button class="btn s alt" onclick="rvClose('${act.id}','Cancelled')">Cancel recovery</button></p></div>`:''}
+  <div class="card"><h3>Impact and plan</h3><div class="sub">Recoverable work: <b>${r1(P.total)} h</b> across ${P.items.length} items (${PCM().map(s=>s+' '+r1(dsub[s])+' h').join(' · ')}). ${P.def.length?P.def.length+' low-priority items are deferred, not dropped.':''}</div>
+   <div class="row" style="margin-top:8px"><div><label>Share of each day for recovery: ${rvShare}%</label><input type="range" min="10" max="60" step="5" value="${rvShare}" onchange="rvShare=+this.value;vRecovery()"></div><div><label>Plan length (days)</label><input type="number" min="3" max="21" value="${rvDays}" onchange="rvDays=Math.max(3,Math.min(21,+this.value||7));vRecovery()"></div></div>
+   <div class="sub" style="margin-top:6px">The rest of each day stays for new syllabus and revision, so recovery does not push everything else aside.</div>
+   <div class="sub" style="margin-top:6px"><b>What if:</b> at ${rvShare}% of your time this takes about ${wkNow==null?'—':r1(wkNow)} week${wkNow===1?'':'s'}; at ${Math.min(80,rvShare+15)}% about ${wkMore==null?'—':r1(wkMore)}. The faster option takes ${Math.min(80,rvShare+15)-rvShare} more points of each day from new work and revision.</div>
+   ${P.plan.map(d=>`<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b>${fmtS(d.date)} ${dow(d.date)}</b> <span class="sub">${r1(d.hours)} h</span>${d.items.map(i=>`<div class="sub">• ${esc(i.text)} (${esc(i.subject)}, ${r1(i.hours)} h, ${i.tier})</div>`).join('')||'<div class="sub">• Nothing scheduled</div>'}</div>`).join('')}
+   ${P.left.length?`<div class="sub" style="margin-top:6px">${P.left.length} more items (${r1(sum(P.left.map(i=>i.hours)))} h) do not fit in ${rvDays} days at ${rvShare}%. Lengthen the plan or raise the share.</div>`:''}</div>
+  <div class="card"><h3>Start recovery</h3><form onsubmit="rvStart(event)"><div class="row"><div><label>Mode</label>${sd('rvm',RC_MODE,sg.length?({'Routine Recovery':'Routine Recovery','Test Recovery':'Test Recovery'}[sg[0][0]]||'Backlog Recovery'):'Backlog Recovery')}</div><div><label>What went wrong (cause)</label>${sd('rvc',RC_CAUSE,sg[0]?sg[0][0]:'Backlog Recovery')}</div><div style="grid-column:span 2"><label>What happened? (optional, so I do not guess)</label><input id="rvn" placeholder="e.g. fever for 4 days"></div></div><button class="btn ok">Start recovery with this plan</button></form></div>
+  ${R.filter(r=>r.status!=='Active').length?`<div class="card"><h3>Recovery history</h3><div class="tw"><table><tr><th>Started</th><th>Mode</th><th>Cause</th><th>Outcome</th><th>Done</th></tr>${[...R].reverse().filter(r=>r.status!=='Active').map(r=>`<tr><td>${fmtS(r.start)}</td><td>${esc(r.mode)}</td><td>${esc(r.cause)}${r.notes?'<div class="sub">'+esc(r.notes)+'</div>':''}</td><td>${esc(r.status)}${r.closed?' '+fmtS(r.closed):''}</td><td>${r0(prog(r))}%</td></tr>`).join('')}</table></div></div>`:''}`;
+}
+function rvStart(e){e.preventDefault();if(rvList().some(r=>r.status==='Active'))return alert('A recovery is already active. Stabilize or cancel it first.');const g=id=>document.getElementById(id).value,P=rvPlan(rvShare,rvDays),dsub={};PCM().forEach(s=>dsub[s]=0);P.items.forEach(i=>{if(dsub[i.subject]!=null)dsub[i.subject]+=i.hours});
+  rvList().push({id:'RC'+String(rvList().length+1).padStart(3,'0'),start:today(),mode:g('rvm'),cause:g('rvc'),notes:g('rvn').trim(),trigger:rvSignals().map(x=>x[1]),status:'Active',plan:P.plan,original:{hours:P.total,items:P.items.length,bySubject:dsub,share:rvShare},created:new Date().toISOString()});save();vRecovery()}
+function rvTick(id,di,ii,v){const r=rvList().find(x=>x.id===id);if(r){r.plan[di].items[ii].done=v;save();vRecovery()}}
+function rvClose(id,st){const r=rvList().find(x=>x.id===id);if(!r)return;if(!confirm(st==='Stabilized'?'Mark recovery as finished and return to normal planning?':'Cancel this recovery?'))return;r.status=st;r.closed=today();save();vRecovery()}
+function rvToGoals(id){const r=rvList().find(x=>x.id===id),d=r&&r.plan.find(x=>x.date===today());if(!d||!d.items.length)return alert('Nothing is scheduled for today in this plan.');const day=dayRec(today(),true);d.items.filter(i=>!i.done).forEach(i=>day.goals.push({id:gid(),text:i.text,subject:['Physics','Chemistry','Math'].includes(i.subject)?i.subject:'Other',start:'18:00',q:null,done:false}));save();go('today')}
+
 /* ---------- PRODUCTIVITY INTELLIGENCE: study sessions (S.sessions) against the plan and your question targets ---------- */
 let prodRange=30,prodEdit=null;
 const PROD_SUBJ=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Mock test','Other']:['Physics','Other'];
@@ -2452,7 +2908,7 @@ function saveWT(e){
   if(old)Object.assign(old,o);else S.weakTopics.push(o);
   editWT=null;save();vWeak();
 }
-function wtStatus(id,s){const x=S.weakTopics.find(t=>t.id===id);if(x){x.status=s;save();vWeak()}}
+function wtStatus(id,s){const x=S.weakTopics.find(t=>t.id===id);if(x){x.status=s;if(s==='Mastered'&&!x.masteredOn)x.masteredOn=today();if(s!=='Mastered')x.masteredOn=null;save();vWeak()}}
 function wtDup(id){const x=S.weakTopics.find(t=>t.id===id);if(!x)return;S.weakTopics.push({...x,id:wtNewId(),added:today()});save();vWeak()}
 function wtDel(id){const x=S.weakTopics.find(t=>t.id===id);if(x&&confirm('Delete "'+x.topic+'"?')){S.weakTopics=S.weakTopics.filter(t=>t.id!==id);save();vWeak()}}
 const areaNewId=()=>'AR'+String((S.areas||[]).reduce((m,a)=>Math.max(m,+String(a.id).slice(2)||0),0)+1).padStart(3,'0');
