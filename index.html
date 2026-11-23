@@ -190,7 +190,7 @@ const DEF=()=>({
       Math:[{name:'RD Sharma',note:''},{name:'Cengage Math (Mains)',note:''},{name:'Cengage Math (Advanced)',note:''},{name:'Math PYQ book',note:'Past-year questions'},{name:'Claude pager',note:'Daily pager questions'}]},
     milestones:[['2026-10-09',150],['2026-10-16',160],['2026-10-23',170],['2026-10-30',180],['2026-11-05',190],['2026-11-30',200],['2026-12-31',205],['2027-01-31',210],['2027-02-15',220],['2027-03-01',225],['2027-03-31',230],['2027-06-01',245],['2027-08-01',255],['2027-10-02',265]].map(([date,marks])=>({date,marks}))
   },
-  logs:{},mocks:[],backlog:[],days:{}
+  logs:{},mocks:[],backlog:[],weekTopics:[],days:{}
 });
 const FIRST_MOCK={id:'M20260926',date:'2026-09-26',num:5,type:'Arjuna Classes 11th JEE Mock (75 Q)',phase:'Phase 0',attempted:null,correct:41,incorrect:null,accuracy:null,marks:164,phy:48,chem:56,math:60,time:null,total:75,cp:12,cc:14,cm:15,ea:null,ec:null,ma:null,mc:null,ha:null,hc:null,hi:269,lo:null,av:null,rank:4,students:15,percentile:(15-4)/15*100,energy:null,focus:null,wp:'',wc:'',wm:'',notes:'Roll 2129. Top: Gouransh 269; 3rd Yuvraj Singh 176 (-12); 5th Shaurya 158 (+6).',files:{}};
 const HI_TOPICS=['Straight lines','Circle','Parabola','Trigo 1','Trigo 2'];
@@ -204,7 +204,7 @@ const MOCK_OCT24={...mkTest(7,'2026-10-24',60,72,16),id:'M20261024',type:'Arjuna
 /* Kartik's profile: his own saved data, Physics only, started from the class sheets (24 Oct and 13 Nov 2026) */
 const DEFK=()=>({settings:{start:'2026-10-24',exam:'2028-01-20',weeklyMin:200,weeklyMax:300,baseline:52,unlockPast:false,
   phases:[{name:'Physics plan',start:'2026-10-24',end:'2028-01-20',target:100,focus:'Physics only (Arjuna Classes)',mix:[50,30,20]}],
-  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],days:{}});
+  resources:{Physics:[]},milestones:[{date:'2028-01-20',marks:100}]},logs:{},mocks:[],backlog:[],weekTopics:[],days:{}});
 const mkK=(n,date,phy,sheet)=>({...mkTest(n,date,0,phy,0),id:'K'+date.replace(/-/g,''),chem:null,math:null,marks:phy,total:null,
   type:'Arjuna Classes 11th JEE class test (Physics only)',notes:'Class result sheet '+sheet+', roll 2132. Physics '+phy+' (out of 100). Chemistry and Maths not taken.'});
 const KARTIK_MOCKS=[mkK(1,'2026-10-24',52,'24/10/2026'),mkK(2,'2026-11-13',65,'13/11/2026')];
@@ -395,7 +395,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['Coach',vCoach],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],summary:['Today',vSummary],coach:['Coach',vCoach],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weeks:['Week Topics',vWeeks],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],...(PROFILE==='malik'?{profiles:['Profiles',vProfiles]}:{}),compare:['Compare',vCompare],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -1428,7 +1428,7 @@ function opsApply(ops){
 }
 function viewErrs(){
   const keep=view,errs={};
-  for(const v of ['dashboard','summary','today','log','mocks','backlog','calc','analytics','compare','reports','settings']){
+  for(const v of ['dashboard','summary','today','log','mocks','backlog','weeks','calc','analytics','compare','reports','settings']){
     if(!VIEWS[v])continue;view=v;try{$('#app').innerHTML='';VIEWS[v][1]()}catch(e){errs[v]=e.message}
     Object.values(CH).forEach(c=>{try{c.destroy()}catch(e){}});CH={};
   }
@@ -1944,6 +1944,49 @@ function saveBL(e){
 function revisit(id){const b=S.backlog.find(x=>x.id===id);b.attempts++;b.revisited=today();if(b.status==='Pending')b.status='In Progress';save();vBacklog()}
 function resolveBL(id){const b=S.backlog.find(x=>x.id===id);b.status='Resolved';b.resolved=today();save();vBacklog()}
 function delBL(id){if(confirm('Delete '+id+'?')){S.backlog=S.backlog.filter(x=>x.id!==id);save();vBacklog()}}
+/* ---------- WEEK TOPICS: what to cover each week (S.weekTopics, week = the Monday date) ---------- */
+let wkSel=null,editWT=null;
+const WT_ST=['Planned','In Progress','Done','Skipped'];
+const wtSubj=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Other']:['Physics','Other'];
+const wtNewId=()=>'WT'+String((S.weekTopics||[]).reduce((m,b)=>Math.max(m,+String(b.id).slice(2)||0),0)+1).padStart(3,'0');
+function vWeeks(){
+  if(!Array.isArray(S.weekTopics))S.weekTopics=[];
+  const T=S.weekTopics,wk=wkSel||mon(today()),L=T.filter(x=>x.week===wk),e0=editWT?T.find(x=>x.id===editWT)||{}:{};
+  const done=L.filter(x=>x.status==='Done').length,SJ=wtSubj();
+  const groups=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
+  const stc=s=>s==='Done'?'ok':s==='In Progress'?'warn':s==='Skipped'?'bad':'';
+  const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(o=>`<option ${o===cur?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+  const weeks=[...new Set(T.map(x=>x.week))].sort().reverse();
+  $('#app').innerHTML=`<h2>Week Topics</h2>
+  <div class="sub" style="margin-bottom:12px">Plan the topics to cover each week. You can also ask the AI coach: "add Rotation and Gauss law to this week", "duplicate this week's topics to next week", "mark all Physics topics done", "delete everything in the week of 16 Nov".</div>
+  <div class="card"><div class="tools noprint"><button class="btn s alt" onclick="wkGo(-7)">‹ Previous week</button> <b style="padding:0 8px">${fmtS(wk)} – ${fmtS(addD(wk,6))}${wk===mon(today())?' (this week)':''}</b> <button class="btn s alt" onclick="wkGo(7)">Next week ›</button>
+   <button class="btn s alt" onclick="wkSel=null;vWeeks()">This week</button> <input type="date" value="${wk}" onchange="if(this.value){wkSel=mon(this.value);vWeeks()}" style="width:150px;padding:4px"></div>
+   <div class="sub" style="margin-top:8px">${L.length?`${done} of ${L.length} done`:'No topics planned for this week yet.'}</div><div class="bar"><i style="width:${L.length?done/L.length*100:0}%"></i></div></div>
+  <div class="card"><h3>${editWT?'Edit topic':'Add a topic'}</h3><form onsubmit="saveWT(event)">
+   <div class="row"><div><label>Subject</label>${sel('wsu',SJ,e0.subject)}</div><div style="grid-column:span 2"><label>Topic</label><input id="wto" required value="${esc(e0.topic||'')}" placeholder="e.g. Rotational motion"></div>
+    <div><label>Status</label>${sel('wst',WT_ST,e0.status)}</div></div>
+   <div class="row"><div><label>Week (any date in the week)</label><input id="wwk" type="date" required value="${e0.week||wk}"></div><div style="grid-column:span 3"><label>Notes (optional)</label><input id="wno" value="${esc(e0.notes||'')}"></div></div>
+   <button class="btn ok">${editWT?'Update':'Add topic'}</button> ${editWT?'<button type="button" class="btn alt" onclick="editWT=null;vWeeks()">Cancel</button>':''}</form></div>
+  ${groups.map(s=>`<div class="card"><h3 style="color:${SUBJ_COL[s]||INK()}">${esc(s)}</h3><div class="tw"><table><tr><th>Topic</th><th>Status</th><th></th></tr>${L.filter(x=>x.subject===s).map(x=>`<tr><td><b>${esc(x.topic)}</b>${x.notes?`<div class="sub">${esc(x.notes)}</div>`:''}</td>
+    <td><select onchange="wtStatus('${x.id}',this.value)">${WT_ST.map(o=>`<option ${o===x.status?'selected':''}>${o}</option>`).join('')}</select></td>
+    <td style="white-space:nowrap"><button class="btn s alt" onclick="editWT='${x.id}';vWeeks();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="wtDup('${x.id}',0)">Duplicate</button> <button class="btn s alt" onclick="wtDup('${x.id}',7)">Copy to next week</button> <button class="btn s bad" onclick="wtDel('${x.id}')">×</button></td></tr>`).join('')}</table></div></div>`).join('')}
+  ${L.length?`<div class="card"><h3>This week</h3><button class="btn s alt" onclick="wkCopy()">Copy all to next week</button> <button class="btn s bad" onclick="wkClear()">Delete all ${L.length} topics this week</button></div>`:''}
+  ${weeks.length?`<div class="card"><h3>All weeks</h3><div class="tw"><table><tr><th>Week</th><th>Topics</th><th>Done</th></tr>${weeks.map(w=>{const a=T.filter(x=>x.week===w);return `<tr><td><a href="#" onclick="wkSel='${w}';vWeeks();scrollTo(0,0);return false">${fmtS(w)} – ${fmtS(addD(w,6))}</a></td><td>${a.length}</td><td>${a.filter(x=>x.status==='Done').length}</td></tr>`}).join('')}</table></div></div>`:''}`;
+}
+function wkGo(d){wkSel=addD(wkSel||mon(today()),d);vWeeks()}
+function saveWT(e){
+  e.preventDefault();if(!Array.isArray(S.weekTopics))S.weekTopics=[];
+  const old=editWT?S.weekTopics.find(x=>x.id===editWT):null;
+  const o={id:old?old.id:wtNewId(),week:mon(v('wwk')),subject:v('wsu'),topic:v('wto').trim(),status:v('wst'),notes:v('wno').trim()};
+  if(!o.topic)return;
+  if(old)Object.assign(old,o);else S.weekTopics.push(o);
+  wkSel=o.week;editWT=null;save();vWeeks();
+}
+function wtStatus(id,s){const x=S.weekTopics.find(t=>t.id===id);if(x){x.status=s;save();vWeeks()}}
+function wtDup(id,days){const x=S.weekTopics.find(t=>t.id===id);if(!x)return;S.weekTopics.push({...x,id:wtNewId(),week:addD(x.week,days),status:'Planned'});save();vWeeks()}
+function wtDel(id){const x=S.weekTopics.find(t=>t.id===id);if(x&&confirm('Delete "'+x.topic+'"?')){S.weekTopics=S.weekTopics.filter(t=>t.id!==id);save();vWeeks()}}
+function wkCopy(){const wk=wkSel||mon(today());S.weekTopics.filter(x=>x.week===wk).forEach(x=>S.weekTopics.push({...x,id:wtNewId(),week:addD(wk,7),status:'Planned'}));save();wkSel=addD(wk,7);vWeeks()}
+function wkClear(){const wk=wkSel||mon(today()),n=S.weekTopics.filter(x=>x.week===wk).length;if(n&&confirm('Delete all '+n+' topics for this week?')){S.weekTopics=S.weekTopics.filter(x=>x.week!==wk);save();vWeeks()}}
 
 /* ---------- ANALYTICS ---------- */
 function vAnalytics(){
