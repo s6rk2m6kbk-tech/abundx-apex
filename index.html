@@ -1483,6 +1483,8 @@ function mdHtml(md){
     if(!t){close();i++;continue}
     if(m=t.match(/^(#{1,4})\s+(.*)$/)){close();o.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`);i++;continue}
     if(/^(-{3,}|\*{3,})$/.test(t)){close();o.push('<hr>');i++;continue}
+    if(t.startsWith('```')){close();i++;const c=[];while(i<L.length&&!L[i].trim().startsWith('```')){c.push(L[i]);i++}i++;o.push('<pre><code>'+esc(c.join('\n'))+'</code></pre>');continue}
+    if(t.startsWith('>')){close();const c=[];while(i<L.length&&L[i].trim().startsWith('>')){c.push(L[i].trim().replace(/^>\s?/,''));i++}o.push('<blockquote>'+c.map(mdInline).join('<br>')+'</blockquote>');continue}
     if(t.startsWith('|')){close();const rows=[];while(i<L.length&&L[i].trim().startsWith('|')){rows.push(L[i].trim());i++}
       const cells=r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim()),sep=rows.length>1&&/^[\s|:-]+$/.test(rows[1]);
       const head=sep?cells(rows[0]):null,body=rows.slice(sep?2:0).map(cells);
@@ -1493,7 +1495,7 @@ function mdHtml(md){
   }
   close();return o.join('');
 }
-const DOC_CSS='body,.d{font:13px/1.55 Helvetica,Arial,sans-serif;color:#111}h1{font-size:22px;margin:0 0 10px}h2{font-size:17px;margin:16px 0 6px}h3{font-size:14px;margin:12px 0 4px}h4{font-size:13px;margin:10px 0 4px}p{margin:6px 0}ul,ol{margin:6px 0 6px 20px;padding:0}li{margin:2px 0}table{border-collapse:collapse;margin:8px 0;width:100%}th,td{border:1px solid #999;padding:4px 7px;text-align:left;vertical-align:top}th{background:#e8e8e8}code{background:#eee;padding:0 3px}hr{border:0;border-top:1px solid #999;margin:10px 0}';
+const DOC_CSS='body,.d{font:13.5px/1.6 "Segoe UI",Helvetica,Arial,sans-serif;color:#1a1a1a}h1{font-size:26px;line-height:1.25;margin:0 0 14px;padding-bottom:8px;border-bottom:3px solid #1d4ed8;color:#0f172a}h2{font-size:18px;margin:20px 0 8px;padding-left:9px;border-left:4px solid #1d4ed8;color:#0f172a}h3{font-size:15px;margin:14px 0 5px;color:#1d4ed8}h4{font-size:13.5px;margin:10px 0 4px}p{margin:7px 0}ul,ol{margin:7px 0 7px 22px;padding:0}li{margin:3px 0}table{border-collapse:collapse;margin:10px 0;width:100%;font-size:12.5px}th,td{border:1px solid #cbd5e1;padding:6px 9px;text-align:left;vertical-align:top}th{background:#1d4ed8;color:#fff;font-weight:600}tr:nth-child(even) td{background:#f1f5f9}code{background:#eef2f7;padding:1px 4px;border-radius:3px;font-family:Consolas,monospace;font-size:.92em}pre{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:9px 11px;margin:9px 0;white-space:pre-wrap;font:12px/1.5 Consolas,monospace}pre code{background:none;padding:0}blockquote{margin:9px 0;padding:6px 12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#3f3f46}hr{border:0;border-top:1px solid #cbd5e1;margin:14px 0}';
 async function loadH2C(){if(window.html2canvas)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=()=>rej(new Error('Could not load the PDF tool. Check your internet connection and try again.'));document.head.appendChild(s)})}
 function cleanSvg(s){
   const m=String(s).match(/<svg[\s\S]*<\/svg>/i);if(!m)throw new Error('The image was not valid SVG.');let t=m[0];
@@ -1512,18 +1514,24 @@ async function buildFile(a){
     try{await loaded;await new Promise(r=>setTimeout(r,150));
       const d=ifr.contentDocument,b=d.body,H=Math.ceil(b.scrollHeight);
       const marks=[...b.querySelectorAll(':scope > *, li, tr')].map(e=>Math.round(e.getBoundingClientRect().top)).sort((x,y)=>x-y);
-      const cv=await window.html2canvas(b,{scale:2,backgroundColor:'#ffffff',width:680,height:H,windowWidth:680,windowHeight:H});
-      const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4'}),f=523/680,PAGE=Math.floor(770/f);
-      let y0=0,first=true;
+      const SC=H>9000?2:3;
+      const cv=await window.html2canvas(b,{scale:SC,backgroundColor:'#ffffff',width:680,height:H,windowWidth:680,windowHeight:H});
+      const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4'}),f=523/680,PAGE=Math.floor(750/f);
+      const pages=[];let y0=0;
       while(y0<H-2){
         let end=Math.min(H,y0+PAGE);
         if(end<H){const m=marks.filter(t=>t>y0+PAGE*0.55&&t<=end).pop();if(m)end=m}
-        const sl=document.createElement('canvas');sl.width=cv.width;sl.height=Math.max(2,Math.round((end-y0)*2));
-        const x=sl.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,sl.width,sl.height);x.drawImage(cv,0,Math.round(y0*2),cv.width,sl.height,0,0,sl.width,sl.height);
-        if(!first)doc.addPage();first=false;
-        doc.addImage(sl.toDataURL('image/jpeg',0.92),'JPEG',36,36,523,(end-y0)*f);
-        y0=end;
+        pages.push([y0,end]);y0=end;
       }
+      pages.forEach(([a0,end],pi)=>{
+        const sl=document.createElement('canvas');sl.width=cv.width;sl.height=Math.max(2,Math.round((end-a0)*SC));
+        const x=sl.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,sl.width,sl.height);x.drawImage(cv,0,Math.round(a0*SC),cv.width,sl.height,0,0,sl.width,sl.height);
+        if(pi)doc.addPage();
+        doc.addImage(sl.toDataURL('image/jpeg',0.95),'JPEG',36,40,523,(end-a0)*f,undefined,'FAST');
+        doc.setDrawColor(203,213,225);doc.setLineWidth(0.6);doc.line(36,812,559,812);
+        doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(120,130,145);
+        doc.text('Abundx Apex',36,826);doc.text('Page '+(pi+1)+' of '+pages.length,559,826,{align:'right'});
+      });
       return doc.output('blob');
     }finally{ifr.remove()}
   }
@@ -1531,8 +1539,12 @@ async function buildFile(a){
   if(a.format==='png'){
     const svg=cleanSvg(a.content),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'}));
     try{const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('The image could not be drawn.'));i.src=url});
-      let w=img.naturalWidth||1000,h=img.naturalHeight||700;const k=w<1400?2:1;
-      const c=document.createElement('canvas');c.width=w*k;c.height=h*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+      let w=img.naturalWidth,h=img.naturalHeight;
+      const vb=svg.match(/viewBox\s*=\s*["']\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+      if(vb&&(!/<svg[^>]*\swidth\s*=/i.test(svg)||!w||w<=150)){w=+vb[1];h=+vb[2]}
+      if(!w||!h){w=1000;h=700}
+      const k=Math.max(1,Math.min(4,2600/w,7000/h));
+      const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(img,0,0,c.width,c.height);
       return await new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error('The image could not be saved.')),'image/png'));
     }finally{URL.revokeObjectURL(url)}
   }
