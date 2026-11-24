@@ -1477,13 +1477,14 @@ async function loginDone(resp){
     view='chats';location.hash='chats';await syncNow(true);render();
   }catch(e){alert('Could not sign in. Check your connection and try again.')}
 }
-async function acctGo(op){
-  const u=(document.getElementById('acU')||{}).value||'',pw=(document.getElementById('acP')||{}).value||'';
-  if(op==='account_create'){const p2=(document.getElementById('acP2')||{}).value||'';if(pw!==p2)return alert('The two passwords do not match.')}
+async function acctGo(op,ids){
+  ids=ids||['acU','acP','acP2'];const g=i=>(document.getElementById(i)||{}).value||'',u=g(ids[0]),pw=g(ids[1]);
+  if(op==='account_create'){if(pw!==g(ids[2]))return alert('The two passwords do not match.')}
   try{
     const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op,user:u,pass:pw})}),j=await r.json().catch(()=>({}));
     if(!r.ok||!j.code)return alert(j.message||'Sign-in failed. Try again.');
     syncSet({code:j.code,since:Date.now(),login:j.user});
+    if(ids[3]){await syncNow(true);try{coachRender()}catch(e){}return}
     view='chats';location.hash='chats';await syncNow(true);render();
   }catch(e){alert('Could not reach the service. Check your connection and try again.')}
 }
@@ -1492,7 +1493,7 @@ async function acctPass(){
   try{const r=await fetch(COACH_API+'/sync',{method:'POST',body:JSON.stringify({op:'account_passwd',user:c.login,pass:o,newpass:n})}),j=await r.json().catch(()=>({}));alert(r.ok?'Password changed. Use the new one on your other devices.':(j.message||'Could not change the password.'))}catch(e){alert('Could not reach the service.')}
 }
 let acMode='login';
-function loginOut(){if(confirm('Sign out on this device? Your data stays here and in your cloud copy; other devices keep syncing. Sign in again any time to reconnect.')){try{localStorage.removeItem(SYNC_KEY)}catch(e){}try{google.accounts.id.disableAutoSelect()}catch(e){}vChats()}}
+function loginOut(stay){if(confirm('Sign out on this device? Your data stays here and in your cloud copy; other devices keep syncing. Sign in again any time to reconnect.')){try{localStorage.removeItem(SYNC_KEY)}catch(e){}try{google.accounts.id.disableAutoSelect()}catch(e){}if(stay)coachRender();else vChats()}}
 function vSyncGo(){view='chats';location.hash='chats';render()}
 function syncBanOn(){view='chats';location.hash='chats';render()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow()});
@@ -1781,6 +1782,14 @@ function coachRender(pending){
       const prev=f.blob&&(a.format==='png'||a.format==='svg')?`<div style="margin-top:8px"><img src="${f.url}" alt="${nm}" style="max-width:100%;border:1px solid var(--line);border-radius:8px;background:#fff"></div>`:'';
       return `<div style="margin:6px 0;padding:10px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%">\u{1F4C4} <b>${nm}</b> <span class="sub">${inf[0]}</span>`
         +(f.error?`<div class="sub bad" style="margin-top:4px">${esc(f.error)}</div>`:!a.content?'<div class="sub" style="margin-top:4px">This file was too large to keep. Ask for it again.</div>':f.blob?`<div style="margin-top:8px"><button class="btn s ok" onclick="coachDownload('${key}')">Download</button></div>`+prev:'<div class="sub" style="margin-top:4px">Preparing the file...</div>')+'</div>';
+    }
+    if(a.type==='sign_in'){
+      const c=syncCfg(),box='margin:6px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;max-width:92%';
+      if(c&&c.login)return `<div style="${box}">\u2705 You are signed in as <b>${esc(c.login)}</b>${c.dataReady?' and your data is syncing.':'.'} <div style="margin-top:6px"><button class="btn s alt" onclick="loginOut(1)">Sign out</button></div></div>`;
+      const k='c'+(mi||0)+'_'+(ai||0),ids=`['${k}U','${k}P','${k}P2',1]`,nw=window['_new'+k];
+      return `<div style="${box}"><b>Sign in to sync your devices</b><div class="sub" style="margin:4px 0 8px">Type your password here in this box, not in the chat. DXA AI never sees it.</div>
+        <div class="row"><div><label>Username</label><input id="${k}U" autocomplete="username" autocapitalize="none"></div><div><label>Password</label><input id="${k}P" type="password" autocomplete="${nw?'new-password':'current-password'}"></div>${nw?`<div><label>Repeat password</label><input id="${k}P2" type="password" autocomplete="new-password"></div>`:''}</div>
+        <div style="margin-top:8px">${nw?`<button class="btn s ok" onclick="acctGo('account_create',${ids})">Create account</button> <button class="btn s alt" onclick="window._new${k}=0;coachRender()">I already have an account</button>`:`<button class="btn s ok" onclick="acctGo('account_login',${ids})">Sign in</button> <button class="btn s alt" onclick="window._new${k}=1;coachRender()">Create an account</button>`}</div></div>`;
     }
     if(a.type==='open_page'){
       const nm=(VIEWS[a.page]||[])[0];
