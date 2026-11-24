@@ -418,7 +418,7 @@ function png(id){const a=document.createElement('a');a.download=id+'.png';a.href
 const COL={coaching:'#b388ff',pager:'#5aa9ff',textbook:'#ffb020',pyq:'#3ddc97'};
 
 /* ---------- shell ---------- */
-const VIEWS={dashboard:['Dashboard',vDash],sync:['Sign in',vSyncGo],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],doubts:['Doubts',vDoubts],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],reports:['Reports',vReports],settings:['Settings',vSettings]};
+const VIEWS={dashboard:['Dashboard',vDash],sync:['Sign in',vSyncGo],summary:['Today',vSummary],coach:['DXA AI',vCoach],chats:['Chat History',vChats],player:['Player',vPlayer],today:['Daily Goals',vToday],log:['Daily Log',vLog],mocks:['Mock Tests',vMocks],papers:['Test Papers',vPapers],backlog:['Backlog',vBacklog],weak:['Weak Topics',vWeak],doubts:['Doubts',vDoubts],commit:['Commitments',vCommit],goals:['Goals',vGoals],workload:['Workload',vWorkload],reality:['Reality Check',vReality],recovery:['Recovery',vRecovery],timeline:['Timeline',vTimeline],memory:['Memory',vMemory],prod:['Productivity',vProd],calc:['Calculator',vCalc],analytics:['Analytics',vAnalytics],resources:['Resources',vResources],reports:['Reports',vReports],settings:['Settings',vSettings]};
 let view=(location.hash||'#dashboard').slice(1);if(!VIEWS[view])view='dashboard';
 function go(x){mockView=null;view=x;location.hash=x;render()}
 function render(){
@@ -2825,6 +2825,51 @@ function dbDup(id){const d=dbList().find(x=>x.id===id);if(!d)return;const c={...
 function dbFileGone(f){fdel('db:'+f.id).catch(()=>{});if(f.cloud)dbCloud('fdel',{id:f.id})}
 function dbFileDel(did,fid){const d=dbList().find(x=>x.id===did);if(!d||!confirm('Remove this file from the doubt?'))return;const f=(d.files||[]).find(x=>x.id===fid);d.files=(d.files||[]).filter(x=>x.id!==fid);if(f)dbFileGone(f);save();vDoubts()}
 function dbDel(id){const d=dbList().find(x=>x.id===id);if(!d||!confirm('Delete this doubt'+((d.files||[]).length?' and its '+d.files.length+' file(s)':'')+'?'))return;(d.files||[]).forEach(dbFileGone);S.doubts=dbList().filter(x=>x.id!==id);save();vDoubts()}
+
+
+/* ---------- PLAYER: audio you can play inside the app (keeps playing while you move between pages) ---------- */
+const PL_TRACKS=[{id:'t1',title:'Turn financial infrastructure into digital civilisation',src:'audio/digital-civilisation.mp3'}];
+const PL_AU=new Audio();PL_AU.preload='metadata';
+let PL={cur:null,local:null};
+const plFmt=t=>{t=Math.max(0,Math.floor(t||0));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),sc=String(t%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+sc:m+':'+sc};
+const plGet=id=>{try{return JSON.parse(localStorage.getItem('abundx_player_'+id)||'{}')}catch(e){return {}}};
+const plPut=(id,o)=>{try{localStorage.setItem('abundx_player_'+id,JSON.stringify({...plGet(id),...o}))}catch(e){}};
+function plLoad(tr,play){
+  if(PL.cur!==tr){PL.cur=tr;PL_AU.src=tr.src;PL_AU.load();const st=tr.id?plGet(tr.id):{};PL_AU.onloadedmetadata=()=>{if(st.pos&&st.pos<PL_AU.duration-3)PL_AU.currentTime=st.pos;plUi()};if(st.rate)PL_AU.playbackRate=st.rate}
+  if(play)PL_AU.play().catch(()=>{});
+  plUi();
+}
+function plUi(){
+  const a=PL_AU,d=a.duration||0,sk=document.getElementById('plSeek');if(!sk)return;
+  if(!sk.dataset.drag)sk.value=d?Math.round(a.currentTime/d*1000):0;
+  document.getElementById('plCur').textContent=plFmt(a.currentTime);document.getElementById('plDur').textContent=d&&isFinite(d)?plFmt(d):'';
+  document.getElementById('plPlay').textContent=a.paused?'\u25B6  Play':'\u23F8  Pause';
+}
+function plToggle(){if(PL_AU.paused)PL_AU.play().catch(()=>alert('This audio could not be played.'));else PL_AU.pause()}
+function plSkip(s){PL_AU.currentTime=Math.max(0,Math.min(PL_AU.duration||1e9,PL_AU.currentTime+s));plUi()}
+function plSeek(v){const d=PL_AU.duration;if(d&&isFinite(d))PL_AU.currentTime=v/1000*d;plUi()}
+function plRate(r){PL_AU.playbackRate=+r;if(PL.cur&&PL.cur.id)plPut(PL.cur.id,{rate:+r})}
+function plPick(f){if(!f)return;const tr={id:null,title:f.name.replace(/\.[^.]+$/,''),src:URL.createObjectURL(f),local:true};PL.local=tr;plLoad(tr,true);vPlayer()}
+function vPlayer(){
+  if(!PL.cur)plLoad(PL_TRACKS[0],false);
+  const tr=PL.cur,list=[...PL_TRACKS,...(PL.local?[PL.local]:[])];
+  $('#app').innerHTML=`<h2>Player</h2><div class="sub" style="margin-bottom:12px">Listen inside the app. The audio keeps playing while you move to other pages, and it remembers where you stopped.</div>
+  <div class="card"><div class="sub">Now playing</div><h3 style="margin:2px 0 10px">${esc(tr.title)}</h3>
+   <input id="plSeek" type="range" min="0" max="1000" value="0" style="width:100%" oninput="this.dataset.drag=1;document.getElementById('plCur').textContent=plFmt(this.value/1000*(PL_AU.duration||0))" onchange="delete this.dataset.drag;plSeek(this.value)">
+   <div style="display:flex;justify-content:space-between" class="sub"><span id="plCur">0:00</span><span id="plDur"></span></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0">
+    <button class="btn s alt" onclick="plSkip(-10)">\u23EA 10 s</button><button class="btn ok" id="plPlay" onclick="plToggle()" style="min-width:130px">\u25B6  Play</button><button class="btn s alt" onclick="plSkip(10)">10 s \u23E9</button></div>
+   <div class="row"><div><label>Speed</label><select onchange="plRate(this.value)">${[0.75,1,1.25,1.5,1.75,2].map(r=>`<option value="${r}" ${PL_AU.playbackRate===r?'selected':''}>${r}\u00D7</option>`).join('')}</select></div>
+    <div><label>Volume</label><input type="range" min="0" max="100" value="${Math.round(PL_AU.volume*100)}" oninput="PL_AU.volume=this.value/100"></div>
+    <div><label>Repeat</label><select onchange="PL_AU.loop=this.value==='1'"><option value="0" ${PL_AU.loop?'':'selected'}>Off</option><option value="1" ${PL_AU.loop?'selected':''}>This track</option></select></div></div></div>
+  <div class="card"><h3>Playlist</h3>${list.map((t,i)=>`<div style="padding:8px 0;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:180px">${t===tr?'\u25B6 ':''}<b>${esc(t.title)}</b>${t.local?' <span class="sub">(from your device, not saved)</span>':''}</span><button class="btn s alt" onclick="plLoad(${t.local?'PL.local':'PL_TRACKS['+i+']'},true);vPlayer()">Play</button></div>`).join('')}
+   <div style="margin-top:12px"><label for="plFile">Play an audio file from this device</label><input id="plFile" type="file" accept="audio/*" onchange="plPick(this.files[0])"></div></div>`;
+  PL_AU.ontimeupdate=()=>{plUi();if(PL.cur&&PL.cur.id&&Math.floor(PL_AU.currentTime)%5===0)plPut(PL.cur.id,{pos:PL_AU.currentTime})};
+  PL_AU.onplay=PL_AU.onpause=PL_AU.ondurationchange=plUi;
+  PL_AU.onended=()=>{if(PL.cur&&PL.cur.id)plPut(PL.cur.id,{pos:0});plUi()};
+  PL_AU.onerror=()=>{const e=document.getElementById('plCur');if(e)e.textContent='Could not load this audio.'};
+  plUi();
+}
 
 /* ---------- WORKLOAD BALANCER ---------- */
 let wlHours=null,wlWhat={from:'',to:'',h:1};
