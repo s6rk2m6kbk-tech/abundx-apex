@@ -94,7 +94,7 @@ main>h3{margin:28px 0 12px}
 .sub{color:var(--mut);font-size:12px;letter-spacing:.06em}
 .card>.sub:first-child,.card .sub:first-child:not(:only-child){text-transform:uppercase;letter-spacing:.2em;font-size:11px;margin-bottom:6px}
 .bar{height:3px;background:var(--track);overflow:hidden;margin:12px 0 6px}.bar>i{display:block;height:100%;background:var(--tx)}
-.dbth{display:inline-block;margin:4px 10px 4px 0;text-align:center;vertical-align:top}.dbth img{display:block;width:110px;height:110px;object-fit:cover;border:1px solid var(--line);border-radius:8px;cursor:zoom-in;background:#222}.dbpdf{display:inline-block;margin:4px 12px 4px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px}#dbLb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}#dbLb img{max-width:96vw;max-height:92vh;border-radius:6px;background:#fff}
+.dbth{display:inline-block;margin:4px 10px 4px 0;text-align:center;vertical-align:top}.dbth img{display:block;width:110px;height:110px;object-fit:cover;border:1px solid var(--line);border-radius:8px;cursor:zoom-in;background:#222}.dbopts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.dbopts.one{grid-template-columns:1fr}@media(max-width:480px){.dbopts{grid-template-columns:1fr}}.dbopt{display:flex;gap:10px;align-items:center;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--tx);font:inherit;cursor:pointer;text-transform:none;letter-spacing:normal}.dbopt .k{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700}.dbopt.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}.dbopt.ok{border-color:var(--ok);background:rgba(61,220,151,.14)}.dbopt.no{border-color:var(--bad);background:rgba(255,90,82,.14)}.dbsol{margin:8px 0;padding:12px 14px;border:1px solid var(--warn);border-radius:10px;background:rgba(255,176,32,.08)}.dbpdf{display:inline-block;margin:4px 12px 4px 0;padding:8px 10px;border:1px solid var(--line);border-radius:8px}#dbLb{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out}#dbLb img{max-width:96vw;max-height:92vh;border-radius:6px;background:#fff}
 .chip{display:inline-block;padding:2px 10px;border-radius:1px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#000;background:var(--mut)}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
 .bg-ok{background:var(--ok)}.bg-warn{background:var(--warn)}.bg-bad{background:var(--bad)}.bg-mut{background:#4a4f57}
@@ -2706,10 +2706,11 @@ function cmCharts(M){
 
 
 /* ---------- DOUBTS: questions you are stuck on, by subject, area and type, with photos and PDFs ---------- */
-const DB_AR='Assertion & Reason',DB_ABC=['a','b','c','d'],DB_AROPT=['Both Statement 1 and Statement 2 are true','Both Statement 1 and Statement 2 are false','Statement 1 is true but Statement 2 is false','Statement 1 is false but Statement 2 is true'];
-const DB_CAT=[DB_AR,'Concept','Problem / numerical','Formula or derivation','Silly mistake','Test question','Other'],DB_ST=['Open','Asked','Resolved'],DB_PR=['High','Medium','Low'],DB_MAXPDF=8*1024*1024;
-let dbF={sub:'',cat:'',st:'open',q:''},dbEdit=null,dbTarget=null;
-const dbList=()=>Array.isArray(S.doubts)?S.doubts:(S.doubts=[]);
+const DB_AR='Assertion & Reason',DB_ABC=['A','B','C','D','E','F'],DB_AROPT=['Both Statement 1 and Statement 2 are true','Both Statement 1 and Statement 2 are false','Statement 1 is true but Statement 2 is false','Statement 1 is false but Statement 2 is true'];
+const DB_CAT=['Concept','Problem / numerical','Formula or derivation','Silly mistake','Test question','Other'],DB_ST=['Open','Asked','Resolved'],DB_PR=['High','Medium','Low'],DB_MAXPDF=8*1024*1024;
+let dbF={sub:'',cat:'',fmt:'',st:'open',q:''},dbEdit=null,dbTarget=null;
+const dbRaw=()=>Array.isArray(S.doubts)?S.doubts:(S.doubts=[]);
+const dbList=()=>{const L=dbRaw();L.forEach(dbMig);return L};
 const dbNewId=()=>'DB'+String(dbList().reduce((m,x)=>Math.max(m,+String(x.id).slice(2)||0),0)+1).padStart(3,'0');
 const dbSubj=()=>PROFILE==='malik'?['Physics','Chemistry','Math','Other']:['Physics','Other'];
 const dbFid=()=>'f'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -2741,16 +2742,125 @@ async function dbAttach(files,d){
 }
 function dbFiltered(){
   const q=(dbF.q||'').trim().toLowerCase();
-  return dbList().filter(x=>(!dbF.sub||x.subject===dbF.sub)&&(!dbF.cat||x.category===dbF.cat)&&(dbF.st==='all'||(dbF.st==='open'?x.status!=='Resolved':x.status===dbF.st))&&(!q||[x.title,x.desc,x.area,x.answer,x.subject,x.category,x.st1,x.st2,...(x.opts||[])].some(t=>String(t||'').toLowerCase().includes(q))));
+  return dbList().filter(x=>(!dbF.sub||x.subject===dbF.sub)&&(!dbF.cat||x.category===dbF.cat)&&(!dbF.fmt||(dbF.fmt==='any'?!!x.qtype:x.qtype===dbF.fmt))&&(dbF.st==='all'||(dbF.st==='open'?x.status!=='Resolved':x.status===dbF.st))&&(!q||[x.title,x.desc,x.area,x.answer,x.subject,x.category,x.st1,x.st2,x.qtext,x.passage,x.topic,x.source,x.qid,...(x.opts||[])].some(t=>String(t||'').toLowerCase().includes(q))));
 }
-function dbArHtml(d){
-  if(d.category!==DB_AR)return '';
-  const row=(n,t)=>t?`<div style="margin:6px 0"><b>Statement ${n}:</b> <span style="white-space:pre-wrap">${esc(t)}</span></div>`:'';
-  const opts=(d.opts||[]).map((o,i)=>{if(!o)return '';const k=DB_ABC[i],ok=d.correct===k,me=d.mine===k;
-    return `<div style="margin:4px 0;padding:7px 10px;border:1px solid var(--${ok?'ok':me?'bad':'line'});border-radius:8px"><b>${k}]</b> ${esc(o)}${ok?' <span class="chip bg-ok">Correct answer</span>':''}${me?` <span class="chip ${ok?'bg-ok':'bg-bad'}">My answer</span>`:''}</div>`}).join('');
-  return `<div style="margin:8px 0">${row(1,d.st1)}${row(2,d.st2)}<div style="margin-top:8px">${opts}</div></div>`;
+/* ----- MCQ format (universal structure: id, question, options, type, correct, subject/chapter/topic, difficulty, solution, source, marking, verification) ----- */
+const DB_Q=[['','None (just a doubt)'],['single_correct','Single correct'],['multiple_correct','Multiple correct'],['numerical','Numerical value'],['assertion_reason','Assertion–Reason'],['match_following','Match the following'],['matrix_match','Matrix match'],['paragraph','Paragraph-based MCQ'],['image','Image-based MCQ']];
+const DB_DIFF=['Easy','Moderately easy','Medium','Hard','Very hard'];
+let dbShow={};
+const dbQName=q=>(DB_Q.find(x=>x[0]===q)||['',''])[1];
+const dbMulti=q=>q==='multiple_correct'||q==='matrix_match';
+const dbArr=x=>(Array.isArray(x)?x:x?String(x).split(/[,\s]+/):[]).map(y=>String(y).trim().toUpperCase()).filter(y=>DB_ABC.includes(y));
+const dbLines=x=>(Array.isArray(x)?x:String(x||'').split('\n')).map(y=>String(y).trim()).filter(Boolean);
+const dbQid=()=>'MCQ-'+String(dbRaw().reduce((m,x)=>Math.max(m,+String(x.qid||'').slice(4)||0),0)+1).padStart(6,'0');
+function dbMig(d){
+  if(d.category===DB_AR){d.category='Concept';if(!d.qtype)d.qtype='assertion_reason'}
+  if(!d.qtype)return;
+  if(d.opts)d.opts=d.opts.map(o=>o&&typeof o==='object'?String(o.text||''):String(o??''));
+  if(!Array.isArray(d.correct))d.correct=dbArr(d.correct);
+  if(!Array.isArray(d.mine))d.mine=dbArr(d.mine);
+  if(!d.qid)d.qid=dbQid();
 }
-function dbArToggle(){const on=document.getElementById('dca').value===DB_AR,box=document.getElementById('dbAr'),t=document.getElementById('dti');if(box)box.style.display=on?'':'none';if(t){t.required=!on;t.placeholder=on?'Optional: taken from Statement 1 if left blank':'e.g. Why does friction act forward on a rolling wheel?'}}
+function dbResult(d){
+  const marks=d.marks??4,neg=d.neg??1;
+  if(d.qtype==='numerical'){const a=String(d.numAns??'').trim(),m=String(d.numMine??'').trim();if(!a)return null;if(!m)return {s:'skipped',score:0};const ok=a===m||(isFinite(+a)&&isFinite(+m)&&Math.abs(+a-+m)<1e-6);return {s:ok?'right':'wrong',score:ok?marks:-neg}}
+  const c=dbArr(d.correct),m=dbArr(d.mine);if(!c.length)return null;if(!m.length)return {s:'skipped',score:0};
+  const ok=c.length===m.length&&c.every(x=>m.includes(x));return {s:ok?'right':'wrong',score:ok?marks:-neg};
+}
+function dbQHtml(d){
+  if(!d.qtype)return '';
+  const show=!!dbShow[d.id],num=d.qtype==='numerical',c=dbArr(d.correct),m=dbArr(d.mine),r=dbResult(d),pre='white-space:pre-wrap';
+  const list=(h,t)=>dbLines(t).length?`<div style="flex:1;min-width:200px"><b>${h}</b>${dbLines(t).map(x=>`<div>${esc(x)}</div>`).join('')}</div>`:'';
+  const long=(d.opts||[]).some(o=>o.length>34);
+  const opts=num?`<div style="margin:8px 0"><label>Your answer</label><input style="max-width:220px" value="${esc(d.numMine??'')}" ${show?'disabled':''} onchange="dbNum('${d.id}',this.value)" placeholder="Type a number"></div>`
+    :`<div class="dbopts${long?' one':''}">${(d.opts||[]).map((o,i)=>{if(!o)return '';const k=DB_ABC[i],sel=m.includes(k),cls=show?(c.includes(k)?'ok':sel?'no':''):(sel?'sel':'');return `<button type="button" class="dbopt ${cls}" onclick="dbPick('${d.id}','${k}')" aria-pressed="${sel}"><span class="k">${k}</span><span>${esc(o)}</span></button>`}).join('')}</div>`;
+  const sol=show?`<div class="dbsol"><div><b>Correct answer: ${num?esc(d.numAns||'not set'):c.join(', ')||'not set'}</b>${r&&r.s!=='skipped'?` <span class="chip ${r.s==='right'?'bg-ok':'bg-bad'}">${r.s==='right'?'You got it':'Not correct'} (${r.score>0?'+':''}${r.score})</span>`:''}</div>
+      ${d.expl?`<div style="margin-top:6px"><b>Explanation</b><div style="${pre}">${esc(d.expl)}</div></div>`:''}${dbLines(d.steps).length?`<div style="margin-top:6px"><b>Steps</b><ol style="margin:4px 0 0 20px">${dbLines(d.steps).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`:''}${!d.expl&&!dbLines(d.steps).length?'<div class="sub">No solution written yet. Use Edit to add one.</div>':''}</div>`:'';
+  return `<div style="margin:8px 0"><span class="chip">${esc(d.qid||'')}</span> <span class="chip">${esc(dbQName(d.qtype))}</span>
+    ${d.passage?`<div style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--line);${pre}">${esc(d.passage)}</div>`:''}
+    ${d.qtext?`<div style="margin:8px 0;${pre}"><b>Q.</b> ${esc(d.qtext)}</div>`:''}
+    ${d.st1?`<div style="margin:6px 0;${pre}"><b>Statement 1:</b> ${esc(d.st1)}</div>`:''}${d.st2?`<div style="margin:6px 0;${pre}"><b>Statement 2:</b> ${esc(d.st2)}</div>`:''}
+    ${dbLines(d.list1).length||dbLines(d.list2).length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin:8px 0">${list('List I',d.list1)}${list('List II',d.list2)}</div>`:''}
+    ${opts}
+    <div style="margin:6px 0"><button class="btn s ok" onclick="dbCheck('${d.id}')">${show?'Hide answer':'Check answer'}</button> <button class="btn s alt" onclick="dbRetry('${d.id}')">Try again</button></div>${sol}
+    <div class="sub">${[d.topic?'Topic: '+esc(d.topic):'',d.difficulty?'Difficulty: L'+d.difficulty+' '+DB_DIFF[d.difficulty-1]:'',d.source?'Source: '+esc(d.source):'','Marks: +'+(d.marks??4)+' / −'+(d.neg??1),d.verified?'✔ Answer verified':'Not verified'].filter(Boolean).join(' · ')}</div></div>`;
+}
+function dbRefresh(){const e=document.getElementById('dbList');if(e){e.innerHTML=dbListHtml();dbHydrate()}const a=document.getElementById('dbStats');if(a)a.innerHTML=dbStatsHtml()}
+function dbPick(id,k){const d=dbList().find(x=>x.id===id);if(!d||dbShow[id])return;let m=dbArr(d.mine);m=m.includes(k)?m.filter(x=>x!==k):dbMulti(d.qtype)?[...m,k].sort():[k];d.mine=m;delete d.checked;save();dbRefresh()}
+function dbNum(id,val){const d=dbList().find(x=>x.id===id);if(d){d.numMine=val.trim();delete d.checked;save()}}
+function dbCheck(id){const d=dbList().find(x=>x.id===id);if(!d)return;dbShow[id]=!dbShow[id];if(dbShow[id]){const r=dbResult(d);if(r&&r.s!=='skipped'){d.checked=today();save()}}dbRefresh()}
+function dbRetry(id){const d=dbList().find(x=>x.id===id);if(!d)return;dbShow[id]=false;d.mine=[];d.numMine='';delete d.checked;save();dbRefresh()}
+function dbStatsHtml(){
+  const Q=dbList().filter(d=>d.qtype);if(!Q.length)return '';
+  const A=Q.filter(d=>d.checked&&dbResult(d)),right=A.filter(d=>dbResult(d).s==='right').length,score=sum(A.map(d=>dbResult(d).score));
+  const tab=(h,keys,of,name)=>{const rows=keys.map(k=>{const q=Q.filter(d=>of(d)===k);if(!q.length)return '';const a=q.filter(d=>d.checked&&dbResult(d)),ok=a.filter(d=>dbResult(d).s==='right').length;return `<tr><td>${esc(name(k))}</td><td>${q.length}</td><td>${a.length}</td><td>${a.length?r0(ok/a.length*100)+'%':'—'}</td></tr>`}).join('');return rows?`<div class="tw" style="margin-top:10px"><table><tr><th>${h}</th><th>Questions</th><th>Attempted</th><th>Accuracy</th></tr>${rows}</table></div>`:''};
+  return `<div class="card"><h3>MCQ analysis</h3><div>${Q.length} questions · ${A.length} attempted · ${right} correct${A.length?' · accuracy '+r0(right/A.length*100)+'% · score '+score:''}</div>
+    ${tab('Difficulty',[1,2,3,4,5,0],d=>+d.difficulty||0,k=>k?'L'+k+' '+DB_DIFF[k-1]:'Not set')}${tab('Type',DB_Q.map(x=>x[0]).filter(Boolean),d=>d.qtype,dbQName)}</div>`;
+}
+function dbQForm(e){
+  const q=e.qtype||'',o=e.opts||[],c=dbArr(e.correct),ta=(id,label,val,rows,ph='')=>`<label>${label}</label><textarea id="${id}" rows="${rows}" style="width:100%" placeholder="${ph}">${esc(Array.isArray(val)?val.join('\n'):val||'')}</textarea>`,full=(show,h)=>`<div class="row" data-q="${show}"><div style="grid-column:span 4">${h}</div></div>`;
+  return `<div class="row"><div style="grid-column:span 4"><label>Question format</label><select id="dqt" onchange="dbQToggle()">${DB_Q.map(([k,l])=>`<option value="${k}" ${q===k?'selected':''}>${l}</option>`).join('')}</select></div></div>
+   <div id="dbQ">
+    ${full('paragraph',ta('dpa','Passage',e.passage,4))}
+    ${full('single_correct multiple_correct numerical match_following matrix_match paragraph image',ta('dqx','Question statement',e.qtext,3))}
+    ${full('assertion_reason',ta('ds1','Statement 1 (Assertion)',e.st1,2))}${full('assertion_reason',ta('ds2','Statement 2 (Reason)',e.st2,2))}
+    <div class="row" data-q="match_following matrix_match"><div style="grid-column:span 2">${ta('dl1','List I (one per line)',e.list1,4,'A. ...')}</div><div style="grid-column:span 2">${ta('dl2','List II (one per line)',e.list2,4,'1. ...')}</div></div>
+    <div data-q="single_correct multiple_correct assertion_reason match_following matrix_match paragraph image"><div class="sub" style="margin:6px 0">Options. Tick the correct one (more than one only for Multiple correct and Matrix match). Leave E and F blank if not needed.</div>
+     ${DB_ABC.map((k,i)=>`<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><label style="display:flex;gap:5px;align-items:center;margin:0;min-width:46px"><input type="checkbox" id="dco${i}" ${c.includes(k)?'checked':''} aria-label="Option ${k} is correct"> <b>${k}</b></label><input id="dop${i}" value="${esc(o[i]||'')}" style="flex:1" placeholder="Option ${k}"></div>`).join('')}</div>
+    ${full('numerical',`<label>Correct numerical answer</label><input id="dna" value="${esc(e.numAns??'')}" placeholder="e.g. 3.5">`)}
+    <div class="row" data-q="all"><div style="grid-column:span 2"><label>Topic</label><input id="dtp" value="${esc(e.topic||'')}" placeholder="e.g. Order of operations"></div><div><label>Difficulty</label><select id="ddf"><option value="">Not set</option>${DB_DIFF.map((x,i)=>`<option value="${i+1}" ${+e.difficulty===i+1?'selected':''}>L${i+1} ${x}</option>`).join('')}</select></div><div><label>Source</label><input id="dso" value="${esc(e.source||'')}" placeholder="PYQ, book, test"></div></div>
+    ${full('all',ta('dex','Solution: explanation',e.expl,2))}${full('all',ta('dsp','Solution: steps (one per line)',e.steps,3))}
+    <div class="row" data-q="all"><div><label>Marks if correct</label><input id="dmk" type="number" step="1" min="0" value="${e.marks??4}"></div><div><label>Negative marks</label><input id="dng" type="number" step="1" min="0" value="${e.neg??1}"></div><div style="grid-column:span 2"><label style="display:flex;gap:8px;align-items:center;margin-top:18px"><input type="checkbox" id="dvf" ${e.verified?'checked':''}> I have verified the answer</label></div></div>
+   </div>`;
+}
+function dbQToggle(){
+  const q=document.getElementById('dqt').value,box=document.getElementById('dbQ'),t=document.getElementById('dti');if(!box)return;
+  box.style.display=q?'':'none';
+  box.querySelectorAll('[data-q]').forEach(el=>{const l=el.dataset.q.split(' ');el.style.display=l.includes('all')||l.includes(q)?'':'none'});
+  const vals=DB_ABC.map((k,i)=>document.getElementById('dop'+i).value.trim());
+  if(q==='assertion_reason'&&vals.every(x=>!x))DB_AROPT.forEach((x,i)=>document.getElementById('dop'+i).value=x);
+  else if(q!=='assertion_reason'&&DB_AROPT.every((x,i)=>vals[i]===x))DB_AROPT.forEach((x,i)=>document.getElementById('dop'+i).value='');
+  if(t){t.required=!q;t.placeholder=q?'Optional: taken from the question if left blank':'e.g. Why does friction act forward on a rolling wheel?'}
+}
+// reads the MCQ part of the form into o; returns false (with a message) if something is missing
+function dbQRead(o){
+  const g=id=>document.getElementById(id).value.trim(),q=g('dqt');o.qtype=q;if(!q)return true;
+  const num=q==='numerical',ar=q==='assertion_reason',match=q==='match_following'||q==='matrix_match';
+  Object.assign(o,{passage:q==='paragraph'?g('dpa'):'',qtext:ar?'':g('dqx'),st1:ar?g('ds1'):'',st2:ar?g('ds2'):'',list1:match?dbLines(g('dl1')):[],list2:match?dbLines(g('dl2')):[],
+    opts:num?[]:DB_ABC.map((k,i)=>g('dop'+i)),correct:num?[]:DB_ABC.filter((k,i)=>document.getElementById('dco'+i).checked),numAns:num?g('dna'):'',
+    topic:g('dtp'),difficulty:+g('ddf')||'',source:g('dso'),expl:g('dex'),steps:dbLines(g('dsp')),marks:Math.max(0,+g('dmk')||0),neg:Math.max(0,+g('dng')||0),verified:document.getElementById('dvf').checked});
+  while(o.opts.length&&!o.opts[o.opts.length-1])o.opts.pop();
+  if(ar&&(!o.st1||!o.st2)){alert('Write both Statement 1 and Statement 2.');return false}
+  if(!ar&&!o.qtext&&q!=='image'){alert('Write the question statement.');return false}
+  if(!num){if(o.opts.filter(Boolean).length<2){alert('Add at least two options.');return false}
+    if(o.correct.some(k=>!o.opts[DB_ABC.indexOf(k)])){alert('An option marked correct is empty.');return false}
+    if(!dbMulti(q)&&o.correct.length>1){alert('Only one option can be correct for '+dbQName(q)+'.');return false}}
+  return true;
+}
+/* Universal MCQ JSON: download and import */
+function dbToJson(d){const num=d.qtype==='numerical';return {question_id:d.qid,question:{text:d.qtext||'',...(d.passage?{passage:d.passage}:{}),...(d.st1?{statement_1:d.st1,statement_2:d.st2}:{}),...(dbLines(d.list1).length?{list_1:dbLines(d.list1),list_2:dbLines(d.list2)}:{})},
+  options:(d.opts||[]).map((t,i)=>({option_id:DB_ABC[i],text:t})).filter(x=>x.text),question_type:d.qtype,correct_options:num?[]:dbArr(d.correct),...(num?{numerical_answer:d.numAns}:{}),subject:d.subject==='Math'?'Mathematics':d.subject,chapter:d.area||'',topic:d.topic||'',difficulty:d.difficulty?'L'+d.difficulty:'',
+  solution:{explanation:d.expl||'',steps:dbLines(d.steps)},source:d.source||'',marking:{correct:d.marks??4,negative:d.neg??1},verified:!!d.verified,images:(d.files||[]).map(f=>f.name)}}
+function dbExport(){const Q=dbList().filter(d=>d.qtype);if(!Q.length)return alert('No MCQs yet.');downloadText('mcqs-'+today()+'.json',JSON.stringify(Q.map(dbToJson),null,2))}
+function dbImport(text){
+  let j;try{j=JSON.parse(text)}catch(e){return alert('That is not valid JSON.')}
+  const arr=Array.isArray(j)?j:Array.isArray(j.questions)?j.questions:[j];let n=0,dup=0,bad=0;
+  const str=x=>x==null?'':String(x).slice(0,4000);
+  arr.slice(0,200).forEach(x=>{
+    if(!x||typeof x!=='object'){bad++;return}
+    const qs=typeof x.question==='string'?{text:x.question}:x.question||{},type=DB_Q.some(t=>t[0]&&t[0]===x.question_type)?x.question_type:(x.numerical_answer!=null?'numerical':'single_correct');
+    const opts=[];(Array.isArray(x.options)?x.options:[]).forEach((o,i)=>{const k=DB_ABC.indexOf(String(o&&o.option_id||'').toUpperCase());opts[k>=0?k:i]=str(o&&typeof o==='object'?o.text:o)});
+    for(let i=0;i<opts.length;i++)opts[i]=opts[i]||'';
+    if(!qs.text&&!qs.statement_1){bad++;return}
+    if(x.question_id&&dbList().some(d=>d.qid===x.question_id)){dup++;return}
+    const diffs=String(x.difficulty||'').toLowerCase(),dn=+(diffs.match(/[1-5]/)||[])[0]||DB_DIFF.findIndex(y=>y.toLowerCase()===diffs)+1||'';
+    const sj=/^math/i.test(x.subject||'')?'Math':dbSubj().includes(x.subject)?x.subject:'Other',sol=x.solution||{},mk=x.marking||{};
+    dbList().push({id:dbNewId(),created:today(),files:[],answer:'',category:'Test question',status:'Open',priority:'Medium',subject:sj,area:str(x.chapter),title:(str(qs.text)||str(qs.statement_1)).replace(/\s+/g,' ').slice(0,80),desc:'',
+      qid:/^MCQ-\d{1,9}$/.test(x.question_id||'')?x.question_id:dbQid(),qtype:type,qtext:str(qs.text),passage:str(qs.passage),st1:str(qs.statement_1),st2:str(qs.statement_2),list1:dbLines(qs.list_1),list2:dbLines(qs.list_2),opts:opts.slice(0,DB_ABC.length),correct:dbArr(x.correct_options),mine:[],numAns:str(x.numerical_answer),
+      topic:str(x.topic),difficulty:dn,expl:str(sol.explanation),steps:dbLines(sol.steps),source:str(x.source),marks:mk.correct??4,neg:mk.negative??1,verified:x.verified===true});n++});
+  if(n){save();dbF.st='all';vDoubts()}
+  alert(`Imported ${n} question${n===1?'':'s'}.`+(dup?` ${dup} skipped (same question ID).`:'')+(bad?` ${bad} could not be read.`:''));
+}
 function dbCard(d){
   const fs=d.files||[],stc={Open:'bg-bad',Asked:'bg-warn',Resolved:'bg-ok'}[d.status]||'';
   const th=fs.map(f=>(f.type||'').startsWith('image/')
@@ -2758,7 +2868,7 @@ function dbCard(d){
     :`<span class="dbpdf"><a href="#" onclick="dbOpen('${f.id}');return false">\u{1F4C4} ${esc(f.name)}</a> <span class="sub">${dbKb(f.size||0)}</span> <a href="#" class="sub" style="margin-left:6px" onclick="dbFileDel('${d.id}','${f.id}');return false">remove</a></span>`).join('');
   return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(d.title)}</b> <span class="chip ${stc}">${esc(d.status)}</span> <span class="chip bg-${d.priority==='High'?'bad':d.priority==='Low'?'ok':'warn'}">${esc(d.priority||'Medium')}</span> <span class="chip">${esc(d.category||'Other')}</span></div>
    <div class="sub">${esc(d.subject)}${d.area?' · '+esc(d.area):''} · added ${fmtS(d.created)}${d.resolved?' · resolved '+fmtS(d.resolved):''}</div>
-   ${dbArHtml(d)}
+   ${dbQHtml(d)}
    ${d.desc?`<div style="margin:6px 0;white-space:pre-wrap">${esc(d.desc)}</div>`:''}
    ${th?`<div style="margin:4px 0">${th}</div>`:''}
    <div class="row" style="margin-top:6px"><div style="grid-column:span 3"><label>Answer / how it was solved (optional)</label><textarea rows="2" style="width:100%" onchange="dbField('${d.id}','answer',this.value)">${esc(d.answer||'')}</textarea></div><div><label>Status</label><select onchange="dbStatus('${d.id}',this.value)">${DB_ST.map(o=>`<option ${o===d.status?'selected':''}>${o}</option>`).join('')}</select></div></div>
@@ -2783,24 +2893,27 @@ function vDoubts(){
    <div class="card"><div class="sub">Resolved</div><div class="big">${L.filter(x=>x.status==='Resolved').length}</div><div class="sub">of ${L.length} doubts</div></div>
    ${SJ.filter(s=>s!=='Other').map(s=>`<div class="card"><div class="sub">${esc(s)}</div><div class="big">${open.filter(x=>x.subject===s).length}</div><div class="sub">open</div></div>`).join('')}</div>
   <div class="card"><h3>${dbEdit?'Edit doubt':'Add a doubt'}</h3><form onsubmit="dbSave(event)">
-   <div class="row"><div><label>Subject</label>${sel('dsu',SJ,eSub,'onchange="dbAreaFill(\'\')"')}</div><div><label>Area</label><select id="dar"><option value="">(no area)</option>${(S.areas||[]).filter(a=>a.subject===eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Type of doubt</label>${sel('dca',DB_CAT,e0.category||'Concept','onchange="dbArToggle()"')}</div><div><label>Priority</label>${sel('dpr',DB_PR,e0.priority||'Medium')}</div></div>
+   <div class="row"><div><label>Subject</label>${sel('dsu',SJ,eSub,'onchange="dbAreaFill(\'\')"')}</div><div><label>Area / chapter</label><select id="dar"><option value="">(no area)</option>${(S.areas||[]).filter(a=>a.subject===eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Type of doubt</label>${sel('dca',DB_CAT,e0.category||'Concept')}</div><div><label>Priority</label>${sel('dpr',DB_PR,e0.priority||'Medium')}</div></div>
    <div class="row"><div style="grid-column:span 3"><label>Doubt (short title)</label><input id="dti" required maxlength="160" value="${esc(e0.title||'')}" placeholder="e.g. Why does friction act forward on a rolling wheel?"></div><div><label>Status</label>${sel('dst',DB_ST,e0.status||'Open')}</div></div>
-   <div id="dbAr" style="display:${e0.category===DB_AR?'':'none'}">
-    <div class="row"><div style="grid-column:span 4"><label>Statement 1 (Assertion)</label><textarea id="ds1" rows="2" style="width:100%">${esc(e0.st1||'')}</textarea></div></div>
-    <div class="row"><div style="grid-column:span 4"><label>Statement 2 (Reason)</label><textarea id="ds2" rows="2" style="width:100%">${esc(e0.st2||'')}</textarea></div></div>
-    ${DB_ABC.map((k,i)=>`<div class="row"><div style="grid-column:span 4"><label>${k}]</label><input id="dop${i}" value="${esc(e0.opts?e0.opts[i]||'':DB_AROPT[i])}"></div></div>`).join('')}
-    <div class="row"><div style="grid-column:span 2"><label>Correct answer</label><select id="dco"><option value="">Not known yet</option>${DB_ABC.map(k=>`<option value="${k}" ${e0.correct===k?'selected':''}>${k}]</option>`).join('')}</select></div><div style="grid-column:span 2"><label>My answer</label><select id="dmi"><option value="">Not attempted</option>${DB_ABC.map(k=>`<option value="${k}" ${e0.mine===k?'selected':''}>${k}]</option>`).join('')}</select></div></div></div>
+   ${dbQForm(e0)}
    <div class="row"><div style="grid-column:span 4"><label>Details (optional)</label><textarea id="dde" rows="3" style="width:100%" placeholder="What exactly confuses you? What have you tried?">${esc(e0.desc||'')}</textarea></div></div>
    <div class="row"><div style="grid-column:span 4"><label>Photos and PDFs (optional, you can pick several)</label><input id="dfi" type="file" multiple accept="image/*,application/pdf"><div class="sub">Photos are shrunk to a readable size. PDFs up to 8 MB. ${syncCfg()?'Sync is on, so your files also open on your other devices.':'Files stay on this device unless you turn on sync in Chat History.'}</div></div></div>
    <button class="btn ok">${dbEdit?'Update':'Add doubt'}</button> ${dbEdit?'<button type="button" class="btn alt" onclick="dbEdit=null;vDoubts()">Cancel</button>':''}</form></div>
   <input id="dbAdd" type="file" multiple accept="image/*,application/pdf" style="display:none" onchange="dbAddTo(this)">
   <div class="card"><div style="margin-bottom:6px"><span class="sub">Subject:</span> ${chip('sub','','All')} ${SJ.map(c=>chip('sub',c,c)).join(' ')}</div>
    <div class="row"><div><label>Show</label><select onchange="dbF.st=this.value;vDoubts()">${[['open','Not resolved'],['all','All'],...DB_ST.map(x=>[x,x])].map(([k,l])=>`<option value="${k}" ${dbF.st===k?'selected':''}>${l}</option>`).join('')}</select></div>
-    <div><label>Type</label><select onchange="dbF.cat=this.value;vDoubts()"><option value="">All</option>${DB_CAT.map(c=>`<option ${dbF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
-    <div style="grid-column:span 2"><label>Search</label><input type="search" value="${esc(dbF.q)}" placeholder="Search doubts, answers, areas..." oninput="dbF.q=this.value;document.getElementById('dbList').innerHTML=dbListHtml();dbHydrate()"></div></div></div>
+    <div><label>Question format</label><select onchange="dbF.fmt=this.value;vDoubts()">${[['','All'],['any','All MCQs'],...DB_Q.slice(1)].map(([k,l])=>`<option value="${k}" ${dbF.fmt===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div><label>Type of doubt</label><select onchange="dbF.cat=this.value;vDoubts()"><option value="">All</option>${DB_CAT.map(c=>`<option ${dbF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
+    <div><label>Search</label><input type="search" value="${esc(dbF.q)}" placeholder="Search doubts, answers, areas..." oninput="dbF.q=this.value;document.getElementById('dbList').innerHTML=dbListHtml();dbHydrate()"></div></div></div>
   <div id="dbList">${dbListHtml()}</div>
-  ${L.length?gCard('Doubts by subject','Open, asked and resolved.',cv('db1',200)):''}`;
-  dbArToggle();dbHydrate();
+  <div id="dbStats">${dbStatsHtml()}</div>
+  ${L.length?gCard('Doubts by subject','Open, asked and resolved.',cv('db1',200)):''}
+  <div class="card"><h3>MCQ data (JSON)</h3><div class="sub" style="margin-bottom:8px">Download your questions in the universal MCQ format, or import questions in that format (one question or a list).</div>
+   <p><button class="btn s ok" onclick="dbExport()">Download MCQs as JSON</button></p>
+   <label for="dbJf">Import from a .json file</label><input id="dbJf" type="file" accept=".json,application/json" onchange="const f=this.files[0];if(f)f.text().then(dbImport);this.value=''">
+   <label for="dbJt" style="margin-top:8px">Or paste JSON</label><textarea id="dbJt" rows="3" style="width:100%" placeholder='{"question":{"text":"..."},"options":[{"option_id":"A","text":"..."}],"correct_options":["A"]}'></textarea>
+   <p style="margin-top:6px"><button class="btn s alt" onclick="dbImport(document.getElementById('dbJt').value)">Import pasted JSON</button></p></div>`;
+  dbQToggle();dbHydrate();
   if(L.length){const cols={Open:GC.bad,Asked:GC.warn,Resolved:GC.ok},S2=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
     mk('db1',{type:'bar',data:{labels:S2,datasets:DB_ST.map(st=>({label:st,data:S2.map(s=>L.filter(x=>x.subject===s&&x.status===st).length),backgroundColor:cols[st]}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
 }
@@ -2826,14 +2939,12 @@ async function dbLight(fid){
 async function dbSave(e){
   e.preventDefault();const L=dbList(),old=dbEdit?L.find(x=>x.id===dbEdit):null,st=v('dst');
   const o={subject:v('dsu'),area:v('dar'),category:v('dca'),priority:v('dpr'),title:v('dti').trim(),desc:document.getElementById('dde').value.trim(),status:st};
-  if(o.category===DB_AR){
-    Object.assign(o,{st1:document.getElementById('ds1').value.trim(),st2:document.getElementById('ds2').value.trim(),opts:DB_ABC.map((k,i)=>v('dop'+i).trim()),correct:v('dco'),mine:v('dmi')});
-    if(!o.st1||!o.st2)return alert('Write both Statement 1 and Statement 2.');
-    if(!o.title)o.title=o.st1.replace(/\s+/g,' ').slice(0,80);
-  }
+  if(!dbQRead(o))return;
+  if(o.qtype&&!o.title)o.title=(o.qtext||o.st1||dbQName(o.qtype)).replace(/\s+/g,' ').slice(0,80);
   if(!o.title)return;
   const d=old||{id:dbNewId(),created:today(),files:[],answer:''};
-  if(o.category!==DB_AR)['st1','st2','opts','correct','mine'].forEach(k=>delete d[k]);
+  if(!o.qtype)['qid','qtype','passage','qtext','st1','st2','list1','list2','opts','correct','mine','numAns','numMine','topic','difficulty','source','expl','steps','marks','neg','verified','checked'].forEach(k=>delete d[k]);
+  else{if(!d.qid)o.qid=dbQid();if(!Array.isArray(d.mine))o.mine=[];if(old){o.mine=[];o.numMine='';delete d.checked;dbShow[d.id]=false}}
   Object.assign(d,o);if(st==='Resolved'&&!d.resolved)d.resolved=today();if(st!=='Resolved')delete d.resolved;
   if(!old)L.push(d);
   const fi=document.getElementById('dfi');if(fi&&fi.files.length)await dbAttach(fi.files,d);
@@ -2842,7 +2953,7 @@ async function dbSave(e){
 async function dbAddTo(inp){const d=dbList().find(x=>x.id===dbTarget);if(d&&inp.files.length){await dbAttach(inp.files,d);save();vDoubts()}inp.value=''}
 function dbField(id,k,val){const d=dbList().find(x=>x.id===id);if(d){d[k]=val.trim();save()}}
 function dbStatus(id,s){const d=dbList().find(x=>x.id===id);if(!d)return;d.status=s;if(s==='Resolved'){if(!d.resolved)d.resolved=today()}else delete d.resolved;save();vDoubts()}
-function dbDup(id){const d=dbList().find(x=>x.id===id);if(!d)return;const c={...d,id:dbNewId(),title:d.title+' (copy)',created:today(),files:[],status:'Open'};delete c.resolved;dbList().push(c);save();vDoubts()}
+function dbDup(id){const d=dbList().find(x=>x.id===id);if(!d)return;const c={...d,id:dbNewId(),title:d.title+' (copy)',created:today(),files:[],status:'Open'};delete c.resolved;delete c.checked;if(c.qtype){c.qid=dbQid();c.mine=[];c.numMine=''}dbList().push(c);save();vDoubts()}
 function dbFileGone(f){fdel('db:'+f.id).catch(()=>{});if(f.cloud)dbCloud('fdel',{id:f.id})}
 function dbFileDel(did,fid){const d=dbList().find(x=>x.id===did);if(!d||!confirm('Remove this file from the doubt?'))return;const f=(d.files||[]).find(x=>x.id===fid);d.files=(d.files||[]).filter(x=>x.id!==fid);if(f)dbFileGone(f);save();vDoubts()}
 function dbDel(id){const d=dbList().find(x=>x.id===id);if(!d||!confirm('Delete this doubt'+((d.files||[]).length?' and its '+d.files.length+' file(s)':'')+'?'))return;(d.files||[]).forEach(dbFileGone);S.doubts=dbList().filter(x=>x.id!==id);save();vDoubts()}
