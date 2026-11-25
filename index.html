@@ -2816,7 +2816,8 @@ function dbApply(r){
   const d=dbList().find(x=>x.id===r.id);if(!d||!dbNeeds(d))return false;
   d.aiTried=today();const steps=dbLines(r.steps),num=String(r.numeric||'').trim(),prob=String(r.problem||'').trim();
   if(!d.qtype){
-    const body=[prob?'Could not answer fully: '+prob:'',r.explanation||'',steps.length?steps.map((x,i)=>(i+1)+'. '+x).join('\n'):'',num?'Answer: '+num:''].filter(Boolean).join('\n');
+    if(prob&&!num){d.aiNote=prob;return false}
+    const body=[prob?'Note: '+prob:'',r.explanation||'',steps.length?steps.map((x,i)=>(i+1)+'. '+x).join('\n'):'',num?'Answer: '+num:''].filter(Boolean).join('\n');
     if(!body)return false;d.answer='DXA AI answer ('+r.confidence+' confidence, please check):\n'+body;return true;
   }
   const c=dbArr(r.correct).filter(k=>(d.opts||[])[DB_ABC.indexOf(k)]);
