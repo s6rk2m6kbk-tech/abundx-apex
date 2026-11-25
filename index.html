@@ -2793,6 +2793,7 @@ function dbQHtml(d){
   const opts=num?`<div style="margin:8px 0"><label>Your answer</label><input style="max-width:220px" value="${esc(d.numMine??'')}" ${show?'disabled':''} onchange="dbNum('${d.id}',this.value)" placeholder="Type a number"></div>`
     :`<div class="dbopts${long?' one':''}">${(d.opts||[]).map((o,i)=>{if(!o)return '';const k=DB_ABC[i],sel=m.includes(k),cls=show?(c.includes(k)?'ok':sel?'no':''):(sel?'sel':'');return `<button type="button" class="dbopt ${cls}" onclick="dbPick('${d.id}','${k}')" aria-pressed="${sel}"><span class="k">${k}</span><span>${dbFmt(o)}</span></button>`}).join('')}</div>`;
   const sol=show?`<div class="dbsol"><div><b>Correct answer: ${num?esc(d.numAns||'not set'):c.join(', ')||'not set'}</b>${r&&r.s!=='skipped'?` <span class="chip ${r.s==='right'?'bg-ok':'bg-bad'}">${r.s==='right'?'You got it':'Not correct'} (${r.score>0?'+':''}${r.score})</span>`:''}</div>
+      ${d.ai&&!d.verified?`<div class="sub" style="margin-top:6px">Answer by DXA AI (${esc(d.ai)} confidence). Check it before you rely on it.</div>`:''}
       ${d.expl?`<div style="margin-top:6px"><b>Explanation</b><div style="${pre}">${esc(d.expl)}</div></div>`:''}${dbLines(d.steps).length?`<div style="margin-top:6px"><b>Steps</b><ol style="margin:4px 0 0 20px">${dbLines(d.steps).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`:''}${!d.expl&&!dbLines(d.steps).length?'<div class="sub">No solution written yet. Use Edit to add one.</div>':''}</div>`:'';
   return `<div class="dbq"><span class="chip">${esc(d.qid||'')}</span> <span class="chip">${esc(dbQName(d.qtype))}</span>
     ${d.passage?`<div style="margin:8px 0;padding:8px 10px;border-left:3px solid var(--line);${pre}">${esc(d.passage)}</div>`:''}
@@ -2802,6 +2803,51 @@ function dbQHtml(d){
     ${opts}
     <div style="margin:6px 0"><button class="btn s ok" onclick="dbCheck('${d.id}')">${show?'Hide answer':'Check answer'}</button> <button class="btn s alt" onclick="dbRetry('${d.id}')">Try again</button></div>${sol}
     <div class="sub">${[d.topic?'Topic: '+esc(d.topic):'',d.difficulty?'Difficulty: L'+d.difficulty+' '+DB_DIFF[d.difficulty-1]:'',d.source?'Source: '+esc(d.source):'','Marks: +'+(d.marks??4)+' / −'+(d.neg??1),d.verified?'✔ Answer verified':'Not verified'].filter(Boolean).join(' · ')}</div></div>`;
+}
+/* answers from DXA AI for every question that has none */
+let dbSolving=false,dbSolveMsg='';
+function dbNeeds(d){if(!d.qtype)return !String(d.answer||'').trim()&&!!String(d.desc||d.title||'').trim();return d.qtype==='numerical'?!String(d.numAns??'').trim():!dbArr(d.correct).length}
+async function dbPayload(d){
+  const q={id:d.id,type:d.qtype||'open',subject:d.subject,chapter:d.area||'',title:d.title,details:d.desc||'',passage:d.passage||'',question:d.qtext||'',statement_1:d.st1||'',statement_2:d.st2||'',list_1:dbLines(d.list1),list_2:dbLines(d.list2),options:(d.opts||[]).map((o,i)=>DB_ABC[i]+'. '+o).filter((x,i)=>d.opts[i])};
+  const images=[];for(const f of (d.files||[]).filter(f=>(f.type||'').startsWith('image/')).slice(0,2)){const b=await dbBlob(f);if(b)images.push({media_type:f.type,data:await dbB64(b)})}
+  if(images.length)q.images=images;return q;
+}
+function dbApply(r){
+  const d=dbList().find(x=>x.id===r.id);if(!d||!dbNeeds(d))return false;
+  d.aiTried=today();const steps=dbLines(r.steps),num=String(r.numeric||'').trim(),prob=String(r.problem||'').trim();
+  if(!d.qtype){
+    const body=[prob?'Could not answer fully: '+prob:'',r.explanation||'',steps.length?steps.map((x,i)=>(i+1)+'. '+x).join('\n'):'',num?'Answer: '+num:''].filter(Boolean).join('\n');
+    if(!body)return false;d.answer='DXA AI answer ('+r.confidence+' confidence, please check):\n'+body;return true;
+  }
+  const c=dbArr(r.correct).filter(k=>(d.opts||[])[DB_ABC.indexOf(k)]);
+  const got=d.qtype==='numerical'?!!num:c.length>0&&(dbMulti(d.qtype)||c.length===1);
+  if(!got){d.aiNote=prob||'DXA AI could not decide the answer.';return false}
+  if(d.qtype==='numerical')d.numAns=num;else d.correct=c;
+  if(!d.expl)d.expl=r.explanation||'';if(!dbLines(d.steps).length)d.steps=steps;
+  d.ai=r.confidence;d.verified=false;delete d.aiNote;delete d.checked;return true;
+}
+function dbSolveBar(){
+  const n=dbList().filter(dbNeeds).length;
+  return `<div class="card"><h3>Answers</h3><div>${n?n+' question'+(n===1?' has':'s have')+' no answer yet.':'Every question has an answer.'}</div>${dbSolveMsg?`<div class="sub" style="margin-top:6px">${esc(dbSolveMsg)}</div>`:''}${n?`<p style="margin-top:10px"><button class="btn s ok" ${dbSolving?'disabled':''} onclick="dbSolve(true)">${dbSolving?'DXA AI is solving...':'Add answers with DXA AI'}</button></p>`:''}<div class="sub">DXA AI answers can be wrong. Check them, then tick "I have verified the answer" in Edit. Your own answers are never replaced.</div></div>`;
+}
+function dbSolveShow(){const b=document.getElementById('dbSolve');if(b)b.innerHTML=dbSolveBar();const a=document.activeElement;if(!(a&&a.tagName==='TEXTAREA'&&a.closest('#dbList')))dbRefresh()}
+async function dbSolve(all,only){
+  if(dbSolving||!COACH_API)return;
+  const todo=dbList().filter(d=>dbNeeds(d)&&(only?d.id===only:all||!d.aiTried)).map(d=>d.id);if(!todo.length)return;
+  dbSolving=true;let done=0,seen=0;
+  try{
+    for(let i=0;i<todo.length;i+=3){
+      dbSolveMsg=`Solving ${i+1} to ${Math.min(i+3,todo.length)} of ${todo.length}...`;dbSolveShow();
+      const batch=todo.slice(i,i+3).map(id=>dbList().find(x=>x.id===id)).filter(d=>d&&dbNeeds(d));if(!batch.length)continue;
+      const questions=[];for(const d of batch)questions.push(await dbPayload(d));
+      const res=await fetch(COACH_API+'/solve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({questions})}),j=await res.json().catch(()=>({}));
+      if(!res.ok||!Array.isArray(j.results))throw new Error(j.message||'DXA AI could not answer right now.');
+      j.results.forEach(r=>{if(batch.some(d=>d.id===r.id)&&dbApply(r))done++});
+      batch.forEach(b=>{const d=dbList().find(x=>x.id===b.id);if(d)d.aiTried=today()});seen+=batch.length;save();
+    }
+    dbSolveMsg=`Added ${done} answer${done===1?'':'s'}.`+(seen>done?` ${seen-done} could not be answered: see the note on those questions.`:'');
+  }catch(e){dbSolveMsg=(e&&e.message==='Failed to fetch'?'Could not reach DXA AI. Check your connection.':(e&&e.message)||'Something went wrong.')+(done?` (${done} added before that.)`:'')}
+  finally{dbSolving=false;dbSolveShow()}
 }
 function dbRefresh(){const e=document.getElementById('dbList');if(e){e.innerHTML=dbListHtml();dbHydrate()}const a=document.getElementById('dbStats');if(a)a.innerHTML=dbStatsHtml()}
 function dbPick(id,k){const d=dbList().find(x=>x.id===id);if(!d||dbShow[id])return;let m=dbArr(d.mine);m=m.includes(k)?m.filter(x=>x!==k):dbMulti(d.qtype)?[...m,k].sort():[k];d.mine=m;delete d.checked;save();dbRefresh()}
@@ -2890,7 +2936,8 @@ function dbCard(d){
    ${d.desc?`<div class="dbqt" style="white-space:pre-wrap">${dbFmt(d.desc)}</div>`:''}
    ${th?`<div style="margin:4px 0">${th}</div>`:''}
    <div class="row" style="margin-top:6px"><div style="grid-column:span 3"><label>Answer / how it was solved (optional)</label><textarea rows="2" style="width:100%" onchange="dbField('${d.id}','answer',this.value)">${esc(d.answer||'')}</textarea></div><div><label>Status</label><select onchange="dbStatus('${d.id}',this.value)">${DB_ST.map(o=>`<option ${o===d.status?'selected':''}>${o}</option>`).join('')}</select></div></div>
-   <div style="margin-top:6px"><button class="btn s alt" onclick="dbTarget='${d.id}';document.getElementById('dbAdd').click()">Add photos / PDFs</button> <button class="btn s alt" onclick="dbEdit='${d.id}';vDoubts();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="dbDup('${d.id}')">Duplicate</button> <button class="btn s bad" onclick="dbDel('${d.id}')">Delete</button></div></div>`;
+   ${d.aiNote&&dbNeeds(d)?`<div class="sub">DXA AI: ${esc(d.aiNote)}</div>`:''}
+   <div style="margin-top:6px">${dbNeeds(d)?`<button class="btn s ok" onclick="dbSolve(true,'${d.id}')">Get answer</button> `:''}<button class="btn s alt" onclick="dbTarget='${d.id}';document.getElementById('dbAdd').click()">Add photos / PDFs</button> <button class="btn s alt" onclick="dbEdit='${d.id}';vDoubts();scrollTo(0,0)">Edit</button> <button class="btn s alt" onclick="dbDup('${d.id}')">Duplicate</button> <button class="btn s bad" onclick="dbDel('${d.id}')">Delete</button></div></div>`;
 }
 function dbListHtml(){
   const L=dbFiltered(),SJ=dbSubj(),PO={High:0,Medium:1,Low:2};
@@ -2923,6 +2970,7 @@ function vDoubts(){
     <div><label>Question format</label><select onchange="dbF.fmt=this.value;vDoubts()">${[['','All'],['any','All MCQs'],...DB_Q.slice(1)].map(([k,l])=>`<option value="${k}" ${dbF.fmt===k?'selected':''}>${l}</option>`).join('')}</select></div>
     <div><label>Type of doubt</label><select onchange="dbF.cat=this.value;vDoubts()"><option value="">All</option>${DB_CAT.map(c=>`<option ${dbF.cat===c?'selected':''}>${esc(c)}</option>`).join('')}</select></div>
     <div><label>Search</label><input type="search" value="${esc(dbF.q)}" placeholder="Search doubts, answers, areas..." oninput="dbF.q=this.value;document.getElementById('dbList').innerHTML=dbListHtml();dbHydrate()"></div></div></div>
+  <div id="dbSolve">${dbSolveBar()}</div>
   <div id="dbList">${dbListHtml()}</div>
   <div id="dbStats">${dbStatsHtml()}</div>
   ${L.length?gCard('Doubts by subject','Open, asked and resolved.',cv('db1',200)):''}
@@ -2932,6 +2980,7 @@ function vDoubts(){
    <label for="dbJt" style="margin-top:8px">Or paste JSON</label><textarea id="dbJt" rows="3" style="width:100%" placeholder='{"question":{"text":"..."},"options":[{"option_id":"A","text":"..."}],"correct_options":["A"]}'></textarea>
    <p style="margin-top:6px"><button class="btn s alt" onclick="dbImport(document.getElementById('dbJt').value)">Import pasted JSON</button></p></div>`;
   dbQToggle();dbHydrate();
+  if(!dbSolving&&!dbEdit&&!window.__VE)setTimeout(()=>{if(view==='doubts'&&!window.__VE)dbSolve(false)},600);
   if(L.length){const cols={Open:GC.bad,Asked:GC.warn,Resolved:GC.ok},S2=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
     mk('db1',{type:'bar',data:{labels:S2,datasets:DB_ST.map(st=>({label:st,data:S2.map(s=>L.filter(x=>x.subject===s&&x.status===st).length),backgroundColor:cols[st]}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
 }
