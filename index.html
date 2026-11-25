@@ -2706,7 +2706,8 @@ function cmCharts(M){
 
 
 /* ---------- DOUBTS: questions you are stuck on, by subject, area and type, with photos and PDFs ---------- */
-const DB_CAT=['Concept','Problem / numerical','Formula or derivation','Silly mistake','Test question','Other'],DB_ST=['Open','Asked','Resolved'],DB_PR=['High','Medium','Low'],DB_MAXPDF=8*1024*1024;
+const DB_AR='Assertion & Reason',DB_ABC=['a','b','c','d'],DB_AROPT=['Both Statement 1 and Statement 2 are true','Both Statement 1 and Statement 2 are false','Statement 1 is true but Statement 2 is false','Statement 1 is false but Statement 2 is true'];
+const DB_CAT=[DB_AR,'Concept','Problem / numerical','Formula or derivation','Silly mistake','Test question','Other'],DB_ST=['Open','Asked','Resolved'],DB_PR=['High','Medium','Low'],DB_MAXPDF=8*1024*1024;
 let dbF={sub:'',cat:'',st:'open',q:''},dbEdit=null,dbTarget=null;
 const dbList=()=>Array.isArray(S.doubts)?S.doubts:(S.doubts=[]);
 const dbNewId=()=>'DB'+String(dbList().reduce((m,x)=>Math.max(m,+String(x.id).slice(2)||0),0)+1).padStart(3,'0');
@@ -2740,8 +2741,16 @@ async function dbAttach(files,d){
 }
 function dbFiltered(){
   const q=(dbF.q||'').trim().toLowerCase();
-  return dbList().filter(x=>(!dbF.sub||x.subject===dbF.sub)&&(!dbF.cat||x.category===dbF.cat)&&(dbF.st==='all'||(dbF.st==='open'?x.status!=='Resolved':x.status===dbF.st))&&(!q||[x.title,x.desc,x.area,x.answer,x.subject,x.category].some(t=>String(t||'').toLowerCase().includes(q))));
+  return dbList().filter(x=>(!dbF.sub||x.subject===dbF.sub)&&(!dbF.cat||x.category===dbF.cat)&&(dbF.st==='all'||(dbF.st==='open'?x.status!=='Resolved':x.status===dbF.st))&&(!q||[x.title,x.desc,x.area,x.answer,x.subject,x.category,x.st1,x.st2,...(x.opts||[])].some(t=>String(t||'').toLowerCase().includes(q))));
 }
+function dbArHtml(d){
+  if(d.category!==DB_AR)return '';
+  const row=(n,t)=>t?`<div style="margin:6px 0"><b>Statement ${n}:</b> <span style="white-space:pre-wrap">${esc(t)}</span></div>`:'';
+  const opts=(d.opts||[]).map((o,i)=>{if(!o)return '';const k=DB_ABC[i],ok=d.correct===k,me=d.mine===k;
+    return `<div style="margin:4px 0;padding:7px 10px;border:1px solid var(--${ok?'ok':me?'bad':'line'});border-radius:8px"><b>${k}]</b> ${esc(o)}${ok?' <span class="chip bg-ok">Correct answer</span>':''}${me?` <span class="chip ${ok?'bg-ok':'bg-bad'}">My answer</span>`:''}</div>`}).join('');
+  return `<div style="margin:8px 0">${row(1,d.st1)}${row(2,d.st2)}<div style="margin-top:8px">${opts}</div></div>`;
+}
+function dbArToggle(){const on=document.getElementById('dca').value===DB_AR,box=document.getElementById('dbAr'),t=document.getElementById('dti');if(box)box.style.display=on?'':'none';if(t){t.required=!on;t.placeholder=on?'Optional: taken from Statement 1 if left blank':'e.g. Why does friction act forward on a rolling wheel?'}}
 function dbCard(d){
   const fs=d.files||[],stc={Open:'bg-bad',Asked:'bg-warn',Resolved:'bg-ok'}[d.status]||'';
   const th=fs.map(f=>(f.type||'').startsWith('image/')
@@ -2749,6 +2758,7 @@ function dbCard(d){
     :`<span class="dbpdf"><a href="#" onclick="dbOpen('${f.id}');return false">\u{1F4C4} ${esc(f.name)}</a> <span class="sub">${dbKb(f.size||0)}</span> <a href="#" class="sub" style="margin-left:6px" onclick="dbFileDel('${d.id}','${f.id}');return false">remove</a></span>`).join('');
   return `<div style="padding:12px 0;border-bottom:1px solid var(--line)"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b>${esc(d.title)}</b> <span class="chip ${stc}">${esc(d.status)}</span> <span class="chip bg-${d.priority==='High'?'bad':d.priority==='Low'?'ok':'warn'}">${esc(d.priority||'Medium')}</span> <span class="chip">${esc(d.category||'Other')}</span></div>
    <div class="sub">${esc(d.subject)}${d.area?' · '+esc(d.area):''} · added ${fmtS(d.created)}${d.resolved?' · resolved '+fmtS(d.resolved):''}</div>
+   ${dbArHtml(d)}
    ${d.desc?`<div style="margin:6px 0;white-space:pre-wrap">${esc(d.desc)}</div>`:''}
    ${th?`<div style="margin:4px 0">${th}</div>`:''}
    <div class="row" style="margin-top:6px"><div style="grid-column:span 3"><label>Answer / how it was solved (optional)</label><textarea rows="2" style="width:100%" onchange="dbField('${d.id}','answer',this.value)">${esc(d.answer||'')}</textarea></div><div><label>Status</label><select onchange="dbStatus('${d.id}',this.value)">${DB_ST.map(o=>`<option ${o===d.status?'selected':''}>${o}</option>`).join('')}</select></div></div>
@@ -2773,8 +2783,13 @@ function vDoubts(){
    <div class="card"><div class="sub">Resolved</div><div class="big">${L.filter(x=>x.status==='Resolved').length}</div><div class="sub">of ${L.length} doubts</div></div>
    ${SJ.filter(s=>s!=='Other').map(s=>`<div class="card"><div class="sub">${esc(s)}</div><div class="big">${open.filter(x=>x.subject===s).length}</div><div class="sub">open</div></div>`).join('')}</div>
   <div class="card"><h3>${dbEdit?'Edit doubt':'Add a doubt'}</h3><form onsubmit="dbSave(event)">
-   <div class="row"><div><label>Subject</label>${sel('dsu',SJ,eSub,'onchange="dbAreaFill(\'\')"')}</div><div><label>Area</label><select id="dar"><option value="">(no area)</option>${(S.areas||[]).filter(a=>a.subject===eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Type of doubt</label>${sel('dca',DB_CAT,e0.category||'Concept')}</div><div><label>Priority</label>${sel('dpr',DB_PR,e0.priority||'Medium')}</div></div>
+   <div class="row"><div><label>Subject</label>${sel('dsu',SJ,eSub,'onchange="dbAreaFill(\'\')"')}</div><div><label>Area</label><select id="dar"><option value="">(no area)</option>${(S.areas||[]).filter(a=>a.subject===eSub).map(a=>`<option ${a.name===e0.area?'selected':''}>${esc(a.name)}</option>`).join('')}</select></div><div><label>Type of doubt</label>${sel('dca',DB_CAT,e0.category||'Concept','onchange="dbArToggle()"')}</div><div><label>Priority</label>${sel('dpr',DB_PR,e0.priority||'Medium')}</div></div>
    <div class="row"><div style="grid-column:span 3"><label>Doubt (short title)</label><input id="dti" required maxlength="160" value="${esc(e0.title||'')}" placeholder="e.g. Why does friction act forward on a rolling wheel?"></div><div><label>Status</label>${sel('dst',DB_ST,e0.status||'Open')}</div></div>
+   <div id="dbAr" style="display:${e0.category===DB_AR?'':'none'}">
+    <div class="row"><div style="grid-column:span 4"><label>Statement 1 (Assertion)</label><textarea id="ds1" rows="2" style="width:100%">${esc(e0.st1||'')}</textarea></div></div>
+    <div class="row"><div style="grid-column:span 4"><label>Statement 2 (Reason)</label><textarea id="ds2" rows="2" style="width:100%">${esc(e0.st2||'')}</textarea></div></div>
+    ${DB_ABC.map((k,i)=>`<div class="row"><div style="grid-column:span 4"><label>${k}]</label><input id="dop${i}" value="${esc(e0.opts?e0.opts[i]||'':DB_AROPT[i])}"></div></div>`).join('')}
+    <div class="row"><div style="grid-column:span 2"><label>Correct answer</label><select id="dco"><option value="">Not known yet</option>${DB_ABC.map(k=>`<option value="${k}" ${e0.correct===k?'selected':''}>${k}]</option>`).join('')}</select></div><div style="grid-column:span 2"><label>My answer</label><select id="dmi"><option value="">Not attempted</option>${DB_ABC.map(k=>`<option value="${k}" ${e0.mine===k?'selected':''}>${k}]</option>`).join('')}</select></div></div></div>
    <div class="row"><div style="grid-column:span 4"><label>Details (optional)</label><textarea id="dde" rows="3" style="width:100%" placeholder="What exactly confuses you? What have you tried?">${esc(e0.desc||'')}</textarea></div></div>
    <div class="row"><div style="grid-column:span 4"><label>Photos and PDFs (optional, you can pick several)</label><input id="dfi" type="file" multiple accept="image/*,application/pdf"><div class="sub">Photos are shrunk to a readable size. PDFs up to 8 MB. ${syncCfg()?'Sync is on, so your files also open on your other devices.':'Files stay on this device unless you turn on sync in Chat History.'}</div></div></div>
    <button class="btn ok">${dbEdit?'Update':'Add doubt'}</button> ${dbEdit?'<button type="button" class="btn alt" onclick="dbEdit=null;vDoubts()">Cancel</button>':''}</form></div>
@@ -2785,7 +2800,7 @@ function vDoubts(){
     <div style="grid-column:span 2"><label>Search</label><input type="search" value="${esc(dbF.q)}" placeholder="Search doubts, answers, areas..." oninput="dbF.q=this.value;document.getElementById('dbList').innerHTML=dbListHtml();dbHydrate()"></div></div></div>
   <div id="dbList">${dbListHtml()}</div>
   ${L.length?gCard('Doubts by subject','Open, asked and resolved.',cv('db1',200)):''}`;
-  dbHydrate();
+  dbArToggle();dbHydrate();
   if(L.length){const cols={Open:GC.bad,Asked:GC.warn,Resolved:GC.ok},S2=[...new Set([...SJ,...L.map(x=>x.subject)])].filter(s=>L.some(x=>x.subject===s));
     mk('db1',{type:'bar',data:{labels:S2,datasets:DB_ST.map(st=>({label:st,data:S2.map(s=>L.filter(x=>x.subject===s&&x.status===st).length),backgroundColor:cols[st]}))},options:{scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},plugins:{legend:{position:'bottom'}}}})}
 }
@@ -2811,8 +2826,14 @@ async function dbLight(fid){
 async function dbSave(e){
   e.preventDefault();const L=dbList(),old=dbEdit?L.find(x=>x.id===dbEdit):null,st=v('dst');
   const o={subject:v('dsu'),area:v('dar'),category:v('dca'),priority:v('dpr'),title:v('dti').trim(),desc:document.getElementById('dde').value.trim(),status:st};
+  if(o.category===DB_AR){
+    Object.assign(o,{st1:document.getElementById('ds1').value.trim(),st2:document.getElementById('ds2').value.trim(),opts:DB_ABC.map((k,i)=>v('dop'+i).trim()),correct:v('dco'),mine:v('dmi')});
+    if(!o.st1||!o.st2)return alert('Write both Statement 1 and Statement 2.');
+    if(!o.title)o.title=o.st1.replace(/\s+/g,' ').slice(0,80);
+  }
   if(!o.title)return;
   const d=old||{id:dbNewId(),created:today(),files:[],answer:''};
+  if(o.category!==DB_AR)['st1','st2','opts','correct','mine'].forEach(k=>delete d[k]);
   Object.assign(d,o);if(st==='Resolved'&&!d.resolved)d.resolved=today();if(st!=='Resolved')delete d.resolved;
   if(!old)L.push(d);
   const fi=document.getElementById('dfi');if(fi&&fi.files.length)await dbAttach(fi.files,d);
